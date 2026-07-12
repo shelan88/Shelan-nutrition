@@ -6,11 +6,11 @@ export type Lang = "en" | "ar";
 
 export const siteMeta = {
   en: {
-    name: "Shilan",
+    name: "SHELAN",
     tagline: "Nutritionist & Lipedema Specialist",
   },
   ar: {
-    name: "شيلان",
+    name: "SHELAN",
     tagline: "أخصائية تغذية ومتخصصة في الليبيديما",
   },
 };
@@ -37,10 +37,10 @@ export const hero = {
     eyebrow: "Personalized Nutrition & Lipedema Care",
     headline: "Nourish Your Body. Reclaim Your Health.",
     subheadline:
-      "Evidence-based nutrition plans and specialized Lipedema management, designed around your body and your life — with Shilan.",
+      "Evidence-based nutrition plans and specialized Lipedema management, designed around your body and your life — with Shelan.",
     ctaPrimary: "Book Your Consultation",
     ctaSecondary: "Learn About Lipedema Care",
-    imageAlt: "Shilan, professional nutritionist",
+    imageAlt: "Shelan, professional nutritionist",
   },
   ar: {
     eyebrow: "تغذية شخصية ورعاية متخصصة لليبيديما",
@@ -55,12 +55,13 @@ export const hero = {
 
 export const about = {
   en: {
-    title: "Meet Shilan",
+    title: "Meet Shelan",
     kicker: "About Your Nutritionist",
     bio: [
-      "Shilan is a certified nutritionist dedicated to helping clients build a healthier relationship with food through personalized, evidence-based care.",
-      "With specialized training in Lipedema-focused nutrition, she combines clinical knowledge with genuine compassion — supporting clients who often feel unheard elsewhere.",
-      "Her philosophy is simple: sustainable health comes from a plan that respects your body, your history, and your goals.",
+      "Shelan.. A journey that began with pain, and ended with understanding and embrace.",
+      "Welcome to my own space. I'm Shelan, a holistic nutritionist and health coach — but before that, I was one of you. For many years, I lived in a struggle with unexplained physical and emotional pain, believing all along that my only problem was \"being overweight\" — until I discovered the truth: I have Lipedema.",
+      "That moment was my turning point. I learned that my body didn't need a harsh war or constant punishment, but rather understanding, support, balance, and real acceptance.",
+      "Today, I've chosen to dedicate my expertise and knowledge to being the friend and guide I wished I'd had beside me on my own journey. My goal isn't just to hand out meal plans — it's to spread holistic health awareness and support every woman who feels tired or lost in her journey with her body. My work with you is built on mindful nutrition, gut health, and a holistic approach connecting physical health with emotional well-being, because I truly believe that health awareness is the key that can change an entire life.",
     ],
     credentialsLabel: "Credentials & Focus Areas",
     credentials: [
@@ -68,15 +69,16 @@ export const about = {
       "Lipedema Nutrition Specialist",
       "Holistic Health Practitioner",
     ],
-    imageAlt: "Portrait of Shilan",
+    imageAlt: "Portrait of Shelan",
   },
   ar: {
-    title: "تعرفي على شيلان",
+    title: "تعرفي على شيلان (SHELAN)",
     kicker: "عن أخصائية التغذية",
     bio: [
-      "شيلان أخصائية تغذية معتمدة، متخصصة في مساعدة عميلاتها على بناء علاقة صحية مع الطعام من خلال رعاية شخصية مبنية على الأدلة العلمية.",
-      "بفضل تدريبها المتخصص في التغذية المرتبطة بالليبيديما، تجمع بين المعرفة السريرية والتعاطف الحقيقي — لدعم من يشعرن أحيانًا بعدم الفهم في أماكن أخرى.",
-      "فلسفتها بسيطة: الصحة المستدامة تأتي من خطة تحترم جسدك وتاريخك وأهدافك.",
+      "شيلان.. رحلة بدأت من الألم، وانتهت بالتفهم والاحتواء.",
+      "أهلاً بكِ في مساحتي الخاصة. أنا شيلان، أخصائية تغذية شمولية ومدربة صحة، ولكن قبل ذلك، أنا كنت واحدة منكنّ. لسنوات طويلة، عشت في صراع مع ألم جسدي ونفسي لا يُفسر، وكنت أعتقد طوال الوقت أن مشكلتي تكمن في \"زيادة الوزن\" فقط، حتى اكتشفت حقيقة مرضي بالليبيديميا.",
+      "تلك اللحظة كانت نقطة التحول؛ تعلمت فيها أن جسدي لم يكن بحاجة إلى حرب قاسية أو عقاب مستمر، بل كان يحتاج إلى الفهم، الدعم، التوازن، والاحتواء الحقيقي.",
+      "اليوم، قررت أن أكرس خبرتي وعلمي لأكون الصديقة والموجهة التي تمنيت وجودها بجانبي في رحلتي. هدفي ليس مجرد وضع جداول غذائية، بل نشر الوعي الصحي الشمولي ودعم كل فتاة تشعر بالتعب أو الضياع في رحلة التعامل مع جسدها. رحلتي معكم ترتكز على التغذية الواعية، صحة الأمعاء، والنهج الشمولي الذي يربط بين صحة الجسد وسلامة النفس، لأنني أؤمن حقاً أن الوعي الصحي هو المفتاح الذي قد يُغير حياة كاملة.",
     ],
     credentialsLabel: "المؤهلات ومجالات التركيز",
     credentials: [
@@ -257,7 +259,7 @@ export const booking = {
   en: {
     title: "Ready to Start Your Journey?",
     description:
-      "Book a one-on-one consultation with Shilan and take the first step toward a personalized nutrition plan built around you.",
+      "Book a one-on-one consultation with Shelan and take the first step toward a personalized nutrition plan built around you.",
     cta: "Book Your Consultation",
   },
   ar: {
@@ -272,7 +274,7 @@ export const footer = {
   en: {
     tagline: "Personalized nutrition. Compassionate care.",
     contactTitle: "Contact",
-    email: "hello@shilannutrition.com",
+    email: "hello@shelannutrition.com",
     phone: "+1 (555) 123-4567",
     location: "Available for in-person & virtual consultations",
     socialTitle: "Follow",
@@ -281,7 +283,7 @@ export const footer = {
   ar: {
     tagline: "تغذية شخصية. رعاية بكل تعاطف.",
     contactTitle: "التواصل",
-    email: "hello@shilannutrition.com",
+    email: "hello@shelannutrition.com",
     phone: "+1 (555) 123-4567",
     location: "متوفرة للاستشارات الحضورية والإلكترونية",
     socialTitle: "تابعينا",

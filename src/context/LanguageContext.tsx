@@ -10,7 +10,7 @@ interface LanguageContextValue {
 
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
 
-const STORAGE_KEY = "shilan-lang";
+const STORAGE_KEY = "shelan-lang";
 
 function getInitialLang(): Lang {
   if (typeof window === "undefined") return "en";
