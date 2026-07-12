@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Globe } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { nav, siteMeta } from "@/content/content";
+import { nav } from "@/content/content";
 
 function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -12,16 +12,16 @@ export default function Navbar() {
   const { lang, toggleLang } = useLanguage();
   const [open, setOpen] = useState(false);
   const items = nav[lang];
-  const meta = siteMeta[lang];
 
   return (
     <header className="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-white/80 border-b border-lavender-100">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 flex items-center justify-between h-20">
-        <a
-          href="#top"
-          className="font-heading text-xl font-bold tracking-tight text-lavender-700"
-        >
-          {meta.name}
+        <a href="#top" className="flex items-center shrink-0">
+          <img
+            src="/logo.png"
+            alt="SHELAN Nutritionist Logo"
+            className="h-12 sm:h-14 w-auto object-contain"
+          />
         </a>
 
         <nav className="hidden md:flex items-center gap-8">
