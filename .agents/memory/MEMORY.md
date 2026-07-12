@@ -1,0 +1,1 @@
+- [lucide-react brand icons](lucide-react-brand-icons.md) — no Facebook/Instagram/Twitter/LinkedIn icons exist in current lucide-react; use generic outline icons instead.

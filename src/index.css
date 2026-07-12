@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Cairo:wght@400;500;600;700;800&family=Tajawal:wght@300;400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-heading: "Montserrat", "Cairo", sans-serif;
+  --font-body: "Inter", "Tajawal", sans-serif;
+
+  --color-lavender-50: #f8f7fc;
+  --color-lavender-100: #efecf8;
+  --color-lavender-200: #ddd6f0;
+  --color-lavender-300: #c3b6e3;
+  --color-lavender-400: #a58ed2;
+  --color-lavender-500: #8b6cc1;
+  --color-lavender-600: #7454a8;
+  --color-lavender-700: #5e4389;
+
+  --color-rose-50: #fdf5f5;
+  --color-rose-100: #fae8e8;
+  --color-rose-200: #f3cfd0;
+  --color-rose-300: #e8a9ab;
+  --color-rose-400: #d97e82;
+  --color-rose-500: #c65b60;
+  --color-rose-600: #a8434a;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background-color: #ffffff;
+  color: #2b2733;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+[dir="rtl"] body {
+  font-family: "Tajawal", "Inter", sans-serif;
+}
+
+[dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] h4 {
+  font-family: "Cairo", "Montserrat", sans-serif;
+}
+
+::selection {
+  background-color: var(--color-rose-200);
+}
