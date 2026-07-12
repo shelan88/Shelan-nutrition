@@ -14,13 +14,14 @@
   --color-lavender-600: #7454a8;
   --color-lavender-700: #5e4389;
 
-  --color-rose-50: #fdf5f5;
-  --color-rose-100: #fae8e8;
-  --color-rose-200: #f3cfd0;
-  --color-rose-300: #e8a9ab;
-  --color-rose-400: #d97e82;
-  --color-rose-500: #c65b60;
-  --color-rose-600: #a8434a;
+  --color-rose-50: #fdf3f3;
+  --color-rose-100: #f9e2e2;
+  --color-rose-200: #eebabc;
+  --color-rose-300: #e08d90;
+  --color-rose-400: #cf6369;
+  --color-rose-500: #b8434a;
+  --color-rose-600: #9c333a;
+  --color-rose-700: #7d272d;
 }
 
 html {

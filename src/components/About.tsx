@@ -7,7 +7,7 @@ export default function About() {
   const t = about[lang];
 
   return (
-    <section id="about" className="py-24 bg-white">
+    <section id="about" className="py-24 bg-gradient-to-b from-white via-lavender-50/40 to-white">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 grid lg:grid-cols-2 gap-16 items-center">
         <motion.div
           initial={{ opacity: 0, x: lang === "ar" ? 40 : -40 }}

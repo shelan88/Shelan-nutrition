@@ -14,7 +14,7 @@ export default function Booking() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.7 }}
-          className="relative rounded-[2.5rem] bg-gradient-to-br from-lavender-100 via-lavender-50 to-rose-100 px-8 py-16 sm:px-16 text-center overflow-hidden"
+          className="relative rounded-[2.5rem] bg-gradient-to-br from-lavender-200 via-lavender-100 to-rose-100 px-8 py-16 sm:px-16 text-center overflow-hidden"
         >
           <div className="absolute -top-16 -end-16 w-64 h-64 rounded-full bg-rose-200/40 blur-3xl" />
           <div className="absolute -bottom-16 -start-16 w-64 h-64 rounded-full bg-lavender-200/50 blur-3xl" />

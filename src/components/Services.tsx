@@ -10,7 +10,7 @@ export default function Services() {
   const t = services[lang];
 
   return (
-    <section id="services" className="py-24 bg-lavender-50/50">
+    <section id="services" className="py-24 bg-gradient-to-b from-lavender-100/80 via-lavender-50 to-lavender-100/60">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-500 mb-3">
@@ -31,7 +31,7 @@ export default function Services() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.3 }}
                 transition={{ duration: 0.6, delay: i * 0.1 }}
-                className="bg-white rounded-3xl p-8 shadow-sm border border-lavender-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                className="bg-white rounded-3xl p-8 shadow-sm border border-lavender-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
               >
                 <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center mb-6">
                   <Icon className="text-rose-500" size={26} />
