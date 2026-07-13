@@ -36,12 +36,12 @@ export default function About() {
           <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-500 mb-3">
             {t.kicker}
           </p>
-          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-rose-600 mb-6">
+          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-heading mb-6">
             {t.title}
           </h2>
           <div className="space-y-4 mb-8">
             {t.bio.map((p: string, i: number) => (
-              <p key={i} className="text-stone-600 leading-relaxed">
+              <p key={i} className="text-body leading-relaxed">
                 {p}
               </p>
             ))}
@@ -52,7 +52,7 @@ export default function About() {
           </p>
           <ul className="space-y-2">
             {t.credentials.map((c: string, i: number) => (
-              <li key={i} className="flex items-center gap-3 text-stone-700">
+              <li key={i} className="flex items-center gap-3 text-body">
                 <span className="w-1.5 h-1.5 rounded-full bg-sage-500 shrink-0" />
                 {c}
               </li>

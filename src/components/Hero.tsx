@@ -27,10 +27,10 @@ export default function Hero() {
           <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-500 mb-4">
             {t.eyebrow}
           </p>
-          <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight text-rose-600 mb-6">
+          <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight text-heading mb-6">
             {t.headline}
           </h1>
-          <p className="text-lg text-stone-600 leading-relaxed mb-9 max-w-xl">
+          <p className="text-lg text-body leading-relaxed mb-9 max-w-xl">
             {t.subheadline}
           </p>
           <div className="flex flex-wrap gap-4">
@@ -42,7 +42,7 @@ export default function Hero() {
             </button>
             <button
               onClick={() => scrollTo("info-hub")}
-              className="px-7 py-3.5 rounded-full border border-sage-300 text-rose-600 font-medium hover:bg-sage-50 transition-colors"
+              className="px-7 py-3.5 rounded-full border border-sage-300 text-heading font-medium hover:bg-sage-50 transition-colors"
             >
               {t.ctaSecondary}
             </button>
@@ -67,7 +67,7 @@ export default function Hero() {
             </span>
           </div>
           <div className="absolute -bottom-6 -start-6 bg-white rounded-2xl shadow-md px-6 py-4 border border-sage-200">
-            <p className="font-heading font-bold text-2xl text-rose-600">10+</p>
+            <p className="font-heading font-bold text-2xl text-heading">10+</p>
             <p className="text-xs text-stone-500">
               {lang === "en" ? "Years of Experience" : "سنوات من الخبرة"}
             </p>

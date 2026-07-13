@@ -25,10 +25,10 @@ export default function SuccessStories() {
           <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-500 mb-3">
             {t.kicker}
           </p>
-          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-rose-600 mb-4">
+          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-heading mb-4">
             {t.title}
           </h2>
-          <p className="text-stone-600 leading-relaxed">{t.subtitle}</p>
+          <p className="text-body leading-relaxed">{t.subtitle}</p>
         </div>
 
         <div className="space-y-4">
@@ -51,7 +51,7 @@ export default function SuccessStories() {
                 >
                   <span className="flex items-start gap-3">
                     <Quote className={`shrink-0 mt-0.5 ${accent.icon}`} size={18} />
-                    <span className="font-medium text-rose-600 leading-snug">
+                    <span className="font-medium text-heading leading-snug">
                       {item.title}
                     </span>
                   </span>
@@ -72,7 +72,7 @@ export default function SuccessStories() {
                       transition={{ duration: 0.3, ease: "easeInOut" }}
                       className="overflow-hidden"
                     >
-                      <p className="px-6 pb-6 text-stone-600 leading-relaxed">
+                      <p className="px-6 pb-6 text-body leading-relaxed">
                         {item.content}
                       </p>
                     </motion.div>

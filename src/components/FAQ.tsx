@@ -16,7 +16,7 @@ export default function FAQ() {
           <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-500 mb-3">
             {t.kicker}
           </p>
-          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-rose-600">
+          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-heading">
             {t.title}
           </h2>
         </div>
@@ -34,7 +34,7 @@ export default function FAQ() {
                   className="w-full flex items-center justify-between gap-4 text-start px-6 py-5"
                   aria-expanded={isOpen}
                 >
-                  <span className="font-medium text-rose-600">{item.question}</span>
+                  <span className="font-medium text-heading">{item.question}</span>
                   <motion.span
                     animate={{ rotate: isOpen ? 180 : 0 }}
                     transition={{ duration: 0.3 }}
@@ -52,7 +52,7 @@ export default function FAQ() {
                       transition={{ duration: 0.3, ease: "easeInOut" }}
                       className="overflow-hidden"
                     >
-                      <p className="px-6 pb-5 text-stone-600 leading-relaxed">
+                      <p className="px-6 pb-5 text-body leading-relaxed">
                         {item.answer}
                       </p>
                     </motion.div>

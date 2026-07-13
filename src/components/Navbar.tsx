@@ -29,7 +29,7 @@ export default function Navbar() {
             <button
               key={item.id}
               onClick={() => scrollTo(item.id)}
-              className="text-sm font-medium text-stone-600 hover:text-rose-600 transition-colors"
+              className="text-sm font-medium text-body hover:text-heading transition-colors"
             >
               {item.label}
             </button>
@@ -39,14 +39,14 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           <button
             onClick={toggleLang}
-            className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-full border border-sage-300 text-stone-700 hover:bg-sage-50 transition-colors"
+            className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-full border border-sage-300 text-body hover:bg-sage-50 transition-colors"
             aria-label="Toggle language"
           >
             <Globe size={16} />
             {lang === "en" ? "العربية" : "English"}
           </button>
           <button
-            className="md:hidden p-2 text-stone-600"
+            className="md:hidden p-2 text-body"
             onClick={() => setOpen((v) => !v)}
             aria-label="Toggle menu"
           >
@@ -71,7 +71,7 @@ export default function Navbar() {
                     scrollTo(item.id);
                     setOpen(false);
                   }}
-                  className="text-start text-sm font-medium text-stone-600 hover:text-rose-600 transition-colors"
+                  className="text-start text-sm font-medium text-body hover:text-heading transition-colors"
                 >
                   {item.label}
                 </button>

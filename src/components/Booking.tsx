@@ -19,10 +19,10 @@ export default function Booking() {
           <div className="absolute -top-16 -end-16 w-64 h-64 rounded-full bg-peach-300/50 blur-3xl" />
           <div className="absolute -bottom-16 -start-16 w-64 h-64 rounded-full bg-lavender-300/50 blur-3xl" />
 
-          <h2 className="relative font-heading text-3xl sm:text-4xl font-bold text-rose-600 mb-5">
+          <h2 className="relative font-heading text-3xl sm:text-4xl font-bold text-heading mb-5">
             {t.title}
           </h2>
-          <p className="relative text-stone-600 leading-relaxed max-w-xl mx-auto mb-10">
+          <p className="relative text-body leading-relaxed max-w-xl mx-auto mb-10">
             {t.description}
           </p>
           <a

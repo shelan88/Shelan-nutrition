@@ -20,7 +20,7 @@ export default function InfoHub() {
           <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-500 mb-3">
             {t.kicker}
           </p>
-          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-rose-600">
+          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-heading">
             {t.title}
           </h2>
         </div>
@@ -41,15 +41,15 @@ export default function InfoHub() {
                 <div className={`w-14 h-14 rounded-2xl ${accent.chip} flex items-center justify-center mb-6`}>
                   <Icon className={accent.icon} size={26} />
                 </div>
-                <h3 className="font-heading text-xl font-semibold text-rose-600 mb-3">
+                <h3 className="font-heading text-xl font-semibold text-heading mb-3">
                   {section.title}
                 </h3>
-                <p className="text-stone-600 leading-relaxed mb-6">
+                <p className="text-body leading-relaxed mb-6">
                   {section.description}
                 </p>
                 <ul className="space-y-2.5">
                   {section.points.map((point: string, j: number) => (
-                    <li key={j} className="flex items-start gap-3 text-stone-700 text-sm">
+                    <li key={j} className="flex items-start gap-3 text-body text-sm">
                       <span className={`w-1.5 h-1.5 rounded-full ${accent.dot} shrink-0 mt-1.5`} />
                       {point}
                     </li>

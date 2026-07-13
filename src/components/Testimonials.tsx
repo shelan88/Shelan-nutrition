@@ -23,10 +23,10 @@ export default function Testimonials() {
           <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-500 mb-3">
             {t.kicker}
           </p>
-          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-rose-600 mb-4">
+          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-heading mb-4">
             {t.title}
           </h2>
-          <p className="text-stone-600 leading-relaxed">{t.subtitle}</p>
+          <p className="text-body leading-relaxed">{t.subtitle}</p>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -44,7 +44,7 @@ export default function Testimonials() {
                 <div className={`w-10 h-10 rounded-xl ${accent.chip} flex items-center justify-center mb-4`}>
                   <Quote className={accent.icon} size={18} />
                 </div>
-                <p className="text-stone-600 leading-relaxed text-sm flex-1">
+                <p className="text-body leading-relaxed text-sm flex-1">
                   {quote}
                 </p>
               </motion.div>

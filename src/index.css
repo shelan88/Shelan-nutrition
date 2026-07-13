@@ -1,9 +1,28 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Cairo:wght@400;500;600;700;800&family=Tajawal:wght@300;400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Amiri:wght@600;700&family=Inter:wght@300;400;500;600;700&family=Almarai:wght@300;400;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-heading: "Montserrat", "Cairo", sans-serif;
-  --font-body: "Inter", "Tajawal", sans-serif;
+  /* Typography — Playfair Display for headings (Amiri for Arabic headings),
+     Inter for English body copy, Almarai for Arabic body copy. */
+  --font-heading: "Playfair Display", "Amiri", serif;
+  --font-body: "Inter", "Almarai", sans-serif;
+
+  /* Fluid, rem-based type scale — smoothly interpolates between mobile and
+     desktop viewports instead of jumping at breakpoints. Desktop-size ceiling
+     matches the previous fixed values, so large screens are unaffected. */
+  --text-sm: clamp(0.8125rem, 0.78rem + 0.15vw, 0.875rem);
+  --text-lg: clamp(1.0625rem, 1rem + 0.3vw, 1.125rem);
+  --text-xl: clamp(1.125rem, 1.05rem + 0.4vw, 1.25rem);
+  --text-2xl: clamp(1.25rem, 1.1rem + 0.7vw, 1.5rem);
+  --text-3xl: clamp(1.5rem, 1.3rem + 1vw, 1.875rem);
+  --text-4xl: clamp(1.75rem, 1.4rem + 1.7vw, 2.25rem);
+  --text-5xl: clamp(2rem, 1.5rem + 2.3vw, 3rem);
+  --text-6xl: clamp(2.25rem, 1.6rem + 2.9vw, 3.75rem);
+
+  /* Smart color variables for primary text — never hardcode heading/body
+     colors in components; use text-heading / text-body utilities instead. */
+  --color-heading: var(--text-heading);
+  --color-body: var(--text-body);
 
   /* Base — warm cream/off-white background */
   --color-cream-50: #fdfbf7;
@@ -48,6 +67,20 @@
   --color-rose-700: #5c262e;
 }
 
+:root {
+  /* Deep Rose for all headings — same hex across light & dark. */
+  --text-heading: #8e3b46;
+  /* Charcoal Grey body text in light mode. */
+  --text-body: #333333;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Soft Cream body text in dark mode — gentle on the eyes. */
+    --text-body: #eaeaea;
+  }
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -56,20 +89,21 @@ body {
   margin: 0;
   font-family: var(--font-body);
   background-color: var(--color-cream-50);
-  color: #4a4038;
+  color: var(--text-body);
   -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
+  color: var(--text-heading);
 }
 
 [dir="rtl"] body {
-  font-family: "Tajawal", "Inter", sans-serif;
+  font-family: "Almarai", "Inter", sans-serif;
 }
 
 [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] h4 {
-  font-family: "Cairo", "Montserrat", sans-serif;
+  font-family: "Amiri", "Playfair Display", serif;
 }
 
 ::selection {
