@@ -84,9 +84,10 @@ export const about = {
     ],
     credentialsLabel: "المؤهلات ومجالات التركيز",
     credentials: [
-      "أخصائية تغذية سريرية معتمدة",
-      "متخصصة في تغذية الليبيديما",
-      "ممارسة صحة شاملة",
+      "#الاخصائية_شيلان",
+      "أخصائية تغذية شمولية وكبير مستشاري الصحة",
+      "🇺🇸 US-Certified Holistic Nutritionist & Master Health Consultant",
+      "🌱 Gut Health Specialist & Wellness Coach",
     ],
     imageAlt: "صورة شخصية لشيلان",
   },
