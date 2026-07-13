@@ -39,7 +39,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-slate-950/75 border-b border-white/10">
+    <header className="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-plum-950/75 border-b border-white/10">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 flex items-center justify-between h-24">
         <a href="#top" className="flex items-center shrink-0">
           <img
@@ -93,7 +93,7 @@ export default function Navbar() {
             animate="visible"
             exit="exit"
             variants={overlayVariants}
-            className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-slate-950/98 backdrop-blur-xl"
+            className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-plum-950/98 backdrop-blur-xl"
           >
             <nav className="flex flex-col items-center gap-7">
               {items.map((item: (typeof items)[number]) => (
@@ -102,7 +102,7 @@ export default function Navbar() {
                   type="button"
                   variants={linkVariants}
                   onClick={() => handleNavClick(item.id)}
-                  className="font-heading text-3xl sm:text-4xl font-bold text-ivory hover:text-rose-300 transition-colors"
+                  className="font-heading text-3xl sm:text-4xl font-bold text-ivory hover:text-orchid-300 transition-colors"
                 >
                   {item.label}
                 </motion.button>

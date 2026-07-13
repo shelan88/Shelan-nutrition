@@ -10,10 +10,10 @@ export default function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="section-dark py-24 bg-slate-950">
+    <section id="faq" className="section-dark py-24 bg-plum-950">
       <div className="max-w-3xl mx-auto px-6 lg:px-10">
         <div className="text-center mb-16">
-          <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-300 mb-3">
+          <p className="uppercase tracking-[0.2em] text-xs font-semibold text-orchid-300 mb-3">
             {t.kicker}
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-bold text-heading">
@@ -27,7 +27,7 @@ export default function FAQ() {
             return (
               <div
                 key={i}
-                className="bg-slate-800 rounded-2xl border border-white/10 shadow-md shadow-black/30 overflow-hidden"
+                className="bg-plum-800 rounded-2xl border border-white/10 shadow-md shadow-black/30 overflow-hidden"
               >
                 <button
                   onClick={() => setOpenIndex(isOpen ? null : i)}
@@ -38,7 +38,7 @@ export default function FAQ() {
                   <motion.span
                     animate={{ rotate: isOpen ? 180 : 0 }}
                     transition={{ duration: 0.3 }}
-                    className="shrink-0 text-sage-400"
+                    className="shrink-0 text-orchid-300"
                   >
                     <ChevronDown size={20} />
                   </motion.span>
