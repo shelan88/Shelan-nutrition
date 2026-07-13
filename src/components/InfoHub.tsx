@@ -5,8 +5,8 @@ import { infoHub } from "@/content/content";
 
 const icons = [BookOpen, Activity];
 const accents = [
-  { chip: "bg-lavender-100", icon: "text-lavender-600", border: "border-lavender-200", dot: "bg-lavender-400" },
-  { chip: "bg-sage-100", icon: "text-sage-600", border: "border-sage-200", dot: "bg-sage-400" },
+  { chip: "bg-lavender-100", icon: "text-lavender-600", border: "border-lavender-200", dot: "bg-lavender-400", shadow: "shadow-lavender-300/25" },
+  { chip: "bg-peach-100", icon: "text-peach-600", border: "border-peach-200", dot: "bg-peach-400", shadow: "shadow-peach-300/25" },
 ];
 
 export default function InfoHub() {
@@ -14,7 +14,7 @@ export default function InfoHub() {
   const t = infoHub[lang];
 
   return (
-    <section id="info-hub" className="py-24 bg-gradient-to-b from-cream-50 via-lavender-50/60 to-cream-50">
+    <section id="info-hub" className="py-24 bg-gradient-to-b from-sage-100 via-sage-50 to-sage-100/70">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-500 mb-3">
@@ -36,7 +36,7 @@ export default function InfoHub() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.3 }}
                 transition={{ duration: 0.6, delay: i * 0.1 }}
-                className={`rounded-3xl p-9 bg-gradient-to-br ${accent.chip} to-cream-50 border ${accent.border}`}
+                className={`rounded-3xl p-9 bg-white shadow-md ${accent.shadow} border ${accent.border} hover:-translate-y-1 hover:shadow-lg transition-all duration-300`}
               >
                 <div className={`w-14 h-14 rounded-2xl ${accent.chip} flex items-center justify-center mb-6`}>
                   <Icon className={accent.icon} size={26} />

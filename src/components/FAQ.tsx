@@ -10,7 +10,7 @@ export default function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="py-24 bg-gradient-to-b from-lavender-100/70 via-lavender-50 to-white">
+    <section id="faq" className="py-24 bg-gradient-to-b from-lavender-100 via-lavender-50 to-cream-50">
       <div className="max-w-3xl mx-auto px-6 lg:px-10">
         <div className="text-center mb-16">
           <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-500 mb-3">
@@ -27,7 +27,7 @@ export default function FAQ() {
             return (
               <div
                 key={i}
-                className="bg-white rounded-2xl border border-lavender-200 overflow-hidden"
+                className="bg-white rounded-2xl border border-lavender-200 shadow-sm shadow-lavender-300/20 overflow-hidden"
               >
                 <button
                   onClick={() => setOpenIndex(isOpen ? null : i)}
