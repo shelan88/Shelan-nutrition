@@ -14,7 +14,7 @@ export default function Navbar() {
   const items = nav[lang];
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-white/80 border-b border-lavender-100">
+    <header className="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-cream-50/80 border-b border-sage-200">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 flex items-center justify-between h-20">
         <a href="#top" className="flex items-center shrink-0">
           <img
@@ -29,7 +29,7 @@ export default function Navbar() {
             <button
               key={item.id}
               onClick={() => scrollTo(item.id)}
-              className="text-sm font-medium text-gray-600 hover:text-rose-500 transition-colors"
+              className="text-sm font-medium text-stone-600 hover:text-rose-600 transition-colors"
             >
               {item.label}
             </button>
@@ -39,14 +39,14 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           <button
             onClick={toggleLang}
-            className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-full border border-lavender-200 text-lavender-700 hover:bg-lavender-50 transition-colors"
+            className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-full border border-sage-300 text-stone-700 hover:bg-sage-50 transition-colors"
             aria-label="Toggle language"
           >
             <Globe size={16} />
             {lang === "en" ? "العربية" : "English"}
           </button>
           <button
-            className="md:hidden p-2 text-gray-600"
+            className="md:hidden p-2 text-stone-600"
             onClick={() => setOpen((v) => !v)}
             aria-label="Toggle menu"
           >
@@ -61,7 +61,7 @@ export default function Navbar() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="md:hidden overflow-hidden bg-white border-t border-lavender-100"
+            className="md:hidden overflow-hidden bg-cream-50 border-t border-sage-200"
           >
             <div className="flex flex-col px-6 py-4 gap-4">
               {items.map((item: (typeof items)[number]) => (
@@ -71,7 +71,7 @@ export default function Navbar() {
                     scrollTo(item.id);
                     setOpen(false);
                   }}
-                  className="text-start text-sm font-medium text-gray-600 hover:text-rose-500 transition-colors"
+                  className="text-start text-sm font-medium text-stone-600 hover:text-rose-600 transition-colors"
                 >
                   {item.label}
                 </button>

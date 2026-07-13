@@ -5,23 +5,47 @@
   --font-heading: "Montserrat", "Cairo", sans-serif;
   --font-body: "Inter", "Tajawal", sans-serif;
 
-  --color-lavender-50: #f8f7fc;
-  --color-lavender-100: #efecf8;
-  --color-lavender-200: #ddd6f0;
-  --color-lavender-300: #c3b6e3;
-  --color-lavender-400: #a58ed2;
-  --color-lavender-500: #8b6cc1;
-  --color-lavender-600: #7454a8;
-  --color-lavender-700: #5e4389;
+  /* Base — warm cream/off-white background */
+  --color-cream-50: #fdfbf7;
+  --color-cream-100: #f8f3ea;
 
-  --color-rose-50: #fdf3f3;
-  --color-rose-100: #f9e2e2;
-  --color-rose-200: #eebabc;
-  --color-rose-300: #e08d90;
-  --color-rose-400: #cf6369;
-  --color-rose-500: #b8434a;
-  --color-rose-600: #9c333a;
-  --color-rose-700: #7d272d;
+  /* Pastel Lavender — background accents (service cards, FAQ) */
+  --color-lavender-50: #f7f4fa;
+  --color-lavender-100: #ede6f2;
+  --color-lavender-200: #dfd2e9;
+  --color-lavender-300: #d3c3e0;
+  --color-lavender-400: #bba3cc;
+  --color-lavender-500: #a183b5;
+  --color-lavender-600: #866b99;
+  --color-lavender-700: #6b5480;
+
+  /* Soft Sage Green — minor accents, icons, subtle borders */
+  --color-sage-50: #f4f6ef;
+  --color-sage-100: #e6ebda;
+  --color-sage-200: #d7dfc5;
+  --color-sage-300: #c8d1b6;
+  --color-sage-400: #b3bf9c;
+  --color-sage-500: #9caa80;
+  --color-sage-600: #839268;
+
+  /* Dusty Peach — CTA buttons and highlights */
+  --color-peach-50: #fef6f0;
+  --color-peach-100: #fce8da;
+  --color-peach-200: #fad9c1;
+  --color-peach-300: #f7c5a8;
+  --color-peach-400: #f0a67d;
+  --color-peach-500: #e68b5c;
+  --color-peach-600: #cc6f42;
+
+  /* Deep Rose — headings & body text only, for contrast/readability */
+  --color-rose-50: #f5e9ea;
+  --color-rose-100: #e9cbce;
+  --color-rose-200: #d39ca2;
+  --color-rose-300: #bd6e77;
+  --color-rose-400: #a5505a;
+  --color-rose-500: #8e3b46;
+  --color-rose-600: #74303a;
+  --color-rose-700: #5c262e;
 }
 
 html {
@@ -31,8 +55,8 @@ html {
 body {
   margin: 0;
   font-family: var(--font-body);
-  background-color: #ffffff;
-  color: #2b2733;
+  background-color: var(--color-cream-50);
+  color: #4a4038;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -49,5 +73,5 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 ::selection {
-  background-color: var(--color-rose-200);
+  background-color: var(--color-peach-200);
 }

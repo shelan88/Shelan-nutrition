@@ -46,14 +46,14 @@ export default function Footer() {
             <a
               href="#"
               aria-label="Instagram"
-              className="w-10 h-10 rounded-full bg-lavender-600 flex items-center justify-center hover:bg-rose-500 transition-colors"
+              className="w-10 h-10 rounded-full bg-lavender-600 flex items-center justify-center hover:bg-peach-300 hover:text-rose-700 transition-colors"
             >
               <AtSign size={18} />
             </a>
             <a
               href="#"
               aria-label="Facebook"
-              className="w-10 h-10 rounded-full bg-lavender-600 flex items-center justify-center hover:bg-rose-500 transition-colors"
+              className="w-10 h-10 rounded-full bg-lavender-600 flex items-center justify-center hover:bg-peach-300 hover:text-rose-700 transition-colors"
             >
               <Share2 size={18} />
             </a>
