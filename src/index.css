@@ -19,11 +19,6 @@
   --text-5xl: clamp(2rem, 1.5rem + 2.3vw, 3rem);
   --text-6xl: clamp(2.25rem, 1.6rem + 2.9vw, 3.75rem);
 
-  /* Smart color variables for primary text — never hardcode heading/body
-     colors in components; use text-heading / text-body utilities instead. */
-  --color-heading: var(--text-heading);
-  --color-body: var(--text-body);
-
   /* Base — warm cream/off-white background */
   --color-cream-50: #fdfbf7;
   --color-cream-100: #f8f3ea;
@@ -65,12 +60,23 @@
   --color-rose-500: #8e3b46;
   --color-rose-600: #74303a;
   --color-rose-700: #5c262e;
+
+  /* Cinematic dark palette — deep slate/charcoal backgrounds for the
+     premium, elevated sections, and ivory text for high contrast on them. */
+  --color-slate-950: #0b1120;
+  --color-slate-900: #0f172a;
+  --color-slate-800: #1f2937;
+  --color-slate-700: #2b3648;
+  --color-slate-600: #3d4a60;
+  --color-ivory: #f9fafb;
+  --color-ivory-muted: #cbd5e1;
+  --color-charcoal-900: #111827;
 }
 
 :root {
   /* Deep Rose for all headings — same hex across light & dark. */
   --text-heading: #8e3b46;
-  /* Charcoal Grey body text in light mode. */
+  /* Charcoal Grey body text in light mode (never pure black). */
   --text-body: #333333;
 }
 
@@ -79,6 +85,16 @@
     /* Soft Cream body text in dark mode — gentle on the eyes. */
     --text-body: #eaeaea;
   }
+}
+
+/* Scoped override for cinematic dark sections: components opt in with the
+   `section-dark` class and every `text-heading` / `text-body` utility inside
+   automatically recolors to ivory tones for premium, high-contrast reading
+   on deep slate backgrounds. */
+.section-dark {
+  --text-heading: var(--color-ivory);
+  --text-body: var(--color-ivory-muted);
+  color-scheme: dark;
 }
 
 html {
@@ -91,17 +107,67 @@ section[id] {
   scroll-margin-top: 6rem;
 }
 
+/* --- iOS Safari text-rendering fix ---------------------------------------
+   Safari on iOS can render text extremely faint/washed-out when font
+   smoothing is left to its defaults, especially at the medium/semibold
+   weights used across this site. Force antialiasing + legibility-optimized
+   rendering globally, and never rely on implicit (unset) font weights. */
+*,
+*::before,
+*::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
 body {
   margin: 0;
   font-family: var(--font-body);
   background-color: var(--color-cream-50);
   color: var(--text-body);
+  font-weight: 500;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+p, span, li, a, button, input, textarea, label {
+  font-weight: 500;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   color: var(--text-heading);
+  font-weight: 700;
+}
+
+/* Hand-rolled (not @theme-generated) utilities: a direct, single-level
+   var() reference so these colors properly inherit the `.section-dark`
+   override on descendants. Tailwind v4 registers @theme color tokens via
+   `@property` with `inherits: false`, which silently breaks this exact
+   "recolor per-section via a scoped custom property" pattern — going
+   through an extra --color-heading/--color-body indirection layer made
+   text fall back to an unstyled value instead of cascading. Keep these
+   simple and do not reintroduce the indirection. */
+.text-heading {
+  color: var(--text-heading);
+}
+.text-body {
+  color: var(--text-body);
+}
+.text-body-muted {
+  color: var(--text-body);
+  opacity: 0.8;
+}
+
+/* Hide scrollbars on horizontally-scrolling elements (testimonial slider)
+   while keeping native touch/trackpad scrolling fully functional. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 [dir="rtl"] body {

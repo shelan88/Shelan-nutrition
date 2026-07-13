@@ -1,29 +1,50 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Quote } from "lucide-react";
+import { Quote, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { successStoriesSection, successStories } from "@/content/content";
 
 const accents = [
-  { border: "border-sage-200", icon: "text-sage-500", ring: "shadow-sage-300/20" },
-  { border: "border-peach-200", icon: "text-peach-500", ring: "shadow-peach-300/20" },
-  { border: "border-lavender-200", icon: "text-lavender-500", ring: "shadow-lavender-300/20" },
+  { chip: "bg-sage-500/15", icon: "text-sage-300", border: "border-white/10" },
+  { chip: "bg-peach-500/15", icon: "text-peach-300", border: "border-white/10" },
+  { chip: "bg-lavender-500/15", icon: "text-lavender-300", border: "border-white/10" },
 ];
+
+// Deterministic bento pattern: every 6th card is a wide "feature" card, every
+// 4th (offset) is a tall card — creates an asymmetrical, editorial rhythm
+// without any layout randomness between renders.
+function bentoSpan(i: number) {
+  if (i % 6 === 0) return "sm:col-span-2";
+  if (i % 5 === 3) return "lg:row-span-2";
+  return "";
+}
 
 export default function SuccessStories() {
   const { lang } = useLanguage();
   const t = successStoriesSection[lang];
   const stories = successStories[lang];
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (activeIndex === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setActiveIndex(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [activeIndex]);
+
+  const active = activeIndex !== null ? stories[activeIndex] : null;
+  const activeAccent = activeIndex !== null ? accents[activeIndex % accents.length] : accents[0];
 
   return (
     <section
       id="success-stories"
-      className="py-24 bg-gradient-to-b from-cream-50 via-peach-50 to-lavender-50"
+      className="section-dark py-24 bg-slate-950"
     >
-      <div className="max-w-3xl mx-auto px-6 lg:px-10">
-        <div className="text-center mb-16">
-          <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-500 mb-3">
+      <div className="max-w-7xl mx-auto px-6 lg:px-10">
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-300 mb-3">
             {t.kicker}
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-bold text-heading mb-4">
@@ -32,58 +53,77 @@ export default function SuccessStories() {
           <p className="text-body leading-relaxed">{t.subtitle}</p>
         </div>
 
-        <div className="space-y-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 auto-rows-[200px]">
           {stories.map((item, i) => {
-            const isOpen = openIndex === i;
             const accent = accents[i % accents.length];
             return (
-              <motion.div
+              <motion.button
                 key={i}
-                initial={{ opacity: 0, y: 16 }}
+                type="button"
+                onClick={() => setActiveIndex(i)}
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.2 }}
                 transition={{ duration: 0.5, delay: (i % 6) * 0.05 }}
-                className={`bg-white rounded-2xl border ${accent.border} shadow-sm ${accent.ring} overflow-hidden`}
+                whileHover={{ y: -4, scale: 1.015 }}
+                whileTap={{ scale: 0.98 }}
+                className={`group relative text-start bg-slate-800 rounded-2xl border ${accent.border} shadow-lg shadow-black/30 hover:shadow-xl hover:shadow-black/50 hover:border-white/20 transition-shadow duration-300 p-6 flex flex-col overflow-hidden ${bentoSpan(i)}`}
               >
-                <button
-                  onClick={() => setOpenIndex(isOpen ? null : i)}
-                  className="w-full flex items-start sm:items-center justify-between gap-4 text-start px-6 py-5"
-                  aria-expanded={isOpen}
-                >
-                  <span className="flex items-start gap-3">
-                    <Quote className={`shrink-0 mt-0.5 ${accent.icon}`} size={18} />
-                    <span className="font-medium text-heading leading-snug">
-                      {item.title}
-                    </span>
-                  </span>
-                  <motion.span
-                    animate={{ rotate: isOpen ? 180 : 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="shrink-0 text-sage-600 mt-1 sm:mt-0"
-                  >
-                    <ChevronDown size={20} />
-                  </motion.span>
-                </button>
-                <AnimatePresence initial={false}>
-                  {isOpen && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
-                      className="overflow-hidden"
-                    >
-                      <p className="px-6 pb-6 text-body leading-relaxed">
-                        {item.content}
-                      </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
+                <div className={`w-10 h-10 rounded-xl ${accent.chip} flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110`}>
+                  <Quote className={accent.icon} size={18} />
+                </div>
+                <p className="font-medium text-heading leading-snug line-clamp-3">
+                  {item.title}
+                </p>
+                <p className="mt-2 text-sm text-body-muted leading-relaxed line-clamp-2 flex-1">
+                  {item.content}
+                </p>
+                <span className="mt-3 text-xs font-semibold uppercase tracking-wide text-rose-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  {lang === "ar" ? "اقرأي القصة كاملة" : "Read full story"}
+                </span>
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </motion.button>
             );
           })}
         </div>
       </div>
+
+      <AnimatePresence>
+        {active && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-sm"
+            onClick={() => setActiveIndex(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-2xl w-full max-h-[85vh] overflow-y-auto bg-slate-800 border border-white/10 rounded-3xl p-8 sm:p-10 shadow-2xl shadow-black/60"
+            >
+              <button
+                onClick={() => setActiveIndex(null)}
+                aria-label="Close"
+                className="absolute top-5 end-5 w-9 h-9 rounded-full flex items-center justify-center text-ivory-muted hover:bg-white/10 hover:text-ivory transition-colors"
+              >
+                <X size={18} />
+              </button>
+              <div className={`w-11 h-11 rounded-xl ${activeAccent.chip} flex items-center justify-center mb-6`}>
+                <Quote className={activeAccent.icon} size={20} />
+              </div>
+              <h3 className="font-heading text-2xl font-bold text-heading mb-4 leading-snug">
+                {active.title}
+              </h3>
+              <p className="text-body leading-relaxed">{active.content}</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

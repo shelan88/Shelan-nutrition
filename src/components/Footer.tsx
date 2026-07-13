@@ -8,24 +8,24 @@ export default function Footer() {
   const meta = siteMeta[lang];
 
   return (
-    <footer className="bg-lavender-700 text-lavender-50 pt-16 pb-8">
+    <footer className="bg-slate-950 text-ivory-muted pt-16 pb-8 border-t border-white/10">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 grid sm:grid-cols-3 gap-10 mb-12">
         <div>
-          <div className="inline-flex bg-cream-50 rounded-2xl px-5 py-3 mb-4 shadow-md">
+          <div className="inline-flex bg-white/95 rounded-2xl px-5 py-3 mb-4 shadow-lg shadow-black/40">
             <img
               src="/logo.png"
               alt="SHELAN Nutritionist Logo"
               className="h-20 w-auto object-contain"
             />
           </div>
-          <p className="text-sm text-lavender-200">{t.tagline}</p>
+          <p className="text-sm text-ivory-muted">{t.tagline}</p>
         </div>
 
         <div>
-          <p className="text-sm font-semibold mb-4 text-lavender-100">
+          <p className="text-sm font-semibold mb-4 text-ivory">
             {t.contactTitle}
           </p>
-          <ul className="space-y-3 text-sm text-lavender-200">
+          <ul className="space-y-3 text-sm text-ivory-muted">
             <li className="flex items-center gap-2">
               <Mail size={16} /> {t.email}
             </li>
@@ -39,21 +39,21 @@ export default function Footer() {
         </div>
 
         <div>
-          <p className="text-sm font-semibold mb-4 text-lavender-100">
+          <p className="text-sm font-semibold mb-4 text-ivory">
             {t.socialTitle}
           </p>
           <div className="flex gap-3">
             <a
               href="#"
               aria-label="Instagram"
-              className="w-10 h-10 rounded-full bg-lavender-600 flex items-center justify-center hover:bg-peach-300 hover:text-rose-700 transition-colors"
+              className="w-10 h-10 rounded-full bg-white/10 border border-white/10 flex items-center justify-center hover:bg-rose-500/30 hover:text-rose-200 transition-colors"
             >
               <AtSign size={18} />
             </a>
             <a
               href="#"
               aria-label="Facebook"
-              className="w-10 h-10 rounded-full bg-lavender-600 flex items-center justify-center hover:bg-peach-300 hover:text-rose-700 transition-colors"
+              className="w-10 h-10 rounded-full bg-white/10 border border-white/10 flex items-center justify-center hover:bg-rose-500/30 hover:text-rose-200 transition-colors"
             >
               <Share2 size={18} />
             </a>
@@ -61,7 +61,7 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 border-t border-lavender-600 text-xs text-lavender-300 text-center">
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 border-t border-white/10 text-xs text-ivory-muted/70 text-center">
         © {new Date().getFullYear()} {meta.name}. {t.rights}
       </div>
     </footer>

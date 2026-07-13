@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Globe } from "lucide-react";
+import { Globe } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { nav } from "@/content/content";
 
@@ -11,21 +11,35 @@ const scrollToSection = (id: string) => {
   }
 };
 
+const overlayVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.07, delayChildren: 0.08 },
+  },
+  exit: { opacity: 0, transition: { duration: 0.25 } },
+};
+
+const linkVariants = {
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" as const } },
+  exit: { opacity: 0, y: 12 },
+};
+
 export default function Navbar() {
   const { lang, toggleLang } = useLanguage();
   const [open, setOpen] = useState(false);
   const items = nav[lang];
 
-  const handleMobileNavClick = (id: string) => {
-    // Close the menu first, then let the collapse animation finish
-    // before scrolling so the closing menu never shifts the page
-    // layout mid-scroll.
+  const handleNavClick = (id: string) => {
+    // Close first, then let the exit animation finish before scrolling so
+    // the collapsing overlay never shifts layout mid-scroll.
     setOpen(false);
-    window.setTimeout(() => scrollToSection(id), 300);
+    window.setTimeout(() => scrollToSection(id), 320);
   };
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-cream-50/80 border-b border-sage-200">
+    <header className="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-slate-950/75 border-b border-white/10">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 flex items-center justify-between h-24">
         <a href="#top" className="flex items-center shrink-0">
           <img
@@ -35,59 +49,66 @@ export default function Navbar() {
           />
         </a>
 
-        <nav className="hidden md:flex items-center gap-8">
-          {items.map((item: (typeof items)[number]) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => scrollToSection(item.id)}
-              className="text-sm font-medium text-body hover:text-heading transition-colors"
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
-
         <div className="flex items-center gap-3">
           <button
             onClick={toggleLang}
-            className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-full border border-sage-300 text-body hover:bg-sage-50 transition-colors"
+            className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-full border border-white/15 text-ivory hover:bg-white/10 transition-colors"
             aria-label="Toggle language"
           >
             <Globe size={16} />
             {lang === "en" ? "العربية" : "English"}
           </button>
+
           <button
-            className="md:hidden p-2 text-body"
             onClick={() => setOpen((v) => !v)}
             aria-label="Toggle menu"
+            aria-expanded={open}
+            className="relative w-11 h-11 flex items-center justify-center rounded-full border border-white/15 hover:bg-white/10 transition-colors"
           >
-            {open ? <X size={22} /> : <Menu size={22} />}
+            <span className="relative w-5 h-4 flex flex-col justify-between">
+              <motion.span
+                animate={open ? { rotate: 45, y: 7 } : { rotate: 0, y: 0 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="block h-[1.5px] w-full bg-ivory rounded-full origin-center"
+              />
+              <motion.span
+                animate={open ? { opacity: 0 } : { opacity: 1 }}
+                transition={{ duration: 0.2 }}
+                className="block h-[1.5px] w-full bg-ivory rounded-full"
+              />
+              <motion.span
+                animate={open ? { rotate: -45, y: -7 } : { rotate: 0, y: 0 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="block h-[1.5px] w-full bg-ivory rounded-full origin-center"
+              />
+            </span>
           </button>
         </div>
       </div>
 
       <AnimatePresence>
         {open && (
-          <motion.nav
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="md:hidden fixed top-24 inset-x-0 z-40 overflow-hidden bg-cream-50 border-t border-sage-200 shadow-lg"
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={overlayVariants}
+            className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-slate-950/98 backdrop-blur-xl"
           >
-            <div className="flex flex-col px-6 py-4 gap-4">
+            <nav className="flex flex-col items-center gap-7">
               {items.map((item: (typeof items)[number]) => (
-                <button
+                <motion.button
                   key={item.id}
                   type="button"
-                  onClick={() => handleMobileNavClick(item.id)}
-                  className="text-start text-sm font-medium text-body hover:text-heading transition-colors"
+                  variants={linkVariants}
+                  onClick={() => handleNavClick(item.id)}
+                  className="font-heading text-3xl sm:text-4xl font-bold text-ivory hover:text-rose-300 transition-colors"
                 >
                   {item.label}
-                </button>
+                </motion.button>
               ))}
-            </div>
-          </motion.nav>
+            </nav>
+          </motion.div>
         )}
       </AnimatePresence>
     </header>

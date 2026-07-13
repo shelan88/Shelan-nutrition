@@ -7,7 +7,7 @@ export default function About() {
   const t = about[lang];
 
   return (
-    <section id="about" className="py-24 bg-gradient-to-b from-sage-100 via-sage-50 to-cream-50">
+    <section id="about" className="section-dark py-24 bg-slate-900">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 grid lg:grid-cols-2 gap-16 items-center">
         <motion.div
           initial={{ opacity: 0, x: lang === "ar" ? 40 : -40 }}
@@ -17,11 +17,11 @@ export default function About() {
           className="order-2 lg:order-1"
         >
           <div className="relative max-w-md">
-            <div className="absolute -inset-3 rounded-[2.25rem] bg-gradient-to-br from-peach-200 via-lavender-100 to-sage-100 -z-10" />
+            <div className="absolute -inset-3 rounded-[2.25rem] bg-gradient-to-br from-peach-500/25 via-lavender-500/20 to-sage-500/20 -z-10" />
             <img
               src="/portrait.jpg"
               alt={t.imageAlt}
-              className="w-full aspect-[4/5] object-cover rounded-[2rem] shadow-lg"
+              className="w-full aspect-[4/5] object-cover rounded-[2rem] shadow-2xl shadow-black/50"
             />
           </div>
         </motion.div>
@@ -33,7 +33,7 @@ export default function About() {
           transition={{ duration: 0.7 }}
           className="order-1 lg:order-2"
         >
-          <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-500 mb-3">
+          <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-300 mb-3">
             {t.kicker}
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-bold text-heading mb-6">
@@ -47,13 +47,13 @@ export default function About() {
             ))}
           </div>
 
-          <p className="text-sm font-semibold text-lavender-700 mb-3">
+          <p className="text-sm font-semibold text-lavender-300 mb-3">
             {t.credentialsLabel}
           </p>
           <ul className="space-y-2">
             {t.credentials.map((c: string, i: number) => (
               <li key={i} className="flex items-center gap-3 text-body">
-                <span className="w-1.5 h-1.5 rounded-full bg-sage-500 shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-sage-400 shrink-0" />
                 {c}
               </li>
             ))}

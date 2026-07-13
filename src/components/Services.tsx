@@ -5,9 +5,9 @@ import { services } from "@/content/content";
 
 const icons = [Salad, HeartPulse, Sparkles];
 const accents = [
-  { chip: "bg-sage-100", icon: "text-sage-600", border: "border-sage-200" },
-  { chip: "bg-peach-100", icon: "text-peach-600", border: "border-peach-200" },
-  { chip: "bg-lavender-100", icon: "text-lavender-600", border: "border-lavender-200" },
+  { chip: "bg-sage-500/15", icon: "text-sage-300", border: "border-white/10" },
+  { chip: "bg-peach-500/15", icon: "text-peach-300", border: "border-white/10" },
+  { chip: "bg-lavender-500/15", icon: "text-lavender-300", border: "border-white/10" },
 ];
 
 export default function Services() {
@@ -15,10 +15,10 @@ export default function Services() {
   const t = services[lang];
 
   return (
-    <section id="services" className="py-24 bg-gradient-to-b from-peach-100 via-peach-50 to-peach-100/70">
+    <section id="services" className="section-dark py-24 bg-slate-950">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-500 mb-3">
+          <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-300 mb-3">
             {t.kicker}
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-bold text-heading">
@@ -37,7 +37,7 @@ export default function Services() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.3 }}
                 transition={{ duration: 0.6, delay: i * 0.1 }}
-                className={`bg-white rounded-3xl p-8 shadow-md shadow-peach-300/20 border ${accent.border} hover:shadow-lg hover:shadow-peach-300/30 hover:-translate-y-1 transition-all duration-300`}
+                className={`bg-slate-800 rounded-3xl p-8 shadow-lg shadow-black/30 border ${accent.border} hover:shadow-xl hover:shadow-black/40 hover:-translate-y-1 transition-all duration-300`}
               >
                 <div className={`w-14 h-14 rounded-2xl ${accent.chip} flex items-center justify-center mb-6`}>
                   <Icon className={accent.icon} size={26} />
