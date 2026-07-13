@@ -4,8 +4,10 @@ import { Menu, X, Globe } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { nav } from "@/content/content";
 
-function scrollTo(id: string) {
+function scrollTo(e: React.MouseEvent<HTMLAnchorElement>, id: string) {
+  e.preventDefault();
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  window.history.pushState(null, "", `#${id}`);
 }
 
 export default function Navbar() {
@@ -26,13 +28,14 @@ export default function Navbar() {
 
         <nav className="hidden md:flex items-center gap-8">
           {items.map((item: (typeof items)[number]) => (
-            <button
+            <a
               key={item.id}
-              onClick={() => scrollTo(item.id)}
+              href={`#${item.id}`}
+              onClick={(e) => scrollTo(e, item.id)}
               className="text-sm font-medium text-body hover:text-heading transition-colors"
             >
               {item.label}
-            </button>
+            </a>
           ))}
         </nav>
 
@@ -65,16 +68,17 @@ export default function Navbar() {
           >
             <div className="flex flex-col px-6 py-4 gap-4">
               {items.map((item: (typeof items)[number]) => (
-                <button
+                <a
                   key={item.id}
-                  onClick={() => {
-                    scrollTo(item.id);
+                  href={`#${item.id}`}
+                  onClick={(e) => {
+                    scrollTo(e, item.id);
                     setOpen(false);
                   }}
                   className="text-start text-sm font-medium text-body hover:text-heading transition-colors"
                 >
                   {item.label}
-                </button>
+                </a>
               ))}
             </div>
           </motion.nav>
