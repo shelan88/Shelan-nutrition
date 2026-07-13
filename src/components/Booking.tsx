@@ -18,7 +18,7 @@ export default function Booking() {
           className="relative rounded-[2.5rem] bg-gradient-to-br from-plum-800 via-plum-900 to-plum-800 border border-white/10 px-8 py-16 sm:px-16 text-center overflow-hidden"
         >
           <div className="absolute -top-16 -end-16 w-64 h-64 rounded-full bg-rose-600/20 blur-3xl" />
-          <div className="absolute -bottom-16 -start-16 w-64 h-64 rounded-full bg-lavender-500/20 blur-3xl" />
+          <div className="absolute -bottom-16 -start-16 w-64 h-64 rounded-full bg-apricot-500/20 blur-3xl" />
 
           <h2 className="relative font-heading text-3xl sm:text-4xl font-bold text-heading mb-5">
             {t.title}

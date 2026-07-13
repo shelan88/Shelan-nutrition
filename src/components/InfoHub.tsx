@@ -5,8 +5,8 @@ import { infoHub } from "@/content/content";
 
 const icons = [BookOpen, Activity];
 const accents = [
-  { chip: "bg-sage-500/15", icon: "text-sage-300", border: "border-white/10", dot: "bg-sage-400" },
-  { chip: "bg-peach-500/15", icon: "text-peach-300", border: "border-white/10", dot: "bg-peach-400" },
+  { chip: "bg-rose-600/15", icon: "text-rose-300", border: "border-white/10", dot: "bg-rose-400" },
+  { chip: "bg-apricot-500/15", icon: "text-apricot-300", border: "border-white/10", dot: "bg-apricot-400" },
 ];
 
 export default function InfoHub() {

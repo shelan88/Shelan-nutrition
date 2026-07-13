@@ -18,7 +18,7 @@ export default function Hero() {
     >
       <div className="absolute inset-0 bg-gradient-to-b from-plum-900 via-plum-950 to-plum-950" />
       <div className="absolute -top-24 -end-24 w-96 h-96 rounded-full bg-rose-600/20 blur-3xl" />
-      <div className="absolute top-40 -start-32 w-80 h-80 rounded-full bg-lavender-500/20 blur-3xl" />
+      <div className="absolute top-40 -start-32 w-80 h-80 rounded-full bg-apricot-500/20 blur-3xl" />
 
       <div className="relative max-w-7xl mx-auto px-6 lg:px-10">
         <motion.div

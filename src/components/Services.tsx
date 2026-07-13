@@ -6,9 +6,8 @@ import { services } from "@/content/content";
 const icons = [Salad, HeartPulse, Sparkles];
 const accents = [
   { chip: "bg-rose-600/15", icon: "text-rose-300", border: "border-white/10" },
-  { chip: "bg-sage-500/15", icon: "text-sage-300", border: "border-white/10" },
-  { chip: "bg-peach-500/15", icon: "text-peach-300", border: "border-white/10" },
-  { chip: "bg-lavender-500/15", icon: "text-lavender-300", border: "border-white/10" },
+  { chip: "bg-apricot-500/15", icon: "text-apricot-300", border: "border-white/10" },
+  { chip: "bg-nude-500/15", icon: "text-nude-300", border: "border-white/10" },
 ];
 
 export default function Services() {

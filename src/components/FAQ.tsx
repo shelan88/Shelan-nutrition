@@ -38,7 +38,7 @@ export default function FAQ() {
                   <motion.span
                     animate={{ rotate: isOpen ? 180 : 0 }}
                     transition={{ duration: 0.3 }}
-                    className="shrink-0 text-lavender-300"
+                    className="shrink-0 text-nude-300"
                   >
                     <ChevronDown size={20} />
                   </motion.span>

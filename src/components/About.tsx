@@ -17,7 +17,7 @@ export default function About() {
           className="order-2 lg:order-1"
         >
           <div className="relative max-w-md">
-            <div className="absolute -inset-3 rounded-[2.25rem] bg-gradient-to-br from-rose-600/25 via-lavender-500/20 to-peach-400/20 -z-10" />
+            <div className="absolute -inset-3 rounded-[2.25rem] bg-gradient-to-br from-rose-600/25 via-apricot-500/20 to-nude-500/20 -z-10" />
             <img
               src="/portrait.jpg"
               alt={t.imageAlt}
@@ -47,7 +47,7 @@ export default function About() {
             ))}
           </div>
 
-          <p className="text-sm font-semibold text-lavender-300 mb-3">
+          <p className="text-sm font-semibold text-nude-300 mb-3">
             {t.credentialsLabel}
           </p>
           <ul className="space-y-2">

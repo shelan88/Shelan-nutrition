@@ -6,9 +6,8 @@ import { testimonialsSection, testimonials } from "@/content/content";
 
 const accents = [
   { chip: "bg-rose-600/15", icon: "text-rose-300" },
-  { chip: "bg-sage-500/15", icon: "text-sage-300" },
-  { chip: "bg-peach-500/15", icon: "text-peach-300" },
-  { chip: "bg-lavender-500/15", icon: "text-lavender-300" },
+  { chip: "bg-apricot-500/15", icon: "text-apricot-300" },
+  { chip: "bg-nude-500/15", icon: "text-nude-300" },
 ];
 
 export default function Testimonials() {

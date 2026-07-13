@@ -6,9 +6,8 @@ import { successStoriesSection, successStories } from "@/content/content";
 
 const accents = [
   { chip: "bg-rose-600/15", icon: "text-rose-300", border: "border-white/10" },
-  { chip: "bg-sage-500/15", icon: "text-sage-300", border: "border-white/10" },
-  { chip: "bg-peach-500/15", icon: "text-peach-300", border: "border-white/10" },
-  { chip: "bg-lavender-500/15", icon: "text-lavender-300", border: "border-white/10" },
+  { chip: "bg-apricot-500/15", icon: "text-apricot-300", border: "border-white/10" },
+  { chip: "bg-nude-500/15", icon: "text-nude-300", border: "border-white/10" },
 ];
 
 // Deterministic bento pattern: every 6th card is a wide "feature" card, every
@@ -79,7 +78,7 @@ export default function SuccessStories() {
                 <p className="mt-2 text-sm text-body-muted leading-relaxed line-clamp-2 flex-1">
                   {item.content}
                 </p>
-                <span className="mt-3 text-xs font-semibold uppercase tracking-wide text-lavender-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <span className="mt-3 text-xs font-semibold uppercase tracking-wide text-nude-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   {lang === "ar" ? "اقرأي القصة كاملة" : "Read full story"}
                 </span>
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
