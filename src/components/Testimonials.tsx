@@ -12,6 +12,7 @@ const accents = [
 export default function Testimonials() {
   const { lang } = useLanguage();
   const t = testimonialsSection[lang];
+  const quotes = testimonials[lang];
 
   return (
     <section
@@ -30,7 +31,7 @@ export default function Testimonials() {
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {testimonials.map((quote, i) => {
+          {quotes.map((quote, i) => {
             const accent = accents[i % accents.length];
             return (
               <motion.div

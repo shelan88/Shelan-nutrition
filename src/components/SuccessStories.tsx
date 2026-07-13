@@ -13,6 +13,7 @@ const accents = [
 export default function SuccessStories() {
   const { lang } = useLanguage();
   const t = successStoriesSection[lang];
+  const stories = successStories[lang];
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
@@ -32,7 +33,7 @@ export default function SuccessStories() {
         </div>
 
         <div className="space-y-4">
-          {successStories.map((item, i) => {
+          {stories.map((item, i) => {
             const isOpen = openIndex === i;
             const accent = accents[i % accents.length];
             return (

@@ -85,6 +85,12 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Offset anchor scrolling by the fixed header height (h-24 = 6rem) so
+   sections land fully visible below the navbar instead of tucked behind it. */
+section[id] {
+  scroll-margin-top: 6rem;
+}
+
 body {
   margin: 0;
   font-family: var(--font-body);
