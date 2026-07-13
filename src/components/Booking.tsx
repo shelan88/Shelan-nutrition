@@ -17,8 +17,8 @@ export default function Booking() {
           transition={{ duration: 0.7 }}
           className="relative rounded-[2.5rem] bg-gradient-to-br from-plum-800 via-plum-900 to-plum-800 border border-white/10 px-8 py-16 sm:px-16 text-center overflow-hidden"
         >
-          <div className="absolute -top-16 -end-16 w-64 h-64 rounded-full bg-rosegold-500/20 blur-3xl" />
-          <div className="absolute -bottom-16 -start-16 w-64 h-64 rounded-full bg-orchid-500/20 blur-3xl" />
+          <div className="absolute -top-16 -end-16 w-64 h-64 rounded-full bg-rose-600/20 blur-3xl" />
+          <div className="absolute -bottom-16 -start-16 w-64 h-64 rounded-full bg-lavender-500/20 blur-3xl" />
 
           <h2 className="relative font-heading text-3xl sm:text-4xl font-bold text-heading mb-5">
             {t.title}
@@ -29,7 +29,7 @@ export default function Booking() {
           <MagneticButton
             as="a"
             href="#booking"
-            className="relative inline-block px-9 py-4 rounded-full bg-rosegold-500 text-white font-semibold hover:bg-rosegold-600 transition-colors shadow-lg shadow-rosegold-900/50"
+            className="relative inline-block px-9 py-4 rounded-full bg-rose-600 text-white font-semibold hover:bg-rose-500 transition-colors shadow-lg shadow-rose-700/50"
           >
             {t.cta}
           </MagneticButton>

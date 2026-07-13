@@ -61,34 +61,20 @@
   --color-rose-600: #74303a;
   --color-rose-700: #5c262e;
 
-  /* "Orchid Dusk" — cinematic dark-feminine palette. Deep aubergine/plum
-     grounds (never true black) with orchid and rose-gold light, like
-     twilight settling over a blooming garden. Backgrounds carry a warm
-     violet undertone so they read as rich and feminine rather than
-     corporate slate/charcoal. */
-  --color-plum-950: #241530;
-  --color-plum-900: #2f1c3d;
-  --color-plum-800: #3c2650;
-  --color-plum-700: #4a3161;
-  --color-plum-600: #5c3d78;
-
-  /* Orchid — the primary glow accent: kickers, icon chips, link hovers. */
-  --color-orchid-300: #cbaee0;
-  --color-orchid-400: #ac82c9;
-  --color-orchid-500: #8f5cae;
-
-  /* Blush — a softer secondary bloom accent for variety within the family. */
-  --color-blush-300: #eccbd6;
-  --color-blush-400: #dda3b6;
-
-  /* Rose-gold — warm metallic accent reserved for primary CTAs. */
-  --color-rosegold-400: #c98a9c;
-  --color-rosegold-500: #b6708a;
-  --color-rosegold-600: #9c5876;
-  --color-rosegold-900: #4a1f2e;
+  /* "Cycle Bloom" — cinematic dark palette built directly from the brand's
+     four-phase wheel (menstrual rose, follicular sage, ovulation peach,
+     luteal lavender), deepened for a rich, premium night-mode ground
+     instead of the pastel-cream original. Base tone is a warm, dark
+     rosewood-brown (never true black) so the four accent hues stay warm
+     and feminine rather than reading cold/corporate. */
+  --color-plum-950: #1c1012;
+  --color-plum-900: #251619;
+  --color-plum-800: #302026;
+  --color-plum-700: #3d2a30;
+  --color-plum-600: #4c353d;
 
   --color-ivory: #ffffff;
-  --color-ivory-muted: #ddcce6;
+  --color-ivory-muted: #ecdcd8;
 }
 
 :root {

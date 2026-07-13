@@ -102,7 +102,7 @@ export default function Navbar() {
                   type="button"
                   variants={linkVariants}
                   onClick={() => handleNavClick(item.id)}
-                  className="font-heading text-3xl sm:text-4xl font-bold text-ivory hover:text-orchid-300 transition-colors"
+                  className="font-heading text-3xl sm:text-4xl font-bold text-ivory hover:text-lavender-300 transition-colors"
                 >
                   {item.label}
                 </motion.button>

@@ -5,9 +5,10 @@ import { useLanguage } from "@/context/LanguageContext";
 import { testimonialsSection, testimonials } from "@/content/content";
 
 const accents = [
-  { chip: "bg-orchid-500/15", icon: "text-orchid-300" },
-  { chip: "bg-rosegold-500/15", icon: "text-rosegold-400" },
-  { chip: "bg-blush-400/15", icon: "text-blush-300" },
+  { chip: "bg-rose-600/15", icon: "text-rose-300" },
+  { chip: "bg-sage-500/15", icon: "text-sage-300" },
+  { chip: "bg-peach-500/15", icon: "text-peach-300" },
+  { chip: "bg-lavender-500/15", icon: "text-lavender-300" },
 ];
 
 export default function Testimonials() {
@@ -49,7 +50,7 @@ export default function Testimonials() {
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-14">
           <div className="max-w-2xl">
-            <p className="uppercase tracking-[0.2em] text-xs font-semibold text-orchid-300 mb-3">
+            <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-300 mb-3">
               {t.kicker}
             </p>
             <h2 className="font-heading text-3xl sm:text-4xl font-bold text-heading mb-4">
