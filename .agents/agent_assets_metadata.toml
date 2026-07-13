@@ -1,0 +1,20 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "SyCmVk4aRxpOrESKEc8GV"
+uri = "file://attached_assets/generated_audio/shelan_voiceover_ar.mp3"
+type = "audio"
+title = "shelan arabic voiceover"
+
+[[outputs]]
+id = "npQ7oXfo4XgUbJJAQSX6I"
+uri = "file://attached_assets/generated_audio/music_shelan_promo_music_bed.mp3"
+type = "audio"
+title = "shelan promo music bed"
+
+[[outputs]]
+id = "ANssc32T7oCgvFIb8-DGV"
+uri = "file://attached_assets/generated_videos/shelan_promo_ar_final.mp4"
+type = "video"
+title = "SHELAN — Arabic Promo Video"
