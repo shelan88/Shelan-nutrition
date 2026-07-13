@@ -8,7 +8,7 @@ export default function Footer() {
   const meta = siteMeta[lang];
 
   return (
-    <footer className="bg-plum-950 text-ivory-muted pt-16 pb-8 border-t border-white/10">
+    <footer className="section-dark bg-purple-primary text-ivory-muted pt-16 pb-8 border-t border-white/10">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 grid sm:grid-cols-3 gap-10 mb-12">
         <div>
           <div className="inline-flex bg-white/95 rounded-2xl px-5 py-3 mb-4 shadow-lg shadow-black/40">
@@ -46,14 +46,14 @@ export default function Footer() {
             <a
               href="#"
               aria-label="Instagram"
-              className="w-10 h-10 rounded-full bg-white/10 border border-white/10 flex items-center justify-center hover:bg-apricot-500/30 hover:text-nude-300 transition-colors"
+              className="w-10 h-10 rounded-full bg-white/10 border border-white/10 flex items-center justify-center hover:bg-pink-accent/30 hover:text-white transition-colors"
             >
               <AtSign size={18} />
             </a>
             <a
               href="#"
               aria-label="Facebook"
-              className="w-10 h-10 rounded-full bg-white/10 border border-white/10 flex items-center justify-center hover:bg-apricot-500/30 hover:text-nude-300 transition-colors"
+              className="w-10 h-10 rounded-full bg-white/10 border border-white/10 flex items-center justify-center hover:bg-pink-accent/30 hover:text-white transition-colors"
             >
               <Share2 size={18} />
             </a>

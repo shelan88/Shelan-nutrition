@@ -5,8 +5,8 @@ import { infoHub } from "@/content/content";
 
 const icons = [BookOpen, Activity];
 const accents = [
-  { chip: "bg-rose-600/15", icon: "text-rose-300", border: "border-white/10", dot: "bg-rose-400" },
-  { chip: "bg-apricot-500/15", icon: "text-apricot-300", border: "border-white/10", dot: "bg-apricot-400" },
+  { chip: "bg-purple-secondary/10", icon: "text-purple-secondary", border: "border-purple-secondary/10", dot: "bg-purple-secondary" },
+  { chip: "bg-pink-accent/10", icon: "text-pink-accent", border: "border-pink-accent/10", dot: "bg-peach-warm" },
 ];
 
 export default function InfoHub() {
@@ -14,10 +14,10 @@ export default function InfoHub() {
   const t = infoHub[lang];
 
   return (
-    <section id="info-hub" className="section-dark py-24 bg-plum-900">
+    <section id="info-hub" className="py-24 bg-white">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-300 mb-3">
+          <p className="uppercase tracking-[0.2em] text-xs font-semibold text-pink-accent mb-3">
             {t.kicker}
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-bold text-heading">
@@ -36,7 +36,7 @@ export default function InfoHub() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.3 }}
                 transition={{ duration: 0.6, delay: i * 0.1 }}
-                className={`rounded-3xl p-9 bg-plum-800 shadow-lg shadow-black/30 border ${accent.border} hover:-translate-y-1 hover:shadow-xl hover:shadow-black/40 transition-all duration-300`}
+                className={`rounded-3xl p-9 bg-white shadow-lg shadow-purple-primary/10 border ${accent.border} hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-primary/15 transition-all duration-300`}
               >
                 <div className={`w-14 h-14 rounded-2xl ${accent.chip} flex items-center justify-center mb-6`}>
                   <Icon className={accent.icon} size={26} />

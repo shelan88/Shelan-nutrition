@@ -61,46 +61,35 @@
   --color-rose-600: #74303a;
   --color-rose-700: #5c262e;
 
-  /* "Modern Bloom" — a moderately dark, purely feminine palette built from
-     three families only: dusty rose/pink, warm apricot, and understated
-     nude/beige. Base tone is a warm mid-dark mocha (never near-black,
-     never cold slate) so it reads rich and elegant rather than heavy. */
-  --color-plum-950: #3a2c28;
-  --color-plum-900: #453530;
-  --color-plum-800: #52403a;
-  --color-plum-700: #614c44;
-  --color-plum-600: #715a50;
+  /* Premium feminine luxury system — exactly five brand colors:
+     Primary Dark Purple, Secondary Purple, Elegant Pink, Soft Blush Pink,
+     and Warm Peach. Dark Purple owns the navbar/hero/footer/CTA; everything
+     else lives on white with Dark Purple text, Secondary Purple for cards
+     and gradients, Elegant Pink as the accent, Blush Pink for soft washes,
+     and Peach used only for small, sparing details. */
+  --color-purple-primary: #4a1f6d;
+  --color-purple-secondary: #6b2f8a;
+  --color-pink-accent: #e96ba8;
+  --color-pink-blush: #f7b2d0;
+  --color-peach-warm: #f7a97b;
 
-  /* Apricot — warm secondary accent (مشمشي). */
-  --color-apricot-300: #f3c89a;
-  --color-apricot-400: #eaa96a;
-  --color-apricot-500: #dd8a45;
-  --color-apricot-600: #bd6f34;
-
-  /* Nude — understated neutral accent (نهدي بسيط), used sparingly for
-     borders, labels, and quiet highlights so rose and apricot stay the
-     hero colors. */
-  --color-nude-300: #e9d7c8;
-  --color-nude-400: #d3b89f;
-  --color-nude-500: #b8977a;
-  --color-nude-600: #9c7a5e;
+  /* Legacy alias so existing `bg-plum-*` utilities used on the dark
+     navbar/hero/footer/CTA sections resolve to the primary dark purple. */
+  --color-plum-950: #4a1f6d;
+  --color-plum-900: #4a1f6d;
+  --color-plum-800: #6b2f8a;
+  --color-plum-700: #6b2f8a;
+  --color-plum-600: #7d3ea0;
 
   --color-ivory: #ffffff;
-  --color-ivory-muted: #f2e6dd;
+  --color-ivory-muted: #ffffff;
 }
 
 :root {
-  /* Deep Rose for all headings — same hex across light & dark. */
-  --text-heading: #8e3b46;
-  /* Charcoal Grey body text in light mode (never pure black). */
-  --text-body: #333333;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Soft Cream body text in dark mode — gentle on the eyes. */
-    --text-body: #eaeaea;
-  }
+  /* Primary Dark Purple headings on every light (white) section. */
+  --text-heading: #4a1f6d;
+  /* Secondary Purple body copy — still unmistakably "dark purple text". */
+  --text-body: #6b2f8a;
 }
 
 /* Scoped override for cinematic dark sections: components opt in with the
@@ -195,5 +184,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 ::selection {
-  background-color: var(--color-peach-200);
+  background-color: var(--color-pink-blush);
+}
+
+body {
+  background-color: #ffffff;
 }
