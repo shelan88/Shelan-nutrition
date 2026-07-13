@@ -18,11 +18,12 @@ export default function Hero() {
       <div className="absolute -top-24 -end-24 w-96 h-96 rounded-full bg-peach-300/50 blur-3xl" />
       <div className="absolute top-40 -start-32 w-80 h-80 rounded-full bg-lavender-200/60 blur-3xl" />
 
-      <div className="relative max-w-7xl mx-auto px-6 lg:px-10 grid lg:grid-cols-2 gap-14 items-center">
+      <div className="relative max-w-7xl mx-auto px-6 lg:px-10">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: "easeOut" }}
+          className="max-w-2xl"
         >
           <p className="uppercase tracking-[0.2em] text-xs font-semibold text-rose-500 mb-4">
             {t.eyebrow}
@@ -46,31 +47,6 @@ export default function Hero() {
             >
               {t.ctaSecondary}
             </button>
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.94 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut", delay: 0.15 }}
-          className="relative"
-        >
-          <div className="aspect-[4/5] rounded-[2rem] bg-gradient-to-br from-lavender-200 via-lavender-100 to-peach-100 flex items-center justify-center overflow-hidden shadow-lg shadow-lavender-200/40">
-            <span
-              className="text-lavender-500/60 font-heading text-sm tracking-wide text-center px-8"
-              role="img"
-              aria-label={t.imageAlt}
-            >
-              {t.imageAlt}
-              <br />
-              <span className="text-xs opacity-70">(photo placeholder)</span>
-            </span>
-          </div>
-          <div className="absolute -bottom-6 -start-6 bg-white rounded-2xl shadow-md px-6 py-4 border border-sage-200">
-            <p className="font-heading font-bold text-2xl text-heading">10+</p>
-            <p className="text-xs text-stone-500">
-              {lang === "en" ? "Years of Experience" : "سنوات من الخبرة"}
-            </p>
           </div>
         </motion.div>
       </div>
