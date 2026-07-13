@@ -19,77 +19,27 @@
   --text-5xl: clamp(2rem, 1.5rem + 2.3vw, 3rem);
   --text-6xl: clamp(2.25rem, 1.6rem + 2.9vw, 3.75rem);
 
-  /* Base — warm cream/off-white background */
-  --color-cream-50: #fdfbf7;
-  --color-cream-100: #f8f3ea;
-
-  /* Pastel Lavender — background accents (service cards, FAQ) */
-  --color-lavender-50: #f7f4fa;
-  --color-lavender-100: #ede6f2;
-  --color-lavender-200: #dfd2e9;
-  --color-lavender-300: #d3c3e0;
-  --color-lavender-400: #bba3cc;
-  --color-lavender-500: #a183b5;
-  --color-lavender-600: #866b99;
-  --color-lavender-700: #6b5480;
-
-  /* Soft Sage Green — minor accents, icons, subtle borders */
-  --color-sage-50: #f4f6ef;
-  --color-sage-100: #e6ebda;
-  --color-sage-200: #d7dfc5;
-  --color-sage-300: #c8d1b6;
-  --color-sage-400: #b3bf9c;
-  --color-sage-500: #9caa80;
-  --color-sage-600: #839268;
-
-  /* Dusty Peach — CTA buttons and highlights */
-  --color-peach-50: #fef6f0;
-  --color-peach-100: #fce8da;
-  --color-peach-200: #fad9c1;
-  --color-peach-300: #f7c5a8;
-  --color-peach-400: #f0a67d;
-  --color-peach-500: #e68b5c;
-  --color-peach-600: #cc6f42;
-
-  /* Deep Rose — headings & body text only, for contrast/readability */
-  --color-rose-50: #f5e9ea;
-  --color-rose-100: #e9cbce;
-  --color-rose-200: #d39ca2;
-  --color-rose-300: #bd6e77;
-  --color-rose-400: #a5505a;
-  --color-rose-500: #8e3b46;
-  --color-rose-600: #74303a;
-  --color-rose-700: #5c262e;
-
-  /* Premium feminine luxury system — exactly five brand colors:
-     Primary Dark Purple, Secondary Purple, Elegant Pink, Soft Blush Pink,
-     and Warm Peach. Dark Purple owns the navbar/hero/footer/CTA; everything
-     else lives on white with Dark Purple text, Secondary Purple for cards
-     and gradients, Elegant Pink as the accent, Blush Pink for soft washes,
-     and Peach used only for small, sparing details. */
-  --color-purple-primary: #4a1f6d;
-  --color-purple-secondary: #6b2f8a;
-  --color-pink-accent: #e96ba8;
-  --color-pink-blush: #f7b2d0;
-  --color-peach-warm: #f7a97b;
-
-  /* Legacy alias so existing `bg-plum-*` utilities used on the dark
-     navbar/hero/footer/CTA sections resolve to the primary dark purple. */
-  --color-plum-950: #4a1f6d;
-  --color-plum-900: #4a1f6d;
-  --color-plum-800: #6b2f8a;
-  --color-plum-700: #6b2f8a;
-  --color-plum-600: #7d3ea0;
+  /* Premium feminine luxury palette — exactly six brand colors. Pink is
+     always the dominant color (~60%), purple supports and adds depth
+     (~25%), light pink provides soft breathing room (~15%). Purple must
+     never read as the main color. */
+  --color-primary-pink: #f35e98;
+  --color-soft-pink: #f88eb8;
+  --color-light-pink: #ffd7e8;
+  --color-lavender-purple: #b889f5;
+  --color-soft-purple: #8d5fd3;
+  --color-deep-purple: #6a35b5;
 
   --color-ivory: #ffffff;
   --color-ivory-muted: #ffffff;
 }
 
 :root {
-  /* Primary Dark Purple headings on every light (white) section. */
-  --text-heading: #4a1f6d;
-  /* Secondary Purple body copy — still unmistakably "dark purple text". */
-  --text-body: #6b2f8a;
+  /* Deep Purple headings/body on every light (white) section — the
+     darkest palette color, chosen for contrast rather than as a
+     dominant surface color. */
+  --text-heading: #6a35b5;
+  --text-body: #6a35b5;
 }
 
 /* Scoped override for cinematic dark sections: components opt in with the
@@ -184,7 +134,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 ::selection {
-  background-color: var(--color-pink-blush);
+  background-color: var(--color-light-pink);
 }
 
 body {

@@ -5,9 +5,9 @@ import { useLanguage } from "@/context/LanguageContext";
 import { testimonialsSection, testimonials } from "@/content/content";
 
 const accents = [
-  { chip: "bg-purple-secondary/10", icon: "text-purple-secondary" },
-  { chip: "bg-pink-accent/10", icon: "text-pink-accent" },
-  { chip: "bg-peach-warm/15", icon: "text-peach-warm" },
+  { card: "bg-soft-pink", chip: "bg-white/25", icon: "text-white", body: "text-white/90" },
+  { card: "bg-soft-purple", chip: "bg-white/20", icon: "text-white", body: "text-white/90" },
+  { card: "bg-gradient-to-br from-primary-pink to-lavender-purple", chip: "bg-white/25", icon: "text-white", body: "text-white/90" },
 ];
 
 export default function Testimonials() {
@@ -44,12 +44,12 @@ export default function Testimonials() {
   return (
     <section
       id="testimonials"
-      className="py-24 bg-pink-blush/10 overflow-hidden"
+      className="py-24 bg-light-pink/25 overflow-hidden"
     >
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-14">
           <div className="max-w-2xl">
-            <p className="uppercase tracking-[0.2em] text-xs font-semibold text-pink-accent mb-3">
+            <p className="uppercase tracking-[0.2em] text-xs font-semibold text-primary-pink mb-3">
               {t.kicker}
             </p>
             <h2 className="font-heading text-3xl sm:text-4xl font-bold text-heading mb-4">
@@ -63,7 +63,7 @@ export default function Testimonials() {
               onClick={() => scrollByCard(-1)}
               disabled={atStart}
               aria-label="Previous testimonials"
-              className="w-12 h-12 rounded-full border border-purple-secondary/20 flex items-center justify-center text-purple-primary hover:bg-pink-accent/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+              className="w-12 h-12 rounded-full border border-soft-purple/25 flex items-center justify-center text-deep-purple hover:bg-primary-pink/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
             >
               <ChevronLeft size={20} />
             </button>
@@ -71,7 +71,7 @@ export default function Testimonials() {
               onClick={() => scrollByCard(1)}
               disabled={atEnd}
               aria-label="Next testimonials"
-              className="w-12 h-12 rounded-full border border-purple-secondary/20 flex items-center justify-center text-purple-primary hover:bg-pink-accent/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+              className="w-12 h-12 rounded-full border border-soft-purple/25 flex items-center justify-center text-deep-purple hover:bg-primary-pink/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
             >
               <ChevronRight size={20} />
             </button>
@@ -88,8 +88,8 @@ export default function Testimonials() {
       >
         {/* Edge blur overlays give the slider a premium sense of depth —
             content fades into the background rather than cutting off. */}
-        <div className="pointer-events-none absolute inset-y-0 start-0 w-10 sm:w-24 z-10 bg-gradient-to-r from-pink-blush/10 to-transparent backdrop-blur-[2px]" />
-        <div className="pointer-events-none absolute inset-y-0 end-0 w-10 sm:w-24 z-10 bg-gradient-to-l from-pink-blush/10 to-transparent backdrop-blur-[2px]" />
+        <div className="pointer-events-none absolute inset-y-0 start-0 w-10 sm:w-24 z-10 bg-gradient-to-r from-light-pink/25 to-transparent backdrop-blur-[2px]" />
+        <div className="pointer-events-none absolute inset-y-0 end-0 w-10 sm:w-24 z-10 bg-gradient-to-l from-light-pink/25 to-transparent backdrop-blur-[2px]" />
 
         <div
           ref={trackRef}
@@ -102,12 +102,12 @@ export default function Testimonials() {
               <div
                 key={i}
                 data-card
-                className="snap-start shrink-0 w-[280px] sm:w-[340px] bg-white rounded-2xl p-6 border border-purple-secondary/10 shadow-lg shadow-purple-primary/10 hover:shadow-xl hover:shadow-purple-primary/15 hover:-translate-y-1 transition-all duration-300 flex flex-col"
+                className={`snap-start shrink-0 w-[280px] sm:w-[340px] ${accent.card} rounded-2xl p-6 shadow-lg shadow-deep-purple/15 hover:shadow-xl hover:shadow-deep-purple/25 hover:-translate-y-1 transition-all duration-300 flex flex-col`}
               >
                 <div className={`w-10 h-10 rounded-xl ${accent.chip} flex items-center justify-center mb-4`}>
                   <Quote className={accent.icon} size={18} />
                 </div>
-                <p className="text-body leading-relaxed text-sm flex-1">
+                <p className={`${accent.body} leading-relaxed text-sm flex-1`}>
                   {quote}
                 </p>
               </div>

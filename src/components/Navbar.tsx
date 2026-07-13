@@ -39,7 +39,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-purple-primary/90 border-b border-white/10">
+    <header className="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-gradient-to-r from-primary-pink/90 to-soft-pink/85 border-b border-white/10">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 flex items-center justify-between h-24">
         <a href="#top" className="flex items-center shrink-0">
           <img
@@ -52,7 +52,7 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           <button
             onClick={toggleLang}
-            className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-full border border-white/15 text-ivory hover:bg-pink-accent/20 transition-colors"
+            className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-full border border-white/15 text-ivory hover:bg-white/15 transition-colors"
             aria-label="Toggle language"
           >
             <Globe size={16} />
@@ -93,7 +93,7 @@ export default function Navbar() {
             animate="visible"
             exit="exit"
             variants={overlayVariants}
-            className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-purple-primary/98 backdrop-blur-xl"
+            className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-gradient-to-br from-primary-pink/98 to-deep-purple/98 backdrop-blur-xl"
           >
             <nav className="flex flex-col items-center gap-7">
               {items.map((item: (typeof items)[number]) => (
@@ -102,7 +102,7 @@ export default function Navbar() {
                   type="button"
                   variants={linkVariants}
                   onClick={() => handleNavClick(item.id)}
-                  className="font-heading text-3xl sm:text-4xl font-bold text-ivory hover:text-pink-accent transition-colors"
+                  className="font-heading text-3xl sm:text-4xl font-bold text-ivory hover:text-light-pink transition-colors"
                 >
                   {item.label}
                 </motion.button>

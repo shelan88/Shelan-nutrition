@@ -5,9 +5,9 @@ import { useLanguage } from "@/context/LanguageContext";
 import { successStoriesSection, successStories } from "@/content/content";
 
 const accents = [
-  { chip: "bg-purple-secondary/10", icon: "text-purple-secondary", border: "border-purple-secondary/10" },
-  { chip: "bg-pink-accent/10", icon: "text-pink-accent", border: "border-pink-accent/10" },
-  { chip: "bg-peach-warm/15", icon: "text-peach-warm", border: "border-peach-warm/15" },
+  { card: "bg-soft-pink", chip: "bg-white/25", icon: "text-white", title: "text-white", body: "text-white/85", label: "text-white/90" },
+  { card: "bg-soft-purple", chip: "bg-white/20", icon: "text-white", title: "text-white", body: "text-white/85", label: "text-light-pink" },
+  { card: "bg-gradient-to-br from-primary-pink to-lavender-purple", chip: "bg-white/25", icon: "text-white", title: "text-white", body: "text-white/85", label: "text-white/90" },
 ];
 
 // Deterministic bento pattern: every 6th card is a wide "feature" card, every
@@ -44,7 +44,7 @@ export default function SuccessStories() {
     >
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <p className="uppercase tracking-[0.2em] text-xs font-semibold text-pink-accent mb-3">
+          <p className="uppercase tracking-[0.2em] text-xs font-semibold text-primary-pink mb-3">
             {t.kicker}
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-bold text-heading mb-4">
@@ -67,21 +67,21 @@ export default function SuccessStories() {
                 transition={{ duration: 0.5, delay: (i % 6) * 0.05 }}
                 whileHover={{ y: -4, scale: 1.015 }}
                 whileTap={{ scale: 0.98 }}
-                className={`group relative text-start bg-white rounded-2xl border ${accent.border} shadow-lg shadow-purple-primary/10 hover:shadow-xl hover:shadow-purple-primary/15 hover:border-purple-secondary/20 transition-shadow duration-300 p-6 flex flex-col overflow-hidden ${bentoSpan(i)}`}
+                className={`group relative text-start ${accent.card} rounded-2xl shadow-lg shadow-deep-purple/15 hover:shadow-xl hover:shadow-deep-purple/25 transition-shadow duration-300 p-6 flex flex-col overflow-hidden ${bentoSpan(i)}`}
               >
                 <div className={`w-10 h-10 rounded-xl ${accent.chip} flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110`}>
                   <Quote className={accent.icon} size={18} />
                 </div>
-                <p className="font-medium text-heading leading-snug line-clamp-3">
+                <p className={`font-medium ${accent.title} leading-snug line-clamp-3`}>
                   {item.title}
                 </p>
-                <p className="mt-2 text-sm text-body-muted leading-relaxed line-clamp-2 flex-1">
+                <p className={`mt-2 text-sm ${accent.body} leading-relaxed line-clamp-2 flex-1`}>
                   {item.content}
                 </p>
-                <span className="mt-3 text-xs font-semibold uppercase tracking-wide text-peach-warm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <span className={`mt-3 text-xs font-semibold uppercase tracking-wide ${accent.label} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}>
                   {lang === "ar" ? "اقرأي القصة كاملة" : "Read full story"}
                 </span>
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-purple-primary/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </motion.button>
             );
           })}
@@ -95,7 +95,7 @@ export default function SuccessStories() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6 bg-purple-primary/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6 bg-deep-purple/70 backdrop-blur-sm"
             onClick={() => setActiveIndex(null)}
           >
             <motion.div
@@ -104,7 +104,7 @@ export default function SuccessStories() {
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
               onClick={(e) => e.stopPropagation()}
-              className="section-dark relative max-w-2xl w-full max-h-[85vh] overflow-y-auto bg-purple-primary border border-white/10 rounded-3xl p-8 sm:p-10 shadow-2xl shadow-purple-primary/60"
+              className="section-dark relative max-w-2xl w-full max-h-[85vh] overflow-y-auto bg-gradient-to-br from-primary-pink via-lavender-purple to-deep-purple border border-white/10 rounded-3xl p-8 sm:p-10 shadow-2xl shadow-deep-purple/60"
             >
               <button
                 onClick={() => setActiveIndex(null)}
