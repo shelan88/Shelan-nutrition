@@ -16,6 +16,14 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const items = nav[lang];
 
+  const handleMobileNavClick = (id: string) => {
+    // Close the menu first, then let the collapse animation finish
+    // before scrolling so the closing menu never shifts the page
+    // layout mid-scroll.
+    setOpen(false);
+    window.setTimeout(() => scrollToSection(id), 300);
+  };
+
   return (
     <header className="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-cream-50/80 border-b border-sage-200">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 flex items-center justify-between h-24">
@@ -65,17 +73,14 @@ export default function Navbar() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="md:hidden overflow-hidden bg-cream-50 border-t border-sage-200"
+            className="md:hidden fixed top-24 inset-x-0 z-40 overflow-hidden bg-cream-50 border-t border-sage-200 shadow-lg"
           >
             <div className="flex flex-col px-6 py-4 gap-4">
               {items.map((item: (typeof items)[number]) => (
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => {
-                    scrollToSection(item.id);
-                    setOpen(false);
-                  }}
+                  onClick={() => handleMobileNavClick(item.id)}
                   className="text-start text-sm font-medium text-body hover:text-heading transition-colors"
                 >
                   {item.label}
