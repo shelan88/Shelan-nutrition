@@ -15,12 +15,12 @@ export default function Navbar() {
 
   return (
     <header className="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-cream-50/80 border-b border-sage-200">
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 flex items-center justify-between h-20">
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 flex items-center justify-between h-24">
         <a href="#top" className="flex items-center shrink-0">
           <img
             src="/logo.png"
             alt="SHELAN Nutritionist Logo"
-            className="h-12 sm:h-14 w-auto object-contain"
+            className="h-16 sm:h-20 w-auto object-contain"
           />
         </a>
 

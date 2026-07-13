@@ -11,11 +11,11 @@ export default function Footer() {
     <footer className="bg-lavender-700 text-lavender-50 pt-16 pb-8">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 grid sm:grid-cols-3 gap-10 mb-12">
         <div>
-          <div className="inline-flex bg-white/95 rounded-2xl px-4 py-2 mb-3">
+          <div className="inline-flex bg-cream-50 rounded-2xl px-5 py-3 mb-4 shadow-md">
             <img
               src="/logo.png"
               alt="SHELAN Nutritionist Logo"
-              className="h-11 w-auto object-contain"
+              className="h-20 w-auto object-contain"
             />
           </div>
           <p className="text-sm text-lavender-200">{t.tagline}</p>

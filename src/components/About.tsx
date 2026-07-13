@@ -16,16 +16,13 @@ export default function About() {
           transition={{ duration: 0.7 }}
           className="order-2 lg:order-1"
         >
-          <div className="aspect-[4/5] max-w-md rounded-[2rem] bg-gradient-to-br from-peach-100 via-lavender-50 to-lavender-100 flex items-center justify-center shadow-md">
-            <span
-              className="text-lavender-500/60 font-heading text-sm text-center px-8"
-              role="img"
-              aria-label={t.imageAlt}
-            >
-              {t.imageAlt}
-              <br />
-              <span className="text-xs opacity-70">(photo placeholder)</span>
-            </span>
+          <div className="relative max-w-md">
+            <div className="absolute -inset-3 rounded-[2.25rem] bg-gradient-to-br from-peach-200 via-lavender-100 to-sage-100 -z-10" />
+            <img
+              src="/portrait.jpg"
+              alt={t.imageAlt}
+              className="w-full aspect-[4/5] object-cover rounded-[2rem] shadow-lg"
+            />
           </div>
         </motion.div>
 
