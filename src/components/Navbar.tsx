@@ -4,11 +4,12 @@ import { Menu, X, Globe } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { nav } from "@/content/content";
 
-function scrollTo(e: React.MouseEvent<HTMLAnchorElement>, id: string) {
-  e.preventDefault();
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-  window.history.pushState(null, "", `#${id}`);
-}
+const scrollToSection = (id: string) => {
+  const element = document.getElementById(id);
+  if (element) {
+    element.scrollIntoView({ behavior: "smooth" });
+  }
+};
 
 export default function Navbar() {
   const { lang, toggleLang } = useLanguage();
@@ -28,14 +29,14 @@ export default function Navbar() {
 
         <nav className="hidden md:flex items-center gap-8">
           {items.map((item: (typeof items)[number]) => (
-            <a
+            <button
               key={item.id}
-              href={`#${item.id}`}
-              onClick={(e) => scrollTo(e, item.id)}
+              type="button"
+              onClick={() => scrollToSection(item.id)}
               className="text-sm font-medium text-body hover:text-heading transition-colors"
             >
               {item.label}
-            </a>
+            </button>
           ))}
         </nav>
 
@@ -68,17 +69,17 @@ export default function Navbar() {
           >
             <div className="flex flex-col px-6 py-4 gap-4">
               {items.map((item: (typeof items)[number]) => (
-                <a
+                <button
                   key={item.id}
-                  href={`#${item.id}`}
-                  onClick={(e) => {
-                    scrollTo(e, item.id);
+                  type="button"
+                  onClick={() => {
+                    scrollToSection(item.id);
                     setOpen(false);
                   }}
                   className="text-start text-sm font-medium text-body hover:text-heading transition-colors"
                 >
                   {item.label}
-                </a>
+                </button>
               ))}
             </div>
           </motion.nav>
