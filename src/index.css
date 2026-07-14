@@ -137,6 +137,17 @@ h1, h2, h3, h4, h5, h6 {
   background-color: var(--color-light-pink);
 }
 
+/* Image theft / download protection: disables long-press save menus on
+   iOS/Android, blocks right-click context menu (via pointer-events),
+   text/image selection, and drag-out. Pair with draggable="false" on the
+   <img> element itself. Applied to the site logo and the profile portrait. */
+.protected-image {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
 body {
   background-color: #ffffff;
 }

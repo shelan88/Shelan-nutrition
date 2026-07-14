@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Globe, X } from "lucide-react";
+import { Globe, X, UserCircle2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { nav } from "@/content/content";
+import { nav, authModal } from "@/content/content";
+import AuthModal from "@/components/AuthModal";
 
 const scrollToSection = (id: string) => {
   const element = document.getElementById(id);
@@ -39,7 +40,9 @@ const linkVariants = {
 export default function Navbar() {
   const { lang, toggleLang } = useLanguage();
   const [open, setOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
   const items = nav[lang];
+  const authT = authModal[lang];
 
   const handleNavClick = (id: string) => {
     // Close first, then let the exit animation finish before scrolling so
@@ -55,11 +58,29 @@ export default function Navbar() {
           <img
             src="/logo.png"
             alt="SHELAN Nutritionist Logo"
-            className="h-[77px] sm:h-24 w-auto object-contain"
+            draggable="false"
+            onContextMenu={(e) => e.preventDefault()}
+            className="protected-image h-[77px] sm:h-24 w-auto object-contain"
           />
         </a>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            onClick={() => setAuthOpen(true)}
+            className="hidden sm:flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-full border border-white/15 text-ivory hover:bg-white/15 transition-colors"
+            aria-label={authT.trigger}
+          >
+            <UserCircle2 size={16} />
+            {authT.trigger}
+          </button>
+          <button
+            onClick={() => setAuthOpen(true)}
+            className="sm:hidden flex items-center justify-center w-11 h-11 rounded-full border border-white/15 text-ivory hover:bg-white/10 transition-colors"
+            aria-label={authT.trigger}
+          >
+            <UserCircle2 size={20} />
+          </button>
+
           <button
             onClick={toggleLang}
             className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-full border border-white/15 text-ivory hover:bg-white/15 transition-colors"
@@ -125,9 +146,25 @@ export default function Navbar() {
                   {item.label}
                 </motion.button>
               ))}
+              <motion.button
+                type="button"
+                variants={linkVariants}
+                onClick={() => {
+                  setOpen(false);
+                  window.setTimeout(() => setAuthOpen(true), 320);
+                }}
+                className="flex items-center gap-2 font-heading text-lg sm:text-xl font-bold text-light-pink hover:text-white transition-colors mt-2"
+              >
+                <UserCircle2 size={22} />
+                {authT.trigger}
+              </motion.button>
             </nav>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
       </AnimatePresence>
     </header>
   );

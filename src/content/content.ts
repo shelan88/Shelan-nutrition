@@ -275,6 +275,182 @@ export const booking = {
   },
 };
 
+export const pricingSection = {
+  en: {
+    kicker: "Consultation Packages",
+    title: "Choose Your Path to Healing",
+    subtitle:
+      "Flexible plans designed around your journey — from a single diagnostic session to full ongoing support.",
+  },
+  ar: {
+    kicker: "باقات الاستشارة",
+    title: "اختاري رحلتكِ نحو الشفاء",
+    subtitle:
+      "خطط مرنة مصممة حول رحلتكِ — من جلسة تشخيصية واحدة إلى دعم شامل ومستمر.",
+  },
+};
+
+export const pricingPlans = {
+  en: [
+    {
+      name: "Single Diagnostic Session",
+      price: "$120",
+      period: "one-time",
+      duration: "45 minutes",
+      badge: null as string | null,
+      features: [
+        "In-depth health & lifestyle assessment",
+        "Personalized initial recommendations",
+        "Written session summary",
+      ],
+      cta: "Book Now",
+    },
+    {
+      name: "Comprehensive Follow-up Package",
+      price: "$350",
+      period: "/ month",
+      duration: "4 sessions monthly",
+      badge: "Most Popular" as string | null,
+      features: [
+        "Full personalized nutrition plan",
+        "Weekly check-ins & adjustments",
+        "Direct messaging support",
+        "Lipedema-specific progress tracking",
+        "Printable meal & movement guides",
+      ],
+      cta: "Book Now",
+    },
+    {
+      name: "Ready-Made Custom Plan",
+      price: "$65",
+      period: "one-time",
+      duration: "PDF delivery",
+      badge: null as string | null,
+      features: [
+        "Tailored nutrition plan (PDF)",
+        "Delivered within 48 hours",
+        "One follow-up question included",
+      ],
+      cta: "Book Now",
+    },
+  ],
+  ar: [
+    {
+      name: "جلسة تشخيصية واحدة",
+      price: "٤٥٠ ر.س",
+      period: "دفعة واحدة",
+      duration: "٤٥ دقيقة",
+      badge: null as string | null,
+      features: [
+        "تقييم شامل للحالة الصحية ونمط الحياة",
+        "توصيات أولية مخصصة لكِ",
+        "ملخص مكتوب للجلسة",
+      ],
+      cta: "احجزي الآن",
+    },
+    {
+      name: "باقة المتابعة الشاملة",
+      price: "١٢٠٠ ر.س",
+      period: "/ شهريًا",
+      duration: "٤ جلسات شهريًا",
+      badge: "الأكثر طلبًا" as string | null,
+      features: [
+        "خطة تغذية شخصية متكاملة",
+        "متابعة أسبوعية وتعديل الخطة",
+        "دعم مباشر عبر الرسائل",
+        "تتبع تقدّم خاص بالليبيديما",
+        "أدلة قابلة للطباعة للأكل والحركة",
+      ],
+      cta: "احجزي الآن",
+    },
+    {
+      name: "الخطة المخصصة الجاهزة",
+      price: "٢٥٠ ر.س",
+      period: "دفعة واحدة",
+      duration: "تسليم PDF",
+      badge: null as string | null,
+      features: [
+        "خطة تغذية مخصصة بصيغة PDF",
+        "التسليم خلال ٤٨ ساعة",
+        "سؤال متابعة واحد مُتضمّن",
+      ],
+      cta: "احجزي الآن",
+    },
+  ],
+};
+
+export const checkoutModal = {
+  en: {
+    title: "Secure Checkout",
+    subtitle: "Complete your booking with a secure payment.",
+    cardNumber: "Card Number",
+    expiry: "Expiry Date",
+    cvc: "CVC",
+    nameOnCard: "Name on Card",
+    namePlaceholder: "Full name",
+    payButton: "Pay Securely via Stripe",
+    processing: "Processing…",
+    success: "Payment Successful!",
+    successNote: "Your consultation is booked. A confirmation email is on its way.",
+    securedBy: "Secured by",
+    close: "Close",
+    total: "Total",
+  },
+  ar: {
+    title: "الدفع الآمن",
+    subtitle: "أكملي حجزكِ بدفع آمن.",
+    cardNumber: "رقم البطاقة",
+    expiry: "تاريخ الانتهاء",
+    cvc: "CVC",
+    nameOnCard: "الاسم على البطاقة",
+    namePlaceholder: "الاسم الكامل",
+    payButton: "دفع آمن عبر Stripe",
+    processing: "جارٍ المعالجة…",
+    success: "تمت عملية الدفع بنجاح!",
+    successNote: "تم حجز استشارتكِ. سيصلكِ بريد إلكتروني للتأكيد قريبًا.",
+    securedBy: "بحماية",
+    close: "إغلاق",
+    total: "الإجمالي",
+  },
+};
+
+export const authModal = {
+  en: {
+    trigger: "Login / Sign Up",
+    loginTab: "Login",
+    signupTab: "Create Account",
+    email: "Email",
+    password: "Password",
+    confirmPassword: "Confirm Password",
+    name: "Full Name",
+    loginButton: "Login",
+    signupButton: "Create Account",
+    forgotPassword: "Forgot Password?",
+    forgotTitle: "Reset Your Password",
+    forgotSubtitle: "Enter your email and we'll send you a reset link.",
+    resetButton: "Send Reset Link",
+    resetSent: "Reset link sent! Check your inbox.",
+    backToLogin: "Back to Login",
+  },
+  ar: {
+    trigger: "تسجيل الدخول / حساب جديد",
+    loginTab: "تسجيل الدخول",
+    signupTab: "إنشاء حساب جديد",
+    email: "البريد الإلكتروني",
+    password: "كلمة المرور",
+    confirmPassword: "تأكيد كلمة المرور",
+    name: "الاسم الكامل",
+    loginButton: "تسجيل الدخول",
+    signupButton: "إنشاء حساب",
+    forgotPassword: "نسيت كلمة السر؟",
+    forgotTitle: "إعادة تعيين كلمة السر",
+    forgotSubtitle: "أدخلي بريدكِ الإلكتروني وسنرسل لكِ رابط إعادة التعيين.",
+    resetButton: "إعادة تعيين كلمة السر",
+    resetSent: "تم إرسال رابط إعادة التعيين! تحققي من بريدكِ.",
+    backToLogin: "العودة لتسجيل الدخول",
+  },
+};
+
 export const successStoriesSection = {
   en: {
     kicker: "Real Journeys",

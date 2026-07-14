@@ -21,7 +21,9 @@ export default function About() {
             <img
               src="/portrait.jpg"
               alt={t.imageAlt}
-              className="w-full aspect-[4/5] object-cover rounded-[2rem] shadow-2xl shadow-deep-purple/30"
+              draggable="false"
+              onContextMenu={(e) => e.preventDefault()}
+              className="protected-image w-full aspect-[4/5] object-cover rounded-[2rem] shadow-2xl shadow-deep-purple/30"
             />
           </div>
         </motion.div>
