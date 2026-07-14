@@ -151,3 +151,15 @@ h1, h2, h3, h4, h5, h6 {
 body {
   background-color: #ffffff;
 }
+
+/* Social icon attention animation — subtle wiggle/bounce every 3s */
+@keyframes modernWiggle {
+  0%, 90%, 100% { transform: translateY(0) scale(1); }
+  93%            { transform: translateY(-6px) scale(1.08); }
+  95%            { transform: translateY(2px) scale(0.95); }
+  97%            { transform: translateY(-2px) scale(1.02); }
+}
+
+.social-icon-active {
+  animation: modernWiggle 3s infinite ease-in-out;
+}

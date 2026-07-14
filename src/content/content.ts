@@ -24,6 +24,7 @@ export const nav = {
     { id: "testimonials", label: "Testimonials" },
     { id: "faq", label: "FAQ" },
     { id: "booking", label: "Book Now" },
+    { id: "site-footer", label: "Contact Me" },
   ],
   ar: [
     { id: "about", label: "من أنا" },
@@ -33,6 +34,7 @@ export const nav = {
     { id: "testimonials", label: "آراء العميلات" },
     { id: "faq", label: "الأسئلة الشائعة" },
     { id: "booking", label: "احجزي الآن" },
+    { id: "site-footer", label: "تواصلي معي" },
   ],
 };
 
@@ -573,21 +575,13 @@ export const testimonials = {
 
 export const footer = {
   en: {
-    tagline: "Personalized nutrition. Compassionate care.",
-    contactTitle: "Contact",
-    email: "hello@shelannutrition.com",
-    phone: "+1 (555) 123-4567",
-    location: "Available for in-person & virtual consultations",
-    socialTitle: "Follow",
+    tagline: "Personalized nutrition. Care with love.",
+    socialTitle: "Find me on",
     rights: "All rights reserved.",
   },
   ar: {
-    tagline: "تغذية شخصية. رعاية بكل تعاطف.",
-    contactTitle: "التواصل",
-    email: "hello@shelannutrition.com",
-    phone: "+1 (555) 123-4567",
-    location: "متوفرة للاستشارات الحضورية والإلكترونية",
-    socialTitle: "تابعينا",
+    tagline: "تغذية شخصية. رعاية بكل حب.",
+    socialTitle: "تواصلي معي",
     rights: "جميع الحقوق محفوظة.",
   },
 };
