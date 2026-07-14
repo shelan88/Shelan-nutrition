@@ -19,11 +19,14 @@ function bentoSpan(i: number) {
   return "";
 }
 
+const INITIAL_COUNT = 4;
+
 export default function SuccessStories() {
   const { lang } = useLanguage();
   const t = successStoriesSection[lang];
   const stories = successStories[lang];
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (activeIndex === null) return;
@@ -54,7 +57,7 @@ export default function SuccessStories() {
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 auto-rows-[200px]">
-          {stories.map((item, i) => {
+          {stories.slice(0, INITIAL_COUNT).map((item, i) => {
             const accent = accents[i % accents.length];
             return (
               <motion.button
@@ -85,7 +88,67 @@ export default function SuccessStories() {
               </motion.button>
             );
           })}
+
+          <AnimatePresence>
+            {expanded &&
+              stories.slice(INITIAL_COUNT).map((item, idx) => {
+                const i = idx + INITIAL_COUNT;
+                const accent = accents[i % accents.length];
+                return (
+                  <motion.button
+                    key={i}
+                    type="button"
+                    onClick={() => setActiveIndex(i)}
+                    initial={{ opacity: 0, y: 28 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 14 }}
+                    transition={{ duration: 0.45, delay: idx * 0.05, ease: "easeOut" }}
+                    whileHover={{ y: -4, scale: 1.015 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`group relative text-start ${accent.card} rounded-2xl shadow-lg shadow-deep-purple/15 hover:shadow-xl hover:shadow-deep-purple/25 transition-shadow duration-300 p-6 flex flex-col overflow-hidden ${bentoSpan(i)}`}
+                  >
+                    <div className={`w-10 h-10 rounded-xl ${accent.chip} flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110`}>
+                      <Quote className={accent.icon} size={18} />
+                    </div>
+                    <p className={`font-medium ${accent.title} leading-snug line-clamp-3`}>
+                      {item.title}
+                    </p>
+                    <p className={`mt-2 text-sm ${accent.body} leading-relaxed line-clamp-2 flex-1`}>
+                      {item.content}
+                    </p>
+                    <span className={`mt-3 text-xs font-semibold uppercase tracking-wide ${accent.label} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}>
+                      {lang === "ar" ? "اقرأي القصة كاملة" : "Read full story"}
+                    </span>
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </motion.button>
+                );
+              })}
+          </AnimatePresence>
         </div>
+
+        {stories.length > INITIAL_COUNT && (
+          <div className="flex justify-center mt-12">
+            <motion.button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              animate={
+                expanded
+                  ? { scale: 1 }
+                  : { scale: [1, 1.05, 1] }
+              }
+              transition={
+                expanded
+                  ? { duration: 0.3, ease: "easeInOut" }
+                  : { duration: 2, repeat: Infinity, ease: "easeInOut" }
+              }
+              whileHover={{ scale: expanded ? 1.03 : undefined }}
+              whileTap={{ scale: 0.97 }}
+              className="px-8 py-4 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white font-semibold shadow-lg shadow-deep-purple/30 hover:from-primary-pink hover:to-lavender-purple transition-colors"
+            >
+              {expanded ? t.showLessCta : t.loadMoreCta}
+            </motion.button>
+          </div>
+        )}
       </div>
 
       <AnimatePresence>

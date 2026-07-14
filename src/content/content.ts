@@ -281,12 +281,16 @@ export const successStoriesSection = {
     title: "Success Stories",
     subtitle:
       "Real experiences shared by women who followed the conservative treatment approach and reclaimed their health and confidence.",
+    loadMoreCta: "Discover More Success Stories",
+    showLessCta: "Show Less",
   },
   ar: {
     kicker: "رحلات حقيقية",
     title: "قصص نجاح",
     subtitle:
       "تجارب حقيقية شاركتها نساء التزمن بالعلاج التحفظي واستعدن صحتهن وثقتهن بأنفسهن.",
+    loadMoreCta: "اكتشفي المزيد من قصص النجاح",
+    showLessCta: "عرض أقل",
   },
 };
 
