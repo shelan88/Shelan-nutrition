@@ -28,7 +28,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[999] flex items-center justify-center p-4 sm:p-6 bg-deep-purple/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[999] flex items-center justify-center overflow-y-auto p-4 py-8 sm:p-6 bg-deep-purple/70 backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div
@@ -37,7 +37,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
         exit={{ opacity: 0, scale: 0.96, y: 10 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-md rounded-[2rem] bg-white border border-soft-purple/15 shadow-2xl shadow-deep-purple/40 overflow-hidden"
+        className="relative w-full max-w-md max-h-full my-auto rounded-[2rem] bg-white border border-soft-purple/15 shadow-2xl shadow-deep-purple/40 overflow-y-auto overscroll-contain"
       >
         <button
           onClick={onClose}
