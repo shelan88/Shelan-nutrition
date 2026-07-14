@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Globe } from "lucide-react";
+import { Globe, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { nav } from "@/content/content";
 
@@ -11,13 +11,23 @@ const scrollToSection = (id: string) => {
   }
 };
 
-const overlayVariants = {
-  hidden: { opacity: 0 },
+const curtainVariants = {
+  hidden: { y: "-100%", opacity: 0.6 },
   visible: {
+    y: 0,
     opacity: 1,
-    transition: { staggerChildren: 0.07, delayChildren: 0.08 },
+    transition: {
+      duration: 0.4,
+      ease: "easeInOut" as const,
+      staggerChildren: 0.08,
+      delayChildren: 0.15,
+    },
   },
-  exit: { opacity: 0, transition: { duration: 0.25 } },
+  exit: {
+    y: "-100%",
+    opacity: 0.8,
+    transition: { duration: 0.4, ease: "easeInOut" as const },
+  },
 };
 
 const linkVariants = {
@@ -92,32 +102,30 @@ export default function Navbar() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            variants={overlayVariants}
-            className="fixed inset-0 z-[999] flex items-center justify-center px-6 py-28 bg-deep-purple/60 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
+            variants={curtainVariants}
+            className="fixed inset-x-0 top-0 z-[999] w-full min-h-[60vh] sm:min-h-screen flex flex-col bg-[rgba(15,23,42,0.95)] backdrop-blur-[12px] shadow-2xl shadow-black/40"
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.92, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, y: 10 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-sm max-h-full overflow-y-auto rounded-[2rem] border border-white/20 bg-gradient-to-br from-deep-purple/95 via-deep-purple/90 to-soft-purple/90 backdrop-blur-xl shadow-2xl shadow-deep-purple/50 px-8 py-12"
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Close menu"
+              className="absolute top-6 end-6 sm:top-10 sm:end-10 w-12 h-12 flex items-center justify-center rounded-full border border-white/20 text-ivory hover:bg-white/10 hover:border-white/40 transition-colors"
             >
-              <nav className="flex flex-col items-center gap-7 text-center">
-                {items.map((item: (typeof items)[number]) => (
-                  <motion.button
-                    key={item.id}
-                    type="button"
-                    variants={linkVariants}
-                    onClick={() => handleNavClick(item.id)}
-                    className="font-heading text-2xl sm:text-3xl font-bold text-ivory hover:text-light-pink transition-colors"
-                  >
-                    {item.label}
-                  </motion.button>
-                ))}
-              </nav>
-            </motion.div>
+              <X size={26} />
+            </button>
+
+            <nav className="flex-1 flex flex-col items-center justify-center gap-10 sm:gap-12 text-center px-6 py-28">
+              {items.map((item: (typeof items)[number]) => (
+                <motion.button
+                  key={item.id}
+                  type="button"
+                  variants={linkVariants}
+                  onClick={() => handleNavClick(item.id)}
+                  className="font-heading text-[1.5rem] sm:text-4xl lg:text-5xl font-bold text-ivory hover:text-light-pink transition-colors"
+                >
+                  {item.label}
+                </motion.button>
+              ))}
+            </nav>
           </motion.div>
         )}
       </AnimatePresence>
