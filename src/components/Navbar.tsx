@@ -124,24 +124,24 @@ export default function Navbar() {
             animate="visible"
             exit="exit"
             variants={curtainVariants}
-            className="fixed inset-x-0 top-0 z-[999] w-full min-h-[60vh] sm:min-h-screen flex flex-col bg-[rgba(15,23,42,0.95)] backdrop-blur-[12px] shadow-2xl shadow-black/40"
+            className="fixed inset-x-0 top-0 z-[999] w-full max-h-screen overflow-y-auto bg-[rgba(15,23,42,0.95)] backdrop-blur-[12px] shadow-2xl shadow-black/40"
           >
             <button
               onClick={() => setOpen(false)}
               aria-label="Close menu"
-              className="absolute top-6 end-6 sm:top-10 sm:end-10 w-12 h-12 flex items-center justify-center rounded-full border border-white/20 text-ivory hover:bg-white/10 hover:border-white/40 transition-colors"
+              className="fixed top-6 end-6 sm:top-10 sm:end-10 z-10 w-12 h-12 flex items-center justify-center rounded-full border border-white/20 text-ivory hover:bg-white/10 hover:border-white/40 transition-colors"
             >
               <X size={26} />
             </button>
 
-            <nav className="flex-1 flex flex-col items-center justify-center gap-10 sm:gap-12 text-center px-6 py-28">
+            <nav className="min-h-screen flex flex-col items-center justify-center gap-6 sm:gap-7 text-center px-6 pt-28 pb-12">
               {items.map((item: (typeof items)[number]) => (
                 <motion.button
                   key={item.id}
                   type="button"
                   variants={linkVariants}
                   onClick={() => handleNavClick(item.id)}
-                  className="font-heading text-[1.5rem] sm:text-4xl lg:text-5xl font-bold text-ivory hover:text-light-pink transition-colors"
+                  className="font-heading text-[1.3rem] sm:text-[1.4rem] font-bold text-ivory hover:text-light-pink transition-colors"
                 >
                   {item.label}
                 </motion.button>
@@ -153,7 +153,7 @@ export default function Navbar() {
                   setOpen(false);
                   window.setTimeout(() => setAuthOpen(true), 320);
                 }}
-                className="flex items-center gap-2 font-heading text-lg sm:text-xl font-bold text-light-pink hover:text-white transition-colors mt-2"
+                className="flex items-center gap-2 font-heading text-base sm:text-lg font-bold text-light-pink hover:text-white transition-colors mt-2"
               >
                 <UserCircle2 size={22} />
                 {authT.trigger}
