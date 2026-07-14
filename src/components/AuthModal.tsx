@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Mail, Lock, User, ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
@@ -9,6 +10,9 @@ interface AuthModalProps {
 }
 
 type View = "login" | "signup" | "forgot";
+
+const inputClass =
+  "w-full rounded-xl border border-gray-300 bg-white ps-11 pe-4 py-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/60 transition-all";
 
 export default function AuthModal({ onClose }: AuthModalProps) {
   const { lang } = useLanguage();
@@ -22,13 +26,17 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     setResetSent(true);
   };
 
-  return (
+  // Rendered through a portal directly under <body> so this modal is a true
+  // fixed/centered overlay regardless of where it's triggered from — the
+  // header uses backdrop-blur, which creates a CSS containing block for any
+  // fixed-position descendant and would otherwise trap the modal inside it.
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[999] flex items-center justify-center overflow-y-auto p-4 py-8 sm:p-6 bg-deep-purple/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto p-4 py-8 sm:p-6 bg-black/60 backdrop-blur-[4px]"
       onClick={onClose}
     >
       <motion.div
@@ -37,12 +45,12 @@ export default function AuthModal({ onClose }: AuthModalProps) {
         exit={{ opacity: 0, scale: 0.96, y: 10 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-md max-h-full my-auto rounded-[2rem] bg-white border border-soft-purple/15 shadow-2xl shadow-deep-purple/40 overflow-y-auto overscroll-contain"
+        className="relative w-full max-w-md max-h-full my-auto rounded-[2rem] bg-white border border-gray-200 shadow-2xl shadow-black/40 overflow-y-auto overscroll-contain"
       >
         <button
           onClick={onClose}
           aria-label="Close"
-          className="absolute top-5 end-5 z-10 w-9 h-9 rounded-full flex items-center justify-center text-deep-purple/60 hover:bg-light-pink/30 hover:text-deep-purple transition-colors"
+          className="absolute top-5 end-5 z-10 w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
         >
           <X size={18} />
         </button>
@@ -72,25 +80,20 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                 {resetSent ? (
                   <div className="text-center py-6">
                     <CheckCircle2 className="mx-auto text-primary-pink mb-4" size={44} />
-                    <p className="text-deep-purple font-semibold">{t.resetSent}</p>
+                    <p className="text-gray-900 font-semibold">{t.resetSent}</p>
                   </div>
                 ) : (
                   <>
-                    <h3 className="font-heading text-2xl font-bold text-deep-purple mb-2">
+                    <h3 className="font-heading text-2xl font-bold text-gray-900 mb-2">
                       {t.forgotTitle}
                     </h3>
-                    <p className="text-sm text-deep-purple/60 mb-7 leading-relaxed">
+                    <p className="text-sm text-gray-500 mb-7 leading-relaxed">
                       {t.forgotSubtitle}
                     </p>
                     <form onSubmit={handleResetSubmit} className="space-y-4">
                       <div className="relative">
-                        <Mail className="absolute top-1/2 -translate-y-1/2 start-4 text-deep-purple/30" size={18} />
-                        <input
-                          required
-                          type="email"
-                          placeholder={t.email}
-                          className="w-full rounded-xl border border-soft-purple/25 ps-11 pe-4 py-3.5 text-sm text-deep-purple placeholder:text-deep-purple/30 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/50 transition-all"
-                        />
+                        <Mail className="absolute top-1/2 -translate-y-1/2 start-4 text-gray-400" size={18} />
+                        <input required type="email" placeholder={t.email} className={inputClass} />
                       </div>
                       <button
                         type="submit"
@@ -111,14 +114,14 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                 transition={{ duration: 0.35, ease: "easeInOut" }}
                 className="px-8 pt-10 pb-9"
               >
-                <div className="flex rounded-full bg-light-pink/25 p-1 mb-8">
+                <div className="flex rounded-full bg-gray-100 p-1 mb-8">
                   <button
                     type="button"
                     onClick={() => setView("login")}
                     className={`flex-1 py-2.5 rounded-full text-sm font-semibold transition-colors ${
                       view === "login"
                         ? "bg-gradient-to-r from-primary-pink to-soft-pink text-white shadow-md"
-                        : "text-deep-purple/60 hover:text-deep-purple"
+                        : "text-gray-500 hover:text-gray-900"
                     }`}
                   >
                     {t.loginTab}
@@ -129,7 +132,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                     className={`flex-1 py-2.5 rounded-full text-sm font-semibold transition-colors ${
                       view === "signup"
                         ? "bg-gradient-to-r from-primary-pink to-soft-pink text-white shadow-md"
-                        : "text-deep-purple/60 hover:text-deep-purple"
+                        : "text-gray-500 hover:text-gray-900"
                     }`}
                   >
                     {t.signupTab}
@@ -148,22 +151,12 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                       className="space-y-4"
                     >
                       <div className="relative">
-                        <Mail className="absolute top-1/2 -translate-y-1/2 start-4 text-deep-purple/30" size={18} />
-                        <input
-                          required
-                          type="email"
-                          placeholder={t.email}
-                          className="w-full rounded-xl border border-soft-purple/25 ps-11 pe-4 py-3.5 text-sm text-deep-purple placeholder:text-deep-purple/30 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/50 transition-all"
-                        />
+                        <Mail className="absolute top-1/2 -translate-y-1/2 start-4 text-gray-400" size={18} />
+                        <input required type="email" placeholder={t.email} className={inputClass} />
                       </div>
                       <div className="relative">
-                        <Lock className="absolute top-1/2 -translate-y-1/2 start-4 text-deep-purple/30" size={18} />
-                        <input
-                          required
-                          type="password"
-                          placeholder={t.password}
-                          className="w-full rounded-xl border border-soft-purple/25 ps-11 pe-4 py-3.5 text-sm text-deep-purple placeholder:text-deep-purple/30 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/50 transition-all"
-                        />
+                        <Lock className="absolute top-1/2 -translate-y-1/2 start-4 text-gray-400" size={18} />
+                        <input required type="password" placeholder={t.password} className={inputClass} />
                       </div>
                       <button
                         type="button"
@@ -190,40 +183,20 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                       className="space-y-4"
                     >
                       <div className="relative">
-                        <User className="absolute top-1/2 -translate-y-1/2 start-4 text-deep-purple/30" size={18} />
-                        <input
-                          required
-                          type="text"
-                          placeholder={t.name}
-                          className="w-full rounded-xl border border-soft-purple/25 ps-11 pe-4 py-3.5 text-sm text-deep-purple placeholder:text-deep-purple/30 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/50 transition-all"
-                        />
+                        <User className="absolute top-1/2 -translate-y-1/2 start-4 text-gray-400" size={18} />
+                        <input required type="text" placeholder={t.name} className={inputClass} />
                       </div>
                       <div className="relative">
-                        <Mail className="absolute top-1/2 -translate-y-1/2 start-4 text-deep-purple/30" size={18} />
-                        <input
-                          required
-                          type="email"
-                          placeholder={t.email}
-                          className="w-full rounded-xl border border-soft-purple/25 ps-11 pe-4 py-3.5 text-sm text-deep-purple placeholder:text-deep-purple/30 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/50 transition-all"
-                        />
+                        <Mail className="absolute top-1/2 -translate-y-1/2 start-4 text-gray-400" size={18} />
+                        <input required type="email" placeholder={t.email} className={inputClass} />
                       </div>
                       <div className="relative">
-                        <Lock className="absolute top-1/2 -translate-y-1/2 start-4 text-deep-purple/30" size={18} />
-                        <input
-                          required
-                          type="password"
-                          placeholder={t.password}
-                          className="w-full rounded-xl border border-soft-purple/25 ps-11 pe-4 py-3.5 text-sm text-deep-purple placeholder:text-deep-purple/30 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/50 transition-all"
-                        />
+                        <Lock className="absolute top-1/2 -translate-y-1/2 start-4 text-gray-400" size={18} />
+                        <input required type="password" placeholder={t.password} className={inputClass} />
                       </div>
                       <div className="relative">
-                        <Lock className="absolute top-1/2 -translate-y-1/2 start-4 text-deep-purple/30" size={18} />
-                        <input
-                          required
-                          type="password"
-                          placeholder={t.confirmPassword}
-                          className="w-full rounded-xl border border-soft-purple/25 ps-11 pe-4 py-3.5 text-sm text-deep-purple placeholder:text-deep-purple/30 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/50 transition-all"
-                        />
+                        <Lock className="absolute top-1/2 -translate-y-1/2 start-4 text-gray-400" size={18} />
+                        <input required type="password" placeholder={t.confirmPassword} className={inputClass} />
                       </div>
                       <button
                         type="submit"
@@ -239,6 +212,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
           </AnimatePresence>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }

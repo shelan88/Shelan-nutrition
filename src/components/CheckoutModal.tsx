@@ -1,8 +1,12 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { CreditCard, Lock, ShieldCheck, X, CheckCircle2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { checkoutModal } from "@/content/content";
+
+const inputClass =
+  "w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/60 transition-all";
 
 export interface CheckoutPlan {
   name: string;
@@ -42,13 +46,13 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
     window.setTimeout(() => setStatus("success"), 1400);
   };
 
-  return (
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[999] flex items-center justify-center overflow-y-auto p-4 py-8 sm:p-6 bg-deep-purple/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto p-4 py-8 sm:p-6 bg-black/60 backdrop-blur-[4px]"
       onClick={onClose}
     >
       <motion.div
@@ -57,7 +61,7 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
         exit={{ opacity: 0, scale: 0.96, y: 10 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-md max-h-full my-auto rounded-[2rem] bg-white border border-soft-purple/15 shadow-2xl shadow-deep-purple/40 overflow-y-auto overscroll-contain"
+        className="relative w-full max-w-md max-h-full my-auto rounded-[2rem] bg-white border border-gray-200 shadow-2xl shadow-black/40 overflow-y-auto overscroll-contain"
       >
         <div className="relative bg-gradient-to-br from-deep-purple to-soft-purple px-8 py-7 text-center">
           <button
@@ -85,10 +89,10 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
                 className="text-center py-6"
               >
                 <CheckCircle2 className="mx-auto text-primary-pink mb-4" size={48} />
-                <h4 className="font-heading text-lg font-bold text-deep-purple mb-2">
+                <h4 className="font-heading text-lg font-bold text-gray-900 mb-2">
                   {t.success}
                 </h4>
-                <p className="text-sm text-deep-purple/70 mb-6 leading-relaxed">
+                <p className="text-sm text-gray-500 mb-6 leading-relaxed">
                   {t.successNote}
                 </p>
                 <button
@@ -107,15 +111,15 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
                 onSubmit={handleSubmit}
                 className="space-y-4"
               >
-                <div className="flex items-center justify-between rounded-2xl bg-light-pink/25 px-4 py-3 mb-2">
-                  <span className="text-sm font-semibold text-deep-purple">{plan.name}</span>
+                <div className="flex items-center justify-between rounded-2xl bg-gray-100 px-4 py-3 mb-2">
+                  <span className="text-sm font-semibold text-gray-900">{plan.name}</span>
                   <span className="text-sm font-bold text-primary-pink">
-                    {plan.price} <span className="font-normal text-deep-purple/60">{plan.period}</span>
+                    {plan.price} <span className="font-normal text-gray-500">{plan.period}</span>
                   </span>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-deep-purple/70 mb-1.5">
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                     {t.nameOnCard}
                   </label>
                   <input
@@ -124,17 +128,17 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder={t.namePlaceholder}
-                    className="w-full rounded-xl border border-soft-purple/25 px-4 py-3 text-sm text-deep-purple placeholder:text-deep-purple/30 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/50 transition-all"
+                    className={inputClass}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-deep-purple/70 mb-1.5">
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                     {t.cardNumber}
                   </label>
                   <div className="relative">
                     <CreditCard
-                      className="absolute top-1/2 -translate-y-1/2 start-4 text-deep-purple/30"
+                      className="absolute top-1/2 -translate-y-1/2 start-4 text-gray-400"
                       size={18}
                     />
                     <input
@@ -144,14 +148,14 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
                       onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
                       placeholder="4242 4242 4242 4242"
                       maxLength={19}
-                      className="w-full rounded-xl border border-soft-purple/25 ps-11 pe-4 py-3 text-sm text-deep-purple placeholder:text-deep-purple/30 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/50 transition-all"
+                      className={`${inputClass} ps-11 pe-4`}
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-deep-purple/70 mb-1.5">
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                       {t.expiry}
                     </label>
                     <input
@@ -161,11 +165,11 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
                       onChange={(e) => setExpiry(formatExpiry(e.target.value))}
                       placeholder="MM/YY"
                       maxLength={5}
-                      className="w-full rounded-xl border border-soft-purple/25 px-4 py-3 text-sm text-deep-purple placeholder:text-deep-purple/30 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/50 transition-all"
+                      className={inputClass}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-deep-purple/70 mb-1.5">
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                       {t.cvc}
                     </label>
                     <input
@@ -175,7 +179,7 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
                       onChange={(e) => setCvc(e.target.value.replace(/\D/g, "").slice(0, 4))}
                       placeholder="123"
                       maxLength={4}
-                      className="w-full rounded-xl border border-soft-purple/25 px-4 py-3 text-sm text-deep-purple placeholder:text-deep-purple/30 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/50 transition-all"
+                      className={inputClass}
                     />
                   </div>
                 </div>
@@ -198,7 +202,7 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
                   )}
                 </button>
 
-                <p className="flex items-center justify-center gap-1.5 text-xs text-deep-purple/50 pt-1">
+                <p className="flex items-center justify-center gap-1.5 text-xs text-gray-500 pt-1">
                   <ShieldCheck size={14} />
                   {t.securedBy} Stripe
                 </p>
@@ -207,6 +211,7 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
           </AnimatePresence>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
