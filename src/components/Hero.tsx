@@ -14,9 +14,9 @@ export default function Hero() {
   return (
     <section
       id="top"
-      className="section-dark relative pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden bg-gradient-to-br from-primary-pink via-soft-pink to-soft-purple"
+      className="section-dark relative pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden bg-gradient-to-b from-soft-purple via-primary-pink to-soft-pink"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-primary-pink/90 via-lavender-purple/70 to-soft-purple/90" />
+      <div className="absolute inset-0 bg-gradient-to-b from-deep-purple/60 via-primary-pink/70 to-soft-pink/80" />
       <div className="absolute -top-24 -end-24 w-96 h-96 rounded-full bg-light-pink/25 blur-3xl" />
       <div className="absolute top-40 -start-32 w-80 h-80 rounded-full bg-deep-purple/20 blur-3xl" />
 

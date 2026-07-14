@@ -39,13 +39,13 @@ export default function Navbar() {
   };
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-gradient-to-r from-primary-pink/90 to-soft-pink/85 border-b border-white/10">
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 flex items-center justify-between h-24">
+    <header className="fixed top-0 inset-x-0 z-[1000] backdrop-blur-md bg-gradient-to-b from-deep-purple/95 to-soft-purple/90 border-b border-white/10">
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 flex items-center justify-between h-24 sm:h-28">
         <a href="#top" className="flex items-center shrink-0">
           <img
             src="/logo.png"
             alt="SHELAN Nutritionist Logo"
-            className="h-16 sm:h-20 w-auto object-contain"
+            className="h-[77px] sm:h-24 w-auto object-contain"
           />
         </a>
 
@@ -93,21 +93,31 @@ export default function Navbar() {
             animate="visible"
             exit="exit"
             variants={overlayVariants}
-            className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-gradient-to-br from-primary-pink/98 to-deep-purple/98 backdrop-blur-xl"
+            className="fixed inset-0 z-[999] flex items-center justify-center px-6 py-28 bg-deep-purple/60 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
           >
-            <nav className="flex flex-col items-center gap-7">
-              {items.map((item: (typeof items)[number]) => (
-                <motion.button
-                  key={item.id}
-                  type="button"
-                  variants={linkVariants}
-                  onClick={() => handleNavClick(item.id)}
-                  className="font-heading text-3xl sm:text-4xl font-bold text-ivory hover:text-light-pink transition-colors"
-                >
-                  {item.label}
-                </motion.button>
-              ))}
-            </nav>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 10 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-sm max-h-full overflow-y-auto rounded-[2rem] border border-white/20 bg-gradient-to-br from-deep-purple/95 via-deep-purple/90 to-soft-purple/90 backdrop-blur-xl shadow-2xl shadow-deep-purple/50 px-8 py-12"
+            >
+              <nav className="flex flex-col items-center gap-7 text-center">
+                {items.map((item: (typeof items)[number]) => (
+                  <motion.button
+                    key={item.id}
+                    type="button"
+                    variants={linkVariants}
+                    onClick={() => handleNavClick(item.id)}
+                    className="font-heading text-2xl sm:text-3xl font-bold text-ivory hover:text-light-pink transition-colors"
+                  >
+                    {item.label}
+                  </motion.button>
+                ))}
+              </nav>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
