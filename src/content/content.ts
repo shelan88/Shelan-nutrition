@@ -337,7 +337,7 @@ export const pricingPlans = {
   ar: [
     {
       name: "جلسة تشخيصية واحدة",
-      price: "٤٥٠ ر.س",
+      price: "$120",
       period: "دفعة واحدة",
       duration: "٤٥ دقيقة",
       badge: null as string | null,
@@ -350,7 +350,7 @@ export const pricingPlans = {
     },
     {
       name: "باقة المتابعة الشاملة",
-      price: "١٢٠٠ ر.س",
+      price: "$350",
       period: "/ شهريًا",
       duration: "٤ جلسات شهريًا",
       badge: "الأكثر طلبًا" as string | null,
@@ -365,7 +365,7 @@ export const pricingPlans = {
     },
     {
       name: "الخطة المخصصة الجاهزة",
-      price: "٢٥٠ ر.س",
+      price: "$65",
       period: "دفعة واحدة",
       duration: "تسليم PDF",
       badge: null as string | null,
