@@ -585,3 +585,108 @@ export const footer = {
     rights: "جميع الحقوق محفوظة.",
   },
 };
+
+export const stats = {
+  en: {
+    kicker: "Real Results",
+    title: "Transforming Lives, One Plan at a Time",
+    items: [
+      { value: 200, suffix: "+", label: "Happy Clients" },
+      { value: 5,   suffix: "+", label: "Years of Experience" },
+      { value: 94,  suffix: "%", label: "Success Rate" },
+      { value: 300, suffix: "+", label: "Personalized Plans" },
+    ],
+  },
+  ar: {
+    kicker: "نتائج حقيقية",
+    title: "نغيّر حياة، خطوة تغذوية في كل مرة",
+    items: [
+      { value: 200, suffix: "+", label: "عميلة سعيدة" },
+      { value: 5,   suffix: "+", label: "سنوات خبرة" },
+      { value: 94,  suffix: "%", label: "معدل النجاح" },
+      { value: 300, suffix: "+", label: "خطة مخصصة" },
+    ],
+  },
+};
+
+export const journey = {
+  en: {
+    kicker: "Your Path to Wellness",
+    title: "How Your Journey Begins",
+    subtitle: "A clear, supported process designed around you — from the very first step to your lasting transformation.",
+    steps: [
+      {
+        number: "01",
+        title: "Book a Consultation",
+        description: "Schedule your first session in minutes. Choose a time that works perfectly for your life.",
+      },
+      {
+        number: "02",
+        title: "Health Assessment",
+        description: "We explore your health history, lifestyle, and personal goals to build a complete, holistic picture.",
+      },
+      {
+        number: "03",
+        title: "Your Nutrition Plan",
+        description: "Receive a fully personalized, evidence-based plan crafted specifically for your body and unique needs.",
+      },
+      {
+        number: "04",
+        title: "Continuous Follow-up",
+        description: "Regular check-ins, plan refinements, and direct support to keep you on track and motivated.",
+      },
+      {
+        number: "05",
+        title: "Reach Your Goal",
+        description: "Achieve lasting transformation with the confidence and knowledge to maintain it for life.",
+      },
+    ],
+  },
+  ar: {
+    kicker: "طريقك نحو الصحة",
+    title: "كيف تبدأ رحلتك",
+    subtitle: "مسار واضح ومدعوم مصمم خصيصًا لكِ — من أول خطوة إلى تحولك الدائم.",
+    steps: [
+      {
+        number: "٠١",
+        title: "احجزي استشارتك",
+        description: "حددي موعد جلستك الأولى في دقائق واختاري الوقت الذي يناسب حياتك تمامًا.",
+      },
+      {
+        number: "٠٢",
+        title: "التقييم الصحي",
+        description: "نتعمق في تاريخك الصحي ونمط حياتك وأهدافك الشخصية لبناء صورة شاملة ودقيقة.",
+      },
+      {
+        number: "٠٣",
+        title: "خطة تغذيتك المخصصة",
+        description: "تحصلين على خطة شخصية مبنية على الأدلة العلمية ومصممة خصيصًا لجسمك واحتياجاتك.",
+      },
+      {
+        number: "٠٤",
+        title: "متابعة مستمرة",
+        description: "متابعات دورية وتعديل للخطة ودعم مباشر للحفاظ على مسارك وتحفيزك.",
+      },
+      {
+        number: "٠٥",
+        title: "حققي هدفك",
+        description: "تحقيق تحول حقيقي مع الوعي والثقة اللازمين للحفاظ عليه مدى الحياة.",
+      },
+    ],
+  },
+};
+
+export const cta = {
+  en: {
+    kicker: "Take the First Step",
+    headline: "Ready to Reclaim Your Health?",
+    description: "Your journey to a healthier, more balanced life starts with one decision. Shelan is here to guide you every step of the way — with compassion, science, and results that last.",
+    button: "Book Your Consultation",
+  },
+  ar: {
+    kicker: "اتخذي الخطوة الأولى",
+    headline: "هل أنتِ مستعدة لاستعادة صحتك؟",
+    description: "رحلتك نحو حياة أكثر صحة وتوازنًا تبدأ بقرار واحد. شيلان هنا لترشدك في كل خطوة — بدفء ودعم علمي حقيقي ونتائج تدوم.",
+    button: "احجزي استشارتك",
+  },
+};
