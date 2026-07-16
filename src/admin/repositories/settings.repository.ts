@@ -1,18 +1,16 @@
 /**
  * settings.repository.ts — SHELAN Admin Portal
  *
- * Thin Supabase wrapper for the website_settings table.
- * Uses a key-value pattern: each setting is a row with a unique key
- * and an arbitrary JSONB value.
+ * Supabase wrapper for the website_settings table.
+ * Key-value pattern: each setting is a row with a unique key and JSONB value.
  */
 
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import type { Json } from "@/types/database.types";
 
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
 export async function getSetting(key: string): Promise<Json | null> {
-  if (!isSupabaseConfigured) return null;
   const { data, error } = await supabase
     .from("website_settings")
     .select("value")
@@ -23,7 +21,6 @@ export async function getSetting(key: string): Promise<Json | null> {
 }
 
 export async function getAllSettings(): Promise<Record<string, Json>> {
-  if (!isSupabaseConfigured) return {};
   const { data, error } = await supabase
     .from("website_settings")
     .select("key, value");
@@ -34,7 +31,6 @@ export async function getAllSettings(): Promise<Record<string, Json>> {
 // ─── Write ────────────────────────────────────────────────────────────────────
 
 export async function setSetting(key: string, value: Json): Promise<boolean> {
-  if (!isSupabaseConfigured) return false;
   const { error } = await supabase
     .from("website_settings")
     .upsert({ key, value }, { onConflict: "key" });
@@ -43,7 +39,6 @@ export async function setSetting(key: string, value: Json): Promise<boolean> {
 }
 
 export async function deleteSetting(key: string): Promise<boolean> {
-  if (!isSupabaseConfigured) return false;
   const { error } = await supabase
     .from("website_settings")
     .delete()

@@ -1,11 +1,10 @@
 /**
  * appointments.repository.ts — SHELAN Admin Portal
  *
- * Thin Supabase wrapper for the appointments table.
- * Falls back to an empty array when Supabase is not configured.
+ * Supabase wrapper for the appointments table.
  */
 
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import type { AppointmentRow } from "@/types/database.types";
 
 export type { AppointmentRow as Appointment };
@@ -13,7 +12,6 @@ export type { AppointmentRow as Appointment };
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
 export async function getUpcomingAppointments(limit = 20): Promise<AppointmentRow[]> {
-  if (!isSupabaseConfigured) return [];
   const { data, error } = await supabase
     .from("appointments")
     .select("*")
@@ -26,7 +24,6 @@ export async function getUpcomingAppointments(limit = 20): Promise<AppointmentRo
 }
 
 export async function getAllAppointments(): Promise<AppointmentRow[]> {
-  if (!isSupabaseConfigured) return [];
   const { data, error } = await supabase
     .from("appointments")
     .select("*")
@@ -40,7 +37,6 @@ export async function getAllAppointments(): Promise<AppointmentRow[]> {
 export async function createAppointment(
   appt: Omit<AppointmentRow, "id" | "created_at">,
 ): Promise<AppointmentRow | null> {
-  if (!isSupabaseConfigured) return null;
   const { data, error } = await supabase
     .from("appointments")
     .insert(appt)
@@ -54,7 +50,6 @@ export async function updateAppointmentStatus(
   id: string,
   status: AppointmentRow["status"],
 ): Promise<boolean> {
-  if (!isSupabaseConfigured) return false;
   const { error } = await supabase
     .from("appointments")
     .update({ status })

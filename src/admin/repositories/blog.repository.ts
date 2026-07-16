@@ -1,11 +1,11 @@
 /**
  * blog.repository.ts — SHELAN Admin Portal
  *
- * Thin Supabase wrapper for the blog_posts table.
+ * Supabase wrapper for the blog_posts table.
  * Public selects only published posts; admin can manage all.
  */
 
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import type { BlogPostRow } from "@/types/database.types";
 
 export type { BlogPostRow as BlogPost };
@@ -13,7 +13,6 @@ export type { BlogPostRow as BlogPost };
 // ─── Public read (no auth required) ──────────────────────────────────────────
 
 export async function getPublishedPosts(limit = 20): Promise<BlogPostRow[]> {
-  if (!isSupabaseConfigured) return [];
   const { data, error } = await supabase
     .from("blog_posts")
     .select("*")
@@ -25,7 +24,6 @@ export async function getPublishedPosts(limit = 20): Promise<BlogPostRow[]> {
 }
 
 export async function getPostBySlug(slug: string): Promise<BlogPostRow | null> {
-  if (!isSupabaseConfigured) return null;
   const { data, error } = await supabase
     .from("blog_posts")
     .select("*")
@@ -39,7 +37,6 @@ export async function getPostBySlug(slug: string): Promise<BlogPostRow | null> {
 // ─── Admin read (all posts) ────────────────────────────────────────────────────
 
 export async function getAllPosts(): Promise<BlogPostRow[]> {
-  if (!isSupabaseConfigured) return [];
   const { data, error } = await supabase
     .from("blog_posts")
     .select("*")
@@ -53,7 +50,6 @@ export async function getAllPosts(): Promise<BlogPostRow[]> {
 export async function createPost(
   post: Omit<BlogPostRow, "id" | "created_at" | "updated_at">,
 ): Promise<BlogPostRow | null> {
-  if (!isSupabaseConfigured) return null;
   const { data, error } = await supabase
     .from("blog_posts")
     .insert(post)
@@ -64,7 +60,6 @@ export async function createPost(
 }
 
 export async function updatePost(id: string, updates: Partial<BlogPostRow>): Promise<boolean> {
-  if (!isSupabaseConfigured) return false;
   const { error } = await supabase
     .from("blog_posts")
     .update(updates)
@@ -74,7 +69,6 @@ export async function updatePost(id: string, updates: Partial<BlogPostRow>): Pro
 }
 
 export async function deletePost(id: string): Promise<boolean> {
-  if (!isSupabaseConfigured) return false;
   const { error } = await supabase.from("blog_posts").delete().eq("id", id);
   if (error) { console.error("[blog] deletePost:", error.message); return false; }
   return true;

@@ -1,12 +1,11 @@
 /**
  * profile.repository.ts — SHELAN Admin Portal
  *
- * Thin Supabase wrapper for the admin_profiles table.
- * Each admin user has a row here linked to a Supabase Auth user_id
- * (the user_id column is nullable until auth is fully wired).
+ * Supabase wrapper for the admin_profiles table.
+ * Each admin user has one row linked to a Supabase Auth user_id.
  */
 
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import type { AdminProfileRow } from "@/types/database.types";
 
 export type { AdminProfileRow as AdminProfile };
@@ -14,7 +13,6 @@ export type { AdminProfileRow as AdminProfile };
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
 export async function getAdminProfile(id: string): Promise<AdminProfileRow | null> {
-  if (!isSupabaseConfigured) return null;
   const { data, error } = await supabase
     .from("admin_profiles")
     .select("*")
@@ -25,7 +23,6 @@ export async function getAdminProfile(id: string): Promise<AdminProfileRow | nul
 }
 
 export async function getAllAdminProfiles(): Promise<AdminProfileRow[]> {
-  if (!isSupabaseConfigured) return [];
   const { data, error } = await supabase
     .from("admin_profiles")
     .select("*")
@@ -39,7 +36,6 @@ export async function getAllAdminProfiles(): Promise<AdminProfileRow[]> {
 export async function createAdminProfile(
   profile: Omit<AdminProfileRow, "id" | "created_at" | "updated_at">,
 ): Promise<AdminProfileRow | null> {
-  if (!isSupabaseConfigured) return null;
   const { data, error } = await supabase
     .from("admin_profiles")
     .insert(profile)
@@ -53,7 +49,6 @@ export async function updateAdminProfile(
   id: string,
   updates: Partial<AdminProfileRow>,
 ): Promise<boolean> {
-  if (!isSupabaseConfigured) return false;
   const { error } = await supabase
     .from("admin_profiles")
     .update(updates)

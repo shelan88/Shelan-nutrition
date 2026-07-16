@@ -2,8 +2,7 @@
  * ClientsPage — /admin/clients
  *
  * Production-ready CRM for SHELAN Admin Portal.
- * Replaces PlaceholderPage. All data from MOCK_CLIENTS (src/admin/data/clients.ts).
- * Supabase-ready: swap MOCK_CLIENTS queries for async hooks when backend is live.
+ * Full client list view. All data fetched live from Supabase via getAllClients().
  */
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
@@ -15,7 +14,6 @@ import {
 import { useLanguage } from "@/context/LanguageContext";
 import PageHeader from "../components/PageHeader";
 import ClientDrawer from "./ClientDrawer";
-import { MOCK_CLIENTS } from "../data/clients";
 import { getAllClients } from "../repositories/clients.repository";
 import type { Client, RiskLevel, ClientStatus, Gender } from "../data/clients";
 
@@ -152,16 +150,16 @@ export default function ClientsPage() {
   const { lang } = useLanguage();
   const isAr = lang === "ar";
 
-  // ── Live data from Supabase (falls back to MOCK_CLIENTS) ──
-  const [clients,  setClients]  = useState<Client[]>(MOCK_CLIENTS);
-  const [loading,  setLoading]  = useState(false);
+  // ── Live data from Supabase ──
+  const [clients,  setClients]  = useState<Client[]>([]);
+  const [loading,  setLoading]  = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     getAllClients()
       .then((data) => { if (!cancelled) setClients(data); })
-      .catch(() => { /* keep MOCK_CLIENTS fallback */ })
+      .catch((err) => console.error("[ClientsPage] load:", err))
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);

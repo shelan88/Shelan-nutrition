@@ -322,8 +322,8 @@ export default function DashboardPage() {
   const kpis: KpiProps[] = [
     {
       label:    isAr ? "الحجوزات اليوم"     : "Today's Bookings",
-      rawValue: 24,
-      change:   isAr ? "+١٢٪ هذا الأسبوع"  : "+12% this week",
+      rawValue: store.appointmentsToday,
+      change:   isAr ? "مواعيد مجدولة اليوم" : "scheduled today",
       positive: true,
       icon: Calendar,
       gradient: "bg-gradient-to-br from-primary-pink to-soft-pink",
@@ -334,7 +334,9 @@ export default function DashboardPage() {
     {
       label:    isAr ? "إجمالي العملاء"    : "Total Clients",
       rawValue: store.totalClients,
-      change:   isAr ? "+٨ هذا الشهر"      : "+8 this month",
+      change:   isAr
+        ? `+${store.newClientsThisMonth} هذا الشهر`
+        : `+${store.newClientsThisMonth} this month`,
       positive: true,
       icon: Users,
       gradient: "bg-gradient-to-br from-lavender-purple to-soft-purple",
@@ -367,14 +369,15 @@ export default function DashboardPage() {
     },
   ];
 
-  // ── Schedule data ──
-  const schedule: (AppointmentProps & { isLast: boolean })[] = [
-    { time: "09:00 AM", client: isAr ? "لارا حسن"         : "Lara Hassan",        service: isAr ? "استشارة أولية"     : "Initial Consultation",   status: "confirmed",   isAr, isLast: false },
-    { time: "10:30 AM", client: isAr ? "ريم الأحمد"        : "Reem Al-Ahmad",      service: isAr ? "جلسة متابعة"        : "Follow-up Session",      status: "confirmed",   isAr, isLast: false },
-    { time: "12:00 PM", client: isAr ? "نورا محمد"         : "Nora Mohammed",      service: isAr ? "تقييم تغذوي"        : "Nutritional Assessment", status: "in-progress", isAr, isLast: false },
-    { time: "02:00 PM", client: isAr ? "فاطمة الراشد"      : "Fatima Al-Rashid",   service: isAr ? "إدارة الوزن"        : "Weight Management",      status: "upcoming",    isAr, isLast: false },
-    { time: "04:00 PM", client: isAr ? "سارة خالد"         : "Sara Khalid",        service: isAr ? "مراجعة خطة الأكل"   : "Meal Plan Review",       status: "upcoming",    isAr, isLast: true  },
-  ];
+  // ── Schedule data (live from Supabase) ──
+  const schedule: (AppointmentProps & { isLast: boolean })[] = store.todaySchedule.map((appt, i, arr) => ({
+    time:    appt.time,
+    client:  appt.client,
+    service: appt.service,
+    status:  appt.status,
+    isAr,
+    isLast:  i === arr.length - 1,
+  }));
 
   // ── Assessment data (live from dashboard repository) ──
   const assessments: AssessmentProps[] = store.assessmentEntries.slice(0, 5).map((e) => ({
@@ -386,14 +389,8 @@ export default function DashboardPage() {
     isAr,
   }));
 
-  // ── Messages data ──
-  const messages: MessageProps[] = [
-    { initials: "RA", name: isAr ? "ريم الأحمد"    : "Reem Al-Ahmad",     preview: isAr ? "شكراً جزيلاً على جلسة الأمس، لديّ سؤال…" : "Thank you so much for yesterday's session, I have a question…", time: isAr ? "منذ ١٢ د" : "12m",  unread: true,  gradient: "bg-gradient-to-br from-primary-pink to-soft-pink" },
-    { initials: "NM", name: isAr ? "نورا محمد"     : "Nora Mohammed",     preview: isAr ? "هل يمكنني تغيير موعد الاثنين القادم؟"       : "Can I reschedule my Monday appointment?",                         time: isAr ? "منذ ٤٥ د" : "45m",  unread: true,  gradient: "bg-gradient-to-br from-lavender-purple to-soft-purple" },
-    { initials: "FK", name: isAr ? "فاطمة خالد"    : "Fatima Khalid",     preview: isAr ? "لقد التزمت بالخطة الغذائية هذا الأسبوع!"    : "I've been sticking to the meal plan this week!",                  time: isAr ? "منذ ٢ س"  : "2h",   unread: true,  gradient: "bg-gradient-to-br from-soft-purple to-deep-purple" },
-    { initials: "SK", name: isAr ? "سارة الكندي"   : "Sara Al-Kindi",     preview: isAr ? "وصلت نتائج الفحوصات، هل تودّين الاطلاع؟"    : "My lab results are in, would you like to review them?",           time: isAr ? "منذ ٥ س"  : "5h",   unread: false, gradient: "bg-gradient-to-br from-primary-pink to-lavender-purple" },
-    { initials: "LH", name: isAr ? "لارا حسن"      : "Lara Hassan",       preview: isAr ? "أحتاج إلى تعديل بسيط على برنامج التمارين"   : "I need a small tweak to my exercise programme",                   time: isAr ? "منذ ١ ي"  : "1d",   unread: false, gradient: "bg-gradient-to-br from-soft-pink to-primary-pink" },
-  ];
+  // ── Messages data (live from Supabase) ──
+  const messages: MessageProps[] = store.recentMessages;
 
   // ── Quick actions ──
   const quickActions: QuickActionProps[] = [
@@ -446,14 +443,22 @@ export default function DashboardPage() {
               {formatDate(isAr)}
             </p>
             <div className="flex sm:justify-end gap-2 mt-2">
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full ring-1 ring-emerald-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                {isAr ? "٥ مواعيد اليوم" : "5 appointments today"}
-              </span>
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-pink bg-pink-50 px-2.5 py-0.5 rounded-full ring-1 ring-pink-200">
-                <MessageSquare size={10} strokeWidth={2} />
-                {isAr ? "٣ رسائل جديدة" : "3 new messages"}
-              </span>
+              {store.appointmentsToday > 0 && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full ring-1 ring-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  {isAr
+                    ? `${store.appointmentsToday} مواعيد اليوم`
+                    : `${store.appointmentsToday} appointment${store.appointmentsToday !== 1 ? "s" : ""} today`}
+                </span>
+              )}
+              {store.unreadMessages > 0 && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-pink bg-pink-50 px-2.5 py-0.5 rounded-full ring-1 ring-pink-200">
+                  <MessageSquare size={10} strokeWidth={2} />
+                  {isAr
+                    ? `${store.unreadMessages} رسائل جديدة`
+                    : `${store.unreadMessages} new message${store.unreadMessages !== 1 ? "s" : ""}`}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -477,7 +482,13 @@ export default function DashboardPage() {
                 {isAr ? "مواعيد اليوم" : "Today's Schedule"}
               </h2>
               <p className="text-[11.5px] text-[var(--admin-text-faint)] mt-0.5">
-                {isAr ? "٥ مواعيد مجدولة" : "5 appointments scheduled"}
+                {store.loading
+                  ? (isAr ? "جارٍ التحميل…" : "Loading…")
+                  : schedule.length > 0
+                    ? (isAr
+                      ? `${schedule.length} مواعيد مجدولة`
+                      : `${schedule.length} appointment${schedule.length !== 1 ? "s" : ""} scheduled`)
+                    : (isAr ? "لا مواعيد اليوم" : "No appointments today")}
               </p>
             </div>
             <Link
@@ -490,9 +501,13 @@ export default function DashboardPage() {
           </div>
 
           <div className="px-5 pt-5">
-            {schedule.map((appt, i) => (
-              <ScheduleItem key={i} {...appt} />
-            ))}
+            {schedule.length > 0
+              ? schedule.map((appt, i) => <ScheduleItem key={i} {...appt} />)
+              : !store.loading && (
+                <p className="text-[13px] text-[var(--admin-text-faint)] py-6 text-center">
+                  {isAr ? "لا توجد مواعيد مجدولة لهذا اليوم" : "No appointments scheduled for today"}
+                </p>
+              )}
           </div>
         </motion.div>
 
@@ -504,7 +519,13 @@ export default function DashboardPage() {
                 {isAr ? "آخر الرسائل" : "Latest Messages"}
               </h2>
               <p className="text-[11.5px] text-[var(--admin-text-faint)] mt-0.5">
-                {isAr ? "٣ غير مقروءة" : "3 unread"}
+                {store.loading
+                  ? (isAr ? "جارٍ التحميل…" : "Loading…")
+                  : store.unreadMessages > 0
+                    ? (isAr
+                      ? `${store.unreadMessages} غير مقروءة`
+                      : `${store.unreadMessages} unread`)
+                    : (isAr ? "لا رسائل جديدة" : "No unread messages")}
               </p>
             </div>
             <Link
@@ -517,9 +538,13 @@ export default function DashboardPage() {
           </div>
 
           <div className="px-5">
-            {messages.map((msg, i) => (
-              <MessageItem key={i} {...msg} />
-            ))}
+            {messages.length > 0
+              ? messages.map((msg) => <MessageItem key={msg.id} {...msg} />)
+              : !store.loading && (
+                <p className="text-[13px] text-[var(--admin-text-faint)] py-6 text-center">
+                  {isAr ? "لا توجد رسائل حتى الآن" : "No messages yet"}
+                </p>
+              )}
           </div>
         </motion.div>
       </div>

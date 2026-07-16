@@ -1,12 +1,11 @@
 /**
  * messages.repository.ts — SHELAN Admin Portal
  *
- * Thin Supabase wrapper for the messages table.
- * Public website contact form writes here via the anon key.
- * Falls back gracefully when Supabase is not configured.
+ * Supabase wrapper for the messages table.
+ * Public website contact form writes here via the anon key (RLS: anon INSERT).
  */
 
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import type { MessageRow } from "@/types/database.types";
 
 export type { MessageRow as Message };
@@ -14,7 +13,6 @@ export type { MessageRow as Message };
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
 export async function getMessages(limit = 50): Promise<MessageRow[]> {
-  if (!isSupabaseConfigured) return [];
   const { data, error } = await supabase
     .from("messages")
     .select("*")
@@ -25,7 +23,6 @@ export async function getMessages(limit = 50): Promise<MessageRow[]> {
 }
 
 export async function getUnreadCount(): Promise<number> {
-  if (!isSupabaseConfigured) return 0;
   const { count, error } = await supabase
     .from("messages")
     .select("id", { count: "exact", head: true })
@@ -36,7 +33,7 @@ export async function getUnreadCount(): Promise<number> {
 
 // ─── Write ────────────────────────────────────────────────────────────────────
 
-/** Called from the public contact form — works with anon key. */
+/** Called from the public contact form — works with the anon key (INSERT-only RLS). */
 export async function sendMessage(msg: {
   sender_name: string;
   sender_email?: string;
@@ -44,10 +41,6 @@ export async function sendMessage(msg: {
   content: string;
   source?: MessageRow["source"];
 }): Promise<boolean> {
-  if (!isSupabaseConfigured) {
-    console.info("[messages] Supabase not configured — message not persisted:", msg);
-    return true; // Graceful no-op in dev
-  }
   const { error } = await supabase
     .from("messages")
     .insert({ ...msg, status: "unread", source: msg.source ?? "website" });
@@ -56,7 +49,6 @@ export async function sendMessage(msg: {
 }
 
 export async function markMessageRead(id: string): Promise<boolean> {
-  if (!isSupabaseConfigured) return false;
   const { error } = await supabase
     .from("messages")
     .update({ status: "read" })
@@ -66,7 +58,6 @@ export async function markMessageRead(id: string): Promise<boolean> {
 }
 
 export async function markMessageReplied(id: string): Promise<boolean> {
-  if (!isSupabaseConfigured) return false;
   const { error } = await supabase
     .from("messages")
     .update({ status: "replied" })

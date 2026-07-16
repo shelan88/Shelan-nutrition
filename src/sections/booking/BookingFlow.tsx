@@ -1,10 +1,13 @@
 /**
  * BookingFlow — Multi-step booking UI.
  * Step 1: Service selection. Step 2: Calendar + time. Step 3: Personal info. Step 4: Summary + payment.
- * All state is local. No backend. Replace handleConfirm with your API/Supabase call.
+ * Confirms by creating a row in the Supabase appointments table.
+ * NOTE: The payment card on Step 4 is a UI placeholder — a payment integration (Stripe/Tap) is required
+ *       before real card processing can happen.
  * Props-only for data and strings. CMS-ready.
  */
 import { useState, useMemo } from "react";
+import { createAppointment } from "@/admin/repositories/appointments.repository";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Calendar, Star, RefreshCw, ChevronLeft, ChevronRight, CheckCircle2, Lock } from "lucide-react";
 import type { CMSBookingData, CMSBookingService } from "@/types/cms.types";
@@ -291,6 +294,7 @@ function BookingSummary({
   paymentNote,
   onConfirm,
   confirmed,
+  confirming,
 }: {
   service: CMSBookingService | undefined;
   date: string;
@@ -299,6 +303,7 @@ function BookingSummary({
   paymentNote: string;
   onConfirm: () => void;
   confirmed: boolean;
+  confirming: boolean;
 }) {
   const formattedDate = date
     ? new Date(date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })
@@ -359,11 +364,12 @@ function BookingSummary({
 
         <motion.button
           onClick={onConfirm}
+          disabled={confirming}
           whileHover={{ scale: 1.02, y: -1 }}
           whileTap={{ scale: 0.98 }}
-          className="w-full py-4 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple text-white font-semibold shadow-lg shadow-deep-purple/20 hover:shadow-xl hover:shadow-deep-purple/30 transition-shadow"
+          className="w-full py-4 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple text-white font-semibold shadow-lg shadow-deep-purple/20 hover:shadow-xl hover:shadow-deep-purple/30 transition-shadow disabled:opacity-70 disabled:cursor-not-allowed"
         >
-          {strings.confirmLabel}
+          {confirming ? (strings.confirmingLabel ?? "Confirming…") : strings.confirmLabel}
         </motion.button>
         <div className="flex items-center justify-center gap-2 text-xs text-deep-purple/40">
           <Lock size={12} /> {paymentNote}
@@ -389,7 +395,8 @@ export default function BookingFlow({ data, strings, preselectedServiceId }: Pro
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
     firstName: "", lastName: "", email: "", phone: "", notes: "",
   });
-  const [confirmed, setConfirmed] = useState(false);
+  const [confirmed,  setConfirmed]  = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   const selectedService = useMemo(
     () => data.services.find((s) => s.id === serviceId),
@@ -408,6 +415,21 @@ export default function BookingFlow({ data, strings, preselectedServiceId }: Pro
   };
 
   const handleBack = () => setStep((s) => Math.max(0, s - 1));
+
+  const handleConfirm = async () => {
+    setConfirming(true);
+    await createAppointment({
+      client_name: `${personalInfo.firstName} ${personalInfo.lastName}`.trim() || personalInfo.email,
+      date,
+      time,
+      type:   selectedService?.name ?? "Consultation",
+      status: "scheduled",
+      notes:  personalInfo.notes || null,
+      client_id: null,
+    });
+    setConfirming(false);
+    setConfirmed(true);
+  };
 
   const str = strings as Record<string, string>;
 
@@ -452,8 +474,9 @@ export default function BookingFlow({ data, strings, preselectedServiceId }: Pro
                 time={time}
                 strings={str}
                 paymentNote={data.paymentNote}
-                onConfirm={() => setConfirmed(true)}
+                onConfirm={handleConfirm}
                 confirmed={confirmed}
+                confirming={confirming}
               />
             )}
           </motion.div>

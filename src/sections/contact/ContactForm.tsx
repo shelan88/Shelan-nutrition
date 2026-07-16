@@ -1,9 +1,10 @@
 /**
  * ContactForm — Controlled form with subject dropdown and success state.
  * Props-only for strings, CMS-ready for labels.
- * No backend. When ready: replace handleSubmit with fetch/Supabase call.
+ * Submits via Supabase messages table (anon INSERT).
  */
 import { useState } from "react";
+import { sendMessage } from "@/admin/repositories/messages.repository";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 
@@ -66,15 +67,27 @@ export default function ContactForm({ strings }: Props) {
     if (errors[name as keyof FormState]) setErrors((er) => ({ ...er, [name]: undefined }));
   };
 
+  const [submitError, setSubmitError] = useState("");
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setSubmitting(true);
-    // Placeholder: replace with your API / Supabase call
-    await new Promise((r) => setTimeout(r, 1200));
+    setSubmitError("");
+    const ok = await sendMessage({
+      sender_name:  form.name.trim(),
+      sender_email: form.email.trim() || undefined,
+      sender_phone: form.phone.trim() || undefined,
+      content:      `[${form.subject}] ${form.message.trim()}`,
+      source:       "website",
+    });
     setSubmitting(false);
-    setSuccess(true);
+    if (ok) {
+      setSuccess(true);
+    } else {
+      setSubmitError("Something went wrong — please try again or reach out directly by phone.");
+    }
   };
 
   return (
@@ -190,6 +203,9 @@ export default function ContactForm({ strings }: Props) {
             >
               {submitting ? strings.submittingLabel : strings.submitLabel}
             </motion.button>
+            {submitError && (
+              <p className="text-xs text-red-500 text-center">{submitError}</p>
+            )}
           </motion.form>
         )}
       </AnimatePresence>
