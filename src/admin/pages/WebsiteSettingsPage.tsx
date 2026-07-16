@@ -7,6 +7,7 @@ import PageHeader from "../components/PageHeader";
 import { motion, AnimatePresence } from "framer-motion";
 import { Save } from "lucide-react";
 import { getSetting, setSetting } from "@/admin/repositories/settings.repository";
+import FileUploadField from "../components/FileUploadField";
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 14 },
@@ -289,8 +290,13 @@ export default function WebsiteSettingsPage() {
                   </Field>
                 </div>
                 <Field label="Portrait Image URL">
-                  <Input value={about.portrait_url} onChange={e => setAbout(p => ({ ...p, portrait_url: e.target.value }))} placeholder="https://…" />
-                  <p className="mt-1 text-[11px] text-[var(--admin-text-faint)]">URL to portrait image (e.g. uploaded via Media Library)</p>
+                  <FileUploadField
+                    value={about.portrait_url}
+                    onChange={(url) => setAbout(p => ({ ...p, portrait_url: url }))}
+                    folder="about"
+                    lang={lang}
+                  />
+                  <p className="mt-1 text-[11px] text-[var(--admin-text-faint)]">Upload or paste a URL for the portrait image</p>
                 </Field>
               </div>
               <SaveBar saved={saved} saving={saving} onSave={handleSave} />

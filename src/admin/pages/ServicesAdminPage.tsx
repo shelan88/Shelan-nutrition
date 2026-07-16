@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Plus, Pencil, Trash2, Eye, EyeOff, ArrowLeft, Save, Search } from "lucide-react";
 import { getAllServices, createService, updateService, deleteService } from "@/admin/repositories/services.repository";
 import type { ServiceRow } from "@/types/database.types";
+import FileUploadField from "../components/FileUploadField";
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 14 },
@@ -486,11 +487,10 @@ export default function ServicesAdminPage() {
               {/* Image URL */}
               <div>
                 <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Image URL</label>
-                <input
-                  className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
+                <FileUploadField
                   value={form.image_url}
-                  onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))}
-                  placeholder="https://…"
+                  onChange={(url) => setForm((f) => ({ ...f, image_url: url }))}
+                  folder="services"
                 />
               </div>
             </div>

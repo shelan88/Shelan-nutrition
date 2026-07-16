@@ -10,6 +10,7 @@ import {
   deleteTestimonial,
 } from "@/admin/repositories/testimonials.repository";
 import type { TestimonialRow } from "@/types/database.types";
+import FileUploadField from "../components/FileUploadField";
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 14 },
@@ -352,11 +353,10 @@ export default function TestimonialsAdminPage() {
                     {/* Avatar URL */}
                     <div>
                       <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Avatar URL</label>
-                      <input
+                      <FileUploadField
                         value={form.avatar_url ?? ""}
-                        onChange={(e) => set("avatar_url", e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
-                        placeholder="https://…"
+                        onChange={(url) => set("avatar_url", url)}
+                        folder="testimonials"
                       />
                     </div>
 
