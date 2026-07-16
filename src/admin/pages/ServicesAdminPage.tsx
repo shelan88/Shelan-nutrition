@@ -148,7 +148,7 @@ function formFromRow(row: ServiceRow): FormState {
 }
 
 export default function ServicesAdminPage() {
-  const { language } = useLanguage();
+  const { lang } = useLanguage();
   const [view, setView] = useState<"list" | "edit">("list");
   const [editing, setEditing] = useState<ServiceRow | null>(null);
   const [services, setServices] = useState<ServiceRow[]>([]);
@@ -276,15 +276,15 @@ export default function ServicesAdminPage() {
             onClick={() => setView("list")}
             className="flex items-center gap-2 text-[13px] font-medium text-[var(--admin-text-muted)] hover:text-[var(--admin-text)] transition-colors"
           >
-            <ArrowLeft size={16} />
-            Back to Services
+            <ArrowLeft size={16} className="rtl:rotate-180" />
+            {lang === "ar" ? "رجوع إلى الخدمات" : "Back to Services"}
           </button>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setView("list")}
               className="px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors"
             >
-              Cancel
+              {lang === "ar" ? "إلغاء" : "Cancel"}
             </button>
             <button
               onClick={handleSave}
@@ -292,7 +292,7 @@ export default function ServicesAdminPage() {
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all disabled:opacity-60"
             >
               <Save size={14} />
-              {saving ? "Saving…" : "Save Service"}
+              {saving ? (lang === "ar" ? "جارٍ الحفظ…" : "Saving…") : (lang === "ar" ? "حفظ الخدمة" : "Save Service")}
             </button>
           </div>
         </div>
@@ -691,9 +691,9 @@ export default function ServicesAdminPage() {
   return (
     <div>
       <PageHeader
-        title="Services"
-        description="Manage all services offered on the SHELAN platform."
-        breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Services" }]}
+        title={lang === "ar" ? "الخدمات" : "Services"}
+        description={lang === "ar" ? "إدارة جميع الخدمات المقدمة على المنصة." : "Manage all services offered on the SHELAN platform."}
+        breadcrumbs={[{ label: lang === "ar" ? "الإدارة" : "Admin", href: "/admin" }, { label: lang === "ar" ? "الخدمات" : "Services" }]}
       />
 
       <motion.div {...fadeUp(0)} className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
@@ -703,14 +703,14 @@ export default function ServicesAdminPage() {
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-text-faint)]" />
             <input
               className="pl-8 pr-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors w-56"
-              placeholder="Search services…"
+              placeholder={lang === "ar" ? "ابحث عن خدمة…" : "Search services…"}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           <button onClick={openNew} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all">
             <Plus size={14} />
-            New Service
+            {lang === "ar" ? "إضافة خدمة" : "New Service"}
           </button>
         </div>
 

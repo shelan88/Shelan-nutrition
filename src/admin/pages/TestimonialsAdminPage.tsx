@@ -72,7 +72,7 @@ function StarSelector({
 }
 
 export default function TestimonialsAdminPage() {
-  const { language } = useLanguage();
+  const { lang } = useLanguage();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"list" | "edit">("list");
@@ -154,9 +154,9 @@ export default function TestimonialsAdminPage() {
   return (
     <div>
       <PageHeader
-        title="Testimonials"
-        description="Manage client testimonials shown on the website."
-        breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Testimonials" }]}
+        title={lang === "ar" ? "الشهادات" : "Testimonials"}
+        description={lang === "ar" ? "إدارة شهادات العملاء المعروضة على الموقع." : "Manage client testimonials shown on the website."}
+        breadcrumbs={[{ label: lang === "ar" ? "الإدارة" : "Admin", href: "/admin" }, { label: lang === "ar" ? "الشهادات" : "Testimonials" }]}
       />
 
       <AnimatePresence mode="wait">
@@ -165,18 +165,18 @@ export default function TestimonialsAdminPage() {
             {/* Toolbar */}
             <div className="flex items-center justify-between mb-6">
               <p className="text-[13px] text-[var(--admin-text-muted)]">
-                {rows.length} testimonial{rows.length !== 1 ? "s" : ""}
+                {lang === "ar" ? `${rows.length} شهادة` : `${rows.length} testimonial${rows.length !== 1 ? "s" : ""}`}
               </p>
               <button onClick={openNew} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all">
                 <Plus size={15} />
-                New Testimonial
+                {lang === "ar" ? "إضافة شهادة" : "New Testimonial"}
               </button>
             </div>
 
             {loading ? (
-              <div className="text-[13px] text-[var(--admin-text-muted)] py-12 text-center">Loading…</div>
+              <div className="text-[13px] text-[var(--admin-text-muted)] py-12 text-center">{lang === "ar" ? "جارٍ التحميل…" : "Loading…"}</div>
             ) : rows.length === 0 ? (
-              <div className="text-[13px] text-[var(--admin-text-muted)] py-12 text-center">No testimonials yet.</div>
+              <div className="text-[13px] text-[var(--admin-text-muted)] py-12 text-center">{lang === "ar" ? "لا توجد شهادات بعد." : "No testimonials yet."}</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {rows.map((row, i) => (
@@ -247,17 +247,17 @@ export default function TestimonialsAdminPage() {
             {/* Edit toolbar */}
             <div className="flex items-center justify-between mb-6">
               <button onClick={cancel} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors">
-                <ArrowLeft size={13} />
-                Back
+                <ArrowLeft size={13} className="rtl:rotate-180" />
+                {lang === "ar" ? "رجوع" : "Back"}
               </button>
               <div className="flex items-center gap-2">
                 <button onClick={cancel} className="px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors">
                   <X size={13} className="inline mr-1" />
-                  Cancel
+                  {lang === "ar" ? "إلغاء" : "Cancel"}
                 </button>
                 <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all">
                   <Save size={14} />
-                  {saving ? "Saving…" : editing ? "Save Changes" : "Create Testimonial"}
+                  {saving ? (lang === "ar" ? "جارٍ الحفظ…" : "Saving…") : editing ? (lang === "ar" ? "حفظ التغييرات" : "Save Changes") : (lang === "ar" ? "إنشاء شهادة" : "Create Testimonial")}
                 </button>
               </div>
             </div>

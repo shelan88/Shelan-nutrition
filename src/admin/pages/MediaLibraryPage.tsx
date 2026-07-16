@@ -102,6 +102,7 @@ function MediaCard({ item, onDelete }: { item: MediaLibraryRow; onDelete: (id: s
 }
 
 export default function MediaLibraryPage() {
+  const { lang } = useLanguage();
   const [items, setItems] = useState<MediaLibraryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -137,8 +138,8 @@ export default function MediaLibraryPage() {
   return (
     <div>
       <PageHeader
-        title="Media Library"
-        description="Upload and manage images, documents, and videos."
+        title={lang === "ar" ? "مكتبة الوسائط" : "Media Library"}
+        description={lang === "ar" ? "رفع وإدارة الصور والمستندات ومقاطع الفيديو." : "Upload and manage images, documents, and videos."}
       />
 
       {/* Upload Zone */}

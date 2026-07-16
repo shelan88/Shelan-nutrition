@@ -21,7 +21,7 @@ import {
 import NavigationItem from "./NavigationItem";
 
 // ─── Logo mark ────────────────────────────────────────────────────────────────
-function SidebarLogo({ collapsed }: { collapsed: boolean }) {
+function SidebarLogo({ collapsed, lang }: { collapsed: boolean; lang: "en" | "ar" }) {
   return (
     <Link
       to="/admin"
@@ -48,7 +48,7 @@ function SidebarLogo({ collapsed }: { collapsed: boolean }) {
               SHELAN
             </span>
             <p className="text-[9px] text-[var(--admin-text-faint)] tracking-[0.12em] uppercase whitespace-nowrap leading-none mt-0.5">
-              Admin Portal
+              {lang === "ar" ? "لوحة الإدارة" : "Admin Portal"}
             </p>
           </motion.div>
         )}
@@ -155,7 +155,7 @@ export default function Sidebar() {
         ${sidebarCollapsed ? "w-[60px]" : "w-[240px]"}
       `}
     >
-      <SidebarLogo collapsed={sidebarCollapsed} />
+      <SidebarLogo collapsed={sidebarCollapsed} lang={lang} />
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-3 space-y-0 no-scrollbar">
@@ -172,7 +172,7 @@ export default function Sidebar() {
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] hover:text-[var(--admin-text-muted)] transition-colors"
           >
             <ExternalLink size={13} strokeWidth={1.8} />
-            <span>View public site</span>
+            <span>{lang === "ar" ? "عرض الموقع العام" : "View public site"}</span>
           </a>
         </div>
       )}
@@ -245,7 +245,7 @@ export default function Sidebar() {
                 </div>
                 <div>
                   <span className="font-semibold text-[15px] tracking-wide text-[var(--admin-text)]">SHELAN</span>
-                  <p className="text-[9px] text-[var(--admin-text-faint)] tracking-[0.12em] uppercase leading-none mt-0.5">Admin Portal</p>
+                  <p className="text-[9px] text-[var(--admin-text-faint)] tracking-[0.12em] uppercase leading-none mt-0.5">{lang === "ar" ? "لوحة الإدارة" : "Admin Portal"}</p>
                 </div>
               </Link>
               <button

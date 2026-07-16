@@ -35,7 +35,7 @@ function initForm(): Omit<Row, "id" | "created_at"> {
 }
 
 export default function FAQAdminPage() {
-  const { language } = useLanguage();
+  const { lang } = useLanguage();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"list" | "edit">("list");
@@ -114,9 +114,9 @@ export default function FAQAdminPage() {
   return (
     <div>
       <PageHeader
-        title="FAQs"
-        description="Manage frequently asked questions displayed on the website."
-        breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "FAQs" }]}
+        title={lang === "ar" ? "الأسئلة الشائعة" : "FAQs"}
+        description={lang === "ar" ? "إدارة الأسئلة الشائعة المعروضة على الموقع." : "Manage frequently asked questions displayed on the website."}
+        breadcrumbs={[{ label: lang === "ar" ? "الإدارة" : "Admin", href: "/admin" }, { label: lang === "ar" ? "الأسئلة الشائعة" : "FAQs" }]}
       />
 
       <AnimatePresence mode="wait">
@@ -150,7 +150,7 @@ export default function FAQAdminPage() {
                 </div>
                 <button onClick={openNew} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all">
                   <Plus size={15} />
-                  New FAQ
+                  {lang === "ar" ? "إضافة سؤال" : "New FAQ"}
                 </button>
               </div>
 
@@ -214,15 +214,15 @@ export default function FAQAdminPage() {
             {/* Edit toolbar */}
             <div className="flex items-center justify-between mb-6">
               <button onClick={cancel} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors">
-                <ArrowLeft size={13} /> Back
+                <ArrowLeft size={13} className="rtl:rotate-180" /> {lang === "ar" ? "رجوع" : "Back"}
               </button>
               <div className="flex items-center gap-2">
                 <button onClick={cancel} className="px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors">
-                  <X size={13} className="inline mr-1" /> Cancel
+                  <X size={13} className="inline mr-1" /> {lang === "ar" ? "إلغاء" : "Cancel"}
                 </button>
                 <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all">
                   <Save size={14} />
-                  {saving ? "Saving…" : editing ? "Save Changes" : "Create FAQ"}
+                  {saving ? (lang === "ar" ? "جارٍ الحفظ…" : "Saving…") : editing ? (lang === "ar" ? "حفظ التغييرات" : "Save Changes") : (lang === "ar" ? "إنشاء سؤال" : "Create FAQ")}
                 </button>
               </div>
             </div>
@@ -315,17 +315,22 @@ export default function FAQAdminPage() {
                     </div>
 
                     {/* Published */}
-                    <div className="flex items-center gap-3 pt-6">
-                      <input
-                        id="faq-published"
-                        type="checkbox"
-                        checked={form.published ?? false}
-                        onChange={(e) => set("published", e.target.checked)}
-                        className="w-4 h-4 accent-pink-500 rounded cursor-pointer"
-                      />
-                      <label htmlFor="faq-published" className="text-[13px] text-[var(--admin-text)] cursor-pointer select-none">
-                        Published (visible on site)
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
+                        Status
                       </label>
+                      <div className="flex items-center gap-3 h-[38px]">
+                        <input
+                          id="faq-published"
+                          type="checkbox"
+                          checked={form.published ?? false}
+                          onChange={(e) => set("published", e.target.checked)}
+                          className="w-4 h-4 accent-pink-500 rounded cursor-pointer"
+                        />
+                        <label htmlFor="faq-published" className="text-[13px] text-[var(--admin-text)] cursor-pointer select-none">
+                          Published (visible on site)
+                        </label>
+                      </div>
                     </div>
                   </div>
                 </div>

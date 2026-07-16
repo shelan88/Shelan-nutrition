@@ -42,7 +42,7 @@ function initForm(): Omit<Row, "id" | "created_at" | "updated_at"> {
 }
 
 export default function ProgramsAdminPage() {
-  const { language } = useLanguage();
+  const { lang } = useLanguage();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"list" | "edit">("list");
@@ -131,9 +131,9 @@ export default function ProgramsAdminPage() {
   return (
     <div>
       <PageHeader
-        title="Programs"
-        description="Manage nutrition and wellness programs offered to clients."
-        breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Programs" }]}
+        title={lang === "ar" ? "البرامج" : "Programs"}
+        description={lang === "ar" ? "إدارة البرامج الغذائية والصحية المقدمة للعملاء." : "Manage nutrition and wellness programs offered to clients."}
+        breadcrumbs={[{ label: lang === "ar" ? "الإدارة" : "Admin", href: "/admin" }, { label: lang === "ar" ? "البرامج" : "Programs" }]}
       />
 
       <AnimatePresence mode="wait">
@@ -146,14 +146,14 @@ export default function ProgramsAdminPage() {
                 </p>
                 <button onClick={openNew} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all">
                   <Plus size={15} />
-                  New Program
+                  {lang === "ar" ? "إضافة برنامج" : "New Program"}
                 </button>
               </div>
 
               {loading ? (
-                <div className="py-12 text-center text-[13px] text-[var(--admin-text-muted)]">Loading…</div>
+                <div className="py-12 text-center text-[13px] text-[var(--admin-text-muted)]">{lang === "ar" ? "جارٍ التحميل…" : "Loading…"}</div>
               ) : rows.length === 0 ? (
-                <div className="py-12 text-center text-[13px] text-[var(--admin-text-muted)]">No programs yet.</div>
+                <div className="py-12 text-center text-[13px] text-[var(--admin-text-muted)]">{lang === "ar" ? "لا توجد برامج بعد." : "No programs yet."}</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -208,15 +208,15 @@ export default function ProgramsAdminPage() {
           <motion.div key="edit" {...fadeUp()}>
             <div className="flex items-center justify-between mb-6">
               <button onClick={cancel} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors">
-                <ArrowLeft size={13} /> Back
+                <ArrowLeft size={13} className="rtl:rotate-180" /> {lang === "ar" ? "رجوع" : "Back"}
               </button>
               <div className="flex items-center gap-2">
                 <button onClick={cancel} className="px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors">
-                  <X size={13} className="inline mr-1" /> Cancel
+                  <X size={13} className="inline mr-1" /> {lang === "ar" ? "إلغاء" : "Cancel"}
                 </button>
                 <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all">
                   <Save size={14} />
-                  {saving ? "Saving…" : editing ? "Save Changes" : "Create Program"}
+                  {saving ? (lang === "ar" ? "جارٍ الحفظ…" : "Saving…") : editing ? (lang === "ar" ? "حفظ التغييرات" : "Save Changes") : (lang === "ar" ? "إنشاء برنامج" : "Create Program")}
                 </button>
               </div>
             </div>

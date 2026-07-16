@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import PageHeader from "../components/PageHeader";
 import { motion, AnimatePresence } from "framer-motion";
-import { Save } from "lucide-react";
+import { Save, Plus, Trash2, ChevronUp, ChevronDown, Eye, EyeOff } from "lucide-react";
 import { getSetting, setSetting } from "@/admin/repositories/settings.repository";
 import FileUploadField from "../components/FileUploadField";
 
@@ -70,9 +70,44 @@ const defaultContact = {
   map_url: "",
 };
 
-const defaultSocial = {
-  instagram: "", tiktok: "", youtube: "", facebook: "", snapchat: "",
+// ─── Social Media Links ────────────────────────────────────────────────────────
+
+type SocialLink = {
+  id: string;
+  platform: string;
+  iconEmoji: string;
+  url: string;
+  visible: boolean;
+  order: number;
 };
+
+const PRESET_PLATFORMS = [
+  { platform: "Instagram", iconEmoji: "📸" },
+  { platform: "TikTok", iconEmoji: "🎵" },
+  { platform: "YouTube", iconEmoji: "▶️" },
+  { platform: "Facebook", iconEmoji: "📘" },
+  { platform: "Snapchat", iconEmoji: "👻" },
+  { platform: "X (Twitter)", iconEmoji: "🐦" },
+  { platform: "LinkedIn", iconEmoji: "💼" },
+  { platform: "WhatsApp", iconEmoji: "💬" },
+  { platform: "Threads", iconEmoji: "🧵" },
+  { platform: "Pinterest", iconEmoji: "📌" },
+];
+
+function migrateLegacySocial(val: unknown): SocialLink[] {
+  if (!val || typeof val !== "object" || Array.isArray(val)) return [];
+  const old = val as Record<string, string>;
+  const mapping: { key: string; platform: string; iconEmoji: string }[] = [
+    { key: "instagram", platform: "Instagram", iconEmoji: "📸" },
+    { key: "tiktok", platform: "TikTok", iconEmoji: "🎵" },
+    { key: "youtube", platform: "YouTube", iconEmoji: "▶️" },
+    { key: "facebook", platform: "Facebook", iconEmoji: "📘" },
+    { key: "snapchat", platform: "Snapchat", iconEmoji: "👻" },
+  ];
+  return mapping
+    .filter(m => old[m.key])
+    .map((m, i) => ({ id: m.key, platform: m.platform, iconEmoji: m.iconEmoji, url: old[m.key], visible: true, order: i }));
+}
 
 // ─── SaveBar ──────────────────────────────────────────────────────────────────
 
@@ -103,7 +138,11 @@ export default function WebsiteSettingsPage() {
   const [hero, setHero] = useState({ ...defaultHero });
   const [about, setAbout] = useState({ ...defaultAbout });
   const [contact, setContact] = useState({ ...defaultContact });
-  const [social, setSocial] = useState({ ...defaultSocial });
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
+  // for the social CRUD add-platform UI
+  const [showPresetPicker, setShowPresetPicker] = useState(false);
+  const [newCustomPlatform, setNewCustomPlatform] = useState("");
+  const [newCustomEmoji, setNewCustomEmoji] = useState("🔗");
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -119,27 +158,37 @@ export default function WebsiteSettingsPage() {
     hero: setHero,
     about: setAbout,
     contact: setContact,
-    social: setSocial,
+    social: () => {}, // handled separately
   };
 
   const defaultMap: Record<Tab, object> = {
     hero: defaultHero,
     about: defaultAbout,
     contact: defaultContact,
-    social: defaultSocial,
+    social: {},
   };
 
   const getterMap: Record<Tab, object> = {
     hero,
     about,
     contact,
-    social,
+    social: {},
   };
 
   // Load on tab switch
   useEffect(() => {
     (async () => {
       const val = await getSetting(keyMap[tab]);
+      if (tab === "social") {
+        if (Array.isArray(val)) {
+          setSocialLinks(val as SocialLink[]);
+        } else if (val && typeof val === "object") {
+          setSocialLinks(migrateLegacySocial(val));
+        } else {
+          setSocialLinks([]);
+        }
+        return;
+      }
       if (val && typeof val === "object" && !Array.isArray(val)) {
         setterMap[tab]({ ...defaultMap[tab], ...(val as object) });
       } else {
@@ -151,27 +200,30 @@ export default function WebsiteSettingsPage() {
 
   const handleSave = useCallback(async () => {
     setSaving(true);
-    const ok = await setSetting(keyMap[tab], getterMap[tab] as any);
+    const key = keyMap[tab];
+    const value = tab === "social" ? socialLinks : getterMap[tab];
+    const ok = await setSetting(key, value as any);
     setSaving(false);
     if (ok) {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, hero, about, contact, social]);
+  }, [tab, hero, about, contact, socialLinks]);
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: "hero", label: "Hero" },
-    { key: "about", label: "About" },
-    { key: "contact", label: "Contact" },
-    { key: "social", label: "Social Media" },
+    { key: "hero", label: lang === "ar" ? "الرئيسية" : "Hero" },
+    { key: "about", label: lang === "ar" ? "من أنا" : "About" },
+    { key: "contact", label: lang === "ar" ? "التواصل" : "Contact" },
+    { key: "social", label: lang === "ar" ? "التواصل الاجتماعي" : "Social Media" },
   ];
 
   return (
     <div>
       <PageHeader
-        title="Website Settings"
-        description="Manage public-facing website content stored in Supabase."
+        title={lang === "ar" ? "إعدادات الموقع" : "Website Settings"}
+        description={lang === "ar" ? "إدارة محتوى الموقع العام المخزّن في قاعدة البيانات." : "Manage public-facing website content stored in Supabase."}
+        breadcrumbs={[{ label: lang === "ar" ? "الإدارة" : "Admin", href: "/admin" }, { label: lang === "ar" ? "إعدادات الموقع" : "Website Settings" }]}
       />
 
       {/* Tab Switcher */}
@@ -342,31 +394,185 @@ export default function WebsiteSettingsPage() {
           {/* SOCIAL TAB */}
           {tab === "social" && (
             <div>
-              <div className="px-5 py-5 space-y-4">
-                <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">Social Media Links</p>
-                {(
-                  [
-                    { key: "instagram", label: "Instagram", icon: "📸", placeholder: "https://instagram.com/shelan" },
-                    { key: "tiktok", label: "TikTok", icon: "🎵", placeholder: "https://tiktok.com/@shelan" },
-                    { key: "youtube", label: "YouTube", icon: "▶️", placeholder: "https://youtube.com/@shelan" },
-                    { key: "facebook", label: "Facebook", icon: "📘", placeholder: "https://facebook.com/shelan" },
-                    { key: "snapchat", label: "Snapchat", icon: "👻", placeholder: "https://snapchat.com/add/shelan" },
-                  ] as const
-                ).map(({ key, label, icon, placeholder }) => (
-                  <div key={key} className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-[var(--admin-hover-bg)] border border-[var(--admin-border)] flex items-center justify-center text-base shrink-0">
-                      {icon}
-                    </div>
-                    <div className="flex-1">
-                      <Label>{label}</Label>
-                      <Input
-                        value={(social as any)[key]}
-                        onChange={e => setSocial(p => ({ ...p, [key]: e.target.value }))}
-                        placeholder={placeholder}
-                      />
-                    </div>
+              <div className="px-5 py-5 space-y-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[13px] font-bold text-[var(--admin-text)]">
+                    {lang === "ar" ? "روابط التواصل الاجتماعي" : "Social Media Links"}
+                  </p>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowPresetPicker(v => !v)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[12px] font-semibold shadow-sm hover:shadow-md transition-all"
+                    >
+                      <Plus size={13} />
+                      {lang === "ar" ? "إضافة منصة" : "Add Platform"}
+                    </button>
+                    {showPresetPicker && (
+                      <div className="absolute end-0 top-full mt-2 z-20 bg-[var(--admin-surface)] border border-[var(--admin-border)] rounded-xl shadow-xl shadow-black/10 w-64 overflow-hidden">
+                        <p className="px-4 pt-3 pb-2 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider">
+                          {lang === "ar" ? "اختر منصة" : "Pick a platform"}
+                        </p>
+                        {/* Preset grid */}
+                        <div className="px-3 pb-3 grid grid-cols-2 gap-1.5">
+                          {PRESET_PLATFORMS.map(p => (
+                            <button
+                              key={p.platform}
+                              type="button"
+                              onClick={() => {
+                                setSocialLinks(prev => [...prev, {
+                                  id: crypto.randomUUID(),
+                                  platform: p.platform,
+                                  iconEmoji: p.iconEmoji,
+                                  url: "",
+                                  visible: true,
+                                  order: prev.length,
+                                }]);
+                                setShowPresetPicker(false);
+                              }}
+                              className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors text-start"
+                            >
+                              <span>{p.iconEmoji}</span>
+                              <span className="truncate">{p.platform}</span>
+                            </button>
+                          ))}
+                        </div>
+                        {/* Custom platform */}
+                        <div className="border-t border-[var(--admin-border)] px-3 py-3 space-y-2">
+                          <p className="text-[11px] font-semibold text-[var(--admin-text-faint)] uppercase tracking-wider">
+                            {lang === "ar" ? "منصة مخصصة" : "Custom platform"}
+                          </p>
+                          <div className="flex gap-2">
+                            <input
+                              value={newCustomEmoji}
+                              onChange={e => setNewCustomEmoji(e.target.value)}
+                              maxLength={2}
+                              className="w-12 px-2 py-1.5 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-center text-[14px] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40"
+                              placeholder="🔗"
+                            />
+                            <input
+                              value={newCustomPlatform}
+                              onChange={e => setNewCustomPlatform(e.target.value)}
+                              className="flex-1 px-2 py-1.5 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[13px] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40"
+                              placeholder={lang === "ar" ? "اسم المنصة" : "Platform name"}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            disabled={!newCustomPlatform.trim()}
+                            onClick={() => {
+                              if (!newCustomPlatform.trim()) return;
+                              setSocialLinks(prev => [...prev, {
+                                id: crypto.randomUUID(),
+                                platform: newCustomPlatform.trim(),
+                                iconEmoji: newCustomEmoji || "🔗",
+                                url: "",
+                                visible: true,
+                                order: prev.length,
+                              }]);
+                              setNewCustomPlatform("");
+                              setNewCustomEmoji("🔗");
+                              setShowPresetPicker(false);
+                            }}
+                            className="w-full py-1.5 rounded-lg bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[12px] font-semibold disabled:opacity-40 transition-all"
+                          >
+                            {lang === "ar" ? "إضافة" : "Add"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ))}
+                </div>
+
+                {/* Platform rows */}
+                {socialLinks.length === 0 ? (
+                  <div className="py-10 text-center text-[13px] text-[var(--admin-text-faint)] border border-dashed border-[var(--admin-border)] rounded-xl">
+                    {lang === "ar" ? "لا توجد منصات بعد. أضف واحدة أعلاه." : "No platforms yet. Add one above."}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {[...socialLinks].sort((a, b) => a.order - b.order).map((link, idx, arr) => (
+                      <div key={link.id} className="flex items-center gap-3 p-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-hover-bg)]/40">
+                        {/* Emoji */}
+                        <div className="w-9 h-9 rounded-full bg-[var(--admin-surface)] border border-[var(--admin-border)] flex items-center justify-center text-base shrink-0">
+                          {link.iconEmoji}
+                        </div>
+
+                        {/* Platform name + URL */}
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          <p className="text-[12px] font-semibold text-[var(--admin-text-muted)] truncate">{link.platform}</p>
+                          <input
+                            value={link.url}
+                            onChange={e => setSocialLinks(prev => prev.map(l => l.id === link.id ? { ...l, url: e.target.value } : l))}
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[12px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
+                            placeholder="https://…"
+                            dir="ltr"
+                          />
+                        </div>
+
+                        {/* Controls */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {/* Visible toggle */}
+                          <button
+                            type="button"
+                            title={link.visible ? (lang === "ar" ? "إخفاء" : "Hide") : (lang === "ar" ? "إظهار" : "Show")}
+                            onClick={() => setSocialLinks(prev => prev.map(l => l.id === link.id ? { ...l, visible: !l.visible } : l))}
+                            className={`w-7 h-7 flex items-center justify-center rounded-lg border transition-colors ${link.visible ? "border-emerald-200 text-emerald-600 bg-emerald-50" : "border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)]"}`}
+                          >
+                            {link.visible ? <Eye size={12} /> : <EyeOff size={12} />}
+                          </button>
+                          {/* Move up */}
+                          <button
+                            type="button"
+                            disabled={idx === 0}
+                            onClick={() => setSocialLinks(prev => {
+                              const sorted = [...prev].sort((a, b) => a.order - b.order);
+                              const newArr = sorted.map((l, i) => ({ ...l, order: i }));
+                              const curr = newArr[idx];
+                              const prev2 = newArr[idx - 1];
+                              newArr[idx] = { ...curr, order: prev2.order };
+                              newArr[idx - 1] = { ...prev2, order: curr.order };
+                              return newArr;
+                            })}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] disabled:opacity-30 transition-colors"
+                          >
+                            <ChevronUp size={12} />
+                          </button>
+                          {/* Move down */}
+                          <button
+                            type="button"
+                            disabled={idx === arr.length - 1}
+                            onClick={() => setSocialLinks(prev => {
+                              const sorted = [...prev].sort((a, b) => a.order - b.order);
+                              const newArr = sorted.map((l, i) => ({ ...l, order: i }));
+                              const curr = newArr[idx];
+                              const next = newArr[idx + 1];
+                              newArr[idx] = { ...curr, order: next.order };
+                              newArr[idx + 1] = { ...next, order: curr.order };
+                              return newArr;
+                            })}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] disabled:opacity-30 transition-colors"
+                          >
+                            <ChevronDown size={12} />
+                          </button>
+                          {/* Delete */}
+                          <button
+                            type="button"
+                            title={lang === "ar" ? "حذف" : "Delete"}
+                            onClick={() => {
+                              if (window.confirm(lang === "ar" ? `حذف ${link.platform}؟` : `Delete ${link.platform}?`)) {
+                                setSocialLinks(prev => prev.filter(l => l.id !== link.id));
+                              }
+                            }}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <SaveBar saved={saved} saving={saving} onSave={handleSave} />
             </div>

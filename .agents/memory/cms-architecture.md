@@ -36,7 +36,7 @@ Stored in `website_settings` (key-value):
 - `site.hero` — kicker, heading, subheading, CTA buttons (all EN/AR)
 - `site.about` — name, title, bio, portrait_url (EN/AR)
 - `site.contact` — phone, whatsapp, email, address, hours, map_url (EN/AR)
-- `site.social` — instagram, tiktok, youtube, facebook, snapchat, twitter
+- `site.social` — **SocialLink[] array** (NOT the old flat object). Each item: `{ id, platform, iconEmoji, url, visible, order }`. `migrateLegacySocial()` converts old flat objects on load. State is `socialLinks`/`setSocialLinks` (separate from the generic setterMap/getterMap). The generic tab loading effect has a `if (tab === "social") { ... return; }` branch.
 
 ## Admin Pages (all in src/admin/pages/)
 All 8 new CMS pages are live (PlaceholderPage replaced):
@@ -80,3 +80,17 @@ Bucket auto-created on first upload if missing.
 - FAQs → `/admin/faqs` (HelpCircle icon)
 - Success Stories → `/admin/success-stories` (Trophy icon)
 "Website Builder" nav item now points to WebsiteSettingsPage.
+
+## Bilingual Admin UI (Task #5)
+All 8 CMS pages are fully bilingual via `const { lang } = useLanguage()`:
+- PageHeaders: title, description, breadcrumb labels all use `lang === "ar" ? … : …`
+- Action buttons: New/Back/Cancel/Save/Edit/Delete fully bilingual
+- Loading/empty/count strings: bilingual
+- Search placeholders: bilingual
+- Tab labels in WebsiteSettingsPage: bilingual
+MediaLibraryPage previously imported `useLanguage` but never destructured it — now destructures `lang`.
+
+## Sidebar Bilingual (Task #8)
+Both the desktop logo and mobile drawer "Admin Portal" text are bilingual (`لوحة الإدارة` / `Admin Portal`).
+`SidebarLogo` accepts a `lang` prop. "View public site" link text is bilingual.
+AuthGuard: two-step gate (session check → role check) — no changes needed, works correctly.
