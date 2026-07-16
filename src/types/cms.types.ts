@@ -213,6 +213,101 @@ export interface CMSContactData {
   };
 }
 
+// ─── Assessment page ──────────────────────────────────────────────────────────
+
+export type CMSAssessmentQuestionType =
+  | "text"
+  | "number"
+  | "select"
+  | "radio"
+  | "checkbox"
+  | "range"
+  | "selection_cards";
+
+export interface CMSAssessmentOption {
+  value: string;
+  label: string;
+  description?: string;
+  iconName?: string; // lucide-react icon name
+}
+
+/**
+ * Conditional visibility: the question is shown only when another question's
+ * answer matches the specified value(s). Supports both single and multi answers.
+ */
+export interface CMSAssessmentConditional {
+  questionId: string;
+  value: string | string[];
+}
+
+/**
+ * CMSAssessmentQuestion — fully dynamic question schema.
+ *
+ * The wizard renders questions by filtering on `stepId` and sorting by `order`.
+ * To connect an admin dashboard: swap the static data file for a Supabase
+ * select, e.g.:
+ *   supabase.from('assessment_questions').select('*').eq('locale', lang).order('order')
+ *
+ * All fields except `id`, `stepId`, `category`, `title`, `type`, `required`,
+ * and `order` are optional so the admin can add new question types gracefully.
+ */
+export interface CMSAssessmentQuestion {
+  id: string;
+  stepId: string;
+  category: string;
+  title: string;
+  description?: string;
+  type: CMSAssessmentQuestionType;
+  options?: CMSAssessmentOption[];
+  required: boolean;
+  order: number;
+  placeholder?: string;
+  unit?: string; // e.g. "cm", "kg", "hours"
+  rangeMin?: number;
+  rangeMax?: number;
+  rangeStep?: number;
+  rangeLabels?: [string, string]; // [minLabel, maxLabel]
+  inputType?: string; // e.g. "email" | "tel" for text fields
+  conditional?: CMSAssessmentConditional;
+}
+
+export interface CMSAssessmentStep {
+  id: string;
+  title: string;
+  description?: string;
+  iconName?: string; // lucide-react icon name
+  order: number;
+}
+
+export interface CMSAssessmentData {
+  welcome: {
+    kicker: string;
+    headline: string;
+    subheadline: string;
+    estimatedTime: string;
+    estimatedTimeLabel: string;
+    startLabel: string;
+  };
+  steps: CMSAssessmentStep[];
+  questions: CMSAssessmentQuestion[];
+  summary: {
+    headline: string;
+    description: string;
+    editLabel: string;
+    submitLabel: string;
+    noneSelectedLabel: string;
+  };
+  submission: {
+    kicker: string;
+    headline: string;
+    description: string;
+    primaryCTA: string;
+    primaryHref: string;
+    secondaryCTA: string;
+    secondaryHref: string;
+  };
+}
+
 // ─── Booking page ─────────────────────────────────────────────────────────────
 
 export interface CMSBookingService {

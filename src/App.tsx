@@ -10,6 +10,7 @@
  *   /blog/:slug    → BlogDetailPage
  *   /contact       → ContactPage
  *   /booking       → BookingPage
+ *   /assessment    → AssessmentPage
  *   *              → NotFoundPage
  */
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -28,6 +29,7 @@ import BlogPage from "@/pages/BlogPage";
 import BlogDetailPage from "@/pages/BlogDetailPage";
 import ContactPage from "@/pages/ContactPage";
 import BookingPage from "@/pages/BookingPage";
+import AssessmentPage from "@/pages/AssessmentPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 
 export default function App() {
@@ -47,6 +49,7 @@ export default function App() {
             <Route path="/blog/:slug" element={<BlogDetailPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/booking" element={<BookingPage />} />
+            <Route path="/assessment" element={<AssessmentPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </main>

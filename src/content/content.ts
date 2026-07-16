@@ -687,6 +687,7 @@ export const pagesNav = {
     { label: "About", href: "/about" },
     { label: "Services", href: "/services" },
     { label: "Blog", href: "/blog" },
+    { label: "Assessment", href: "/assessment" },
     { label: "Contact", href: "/contact" },
     { label: "Book Now", href: "/booking", cta: true as const },
   ],
@@ -694,6 +695,7 @@ export const pagesNav = {
     { label: "من أنا", href: "/about" },
     { label: "الخدمات", href: "/services" },
     { label: "المدونة", href: "/blog" },
+    { label: "التقييم الصحي", href: "/assessment" },
     { label: "تواصلي معي", href: "/contact" },
     { label: "احجزي الآن", href: "/booking", cta: true as const },
   ],
@@ -888,6 +890,33 @@ export const notFound = {
     headline: "الصفحة غير موجودة",
     description: "الصفحة التي تبحثين عنها غير موجودة أو تم نقلها.",
     buttonLabel: "العودة للرئيسية",
+  },
+};
+
+// ─── Assessment page UI strings ───────────────────────────────────────────────
+
+export const assessmentStrings = {
+  en: {
+    heroKicker: "Understand Your Body",
+    heroHeadline: "Your Personalised\nHealth Assessment.",
+    heroSubheadline:
+      "A guided, intelligent questionnaire that helps Shelan understand your unique health profile before your first consultation.",
+    backLabel: "Previous",
+    nextLabel: "Continue",
+    requiredLabel: "Required",
+    validationMessage:
+      "Please answer all required questions before continuing.",
+  },
+  ar: {
+    heroKicker: "افهمي جسدكِ",
+    heroHeadline: "تقييمكِ الصحي\nالشخصي.",
+    heroSubheadline:
+      "استبيان إرشادي ذكي يساعد شيلان على فهم ملفكِ الصحي الفريد قبل استشارتكِ الأولى.",
+    backLabel: "السابق",
+    nextLabel: "التالي",
+    requiredLabel: "مطلوب",
+    validationMessage:
+      "يرجى الإجابة على جميع الأسئلة المطلوبة قبل المتابعة.",
   },
 };
 
