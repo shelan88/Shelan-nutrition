@@ -1,226 +1,447 @@
 /**
  * clients.repository.ts — SHELAN Admin Portal
  *
- * In-memory singleton initialized from MOCK_CLIENTS.
- * Supports useSyncExternalStore for reactive React components.
+ * Supabase-backed async repository for the clients table.
+ * Falls back to MOCK_CLIENTS when Supabase is not yet configured
+ * (e.g. before the schema is applied or env vars are missing).
  *
- * Supabase migration path:
- *   - Each function has a marked TODO showing the exact Supabase call to replace it with.
- *   - The function signature and return type stay the same — callers need zero changes.
+ * All exported function signatures remain identical to the previous
+ * in-memory version — callers need only add `await`.
  */
 
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { MOCK_CLIENTS } from "@/admin/data/clients";
+
+// ─── In-memory fallback store (used when Supabase is not configured) ───────────
+// Starts as a copy of MOCK_CLIENTS so reads + writes work consistently offline.
+let _mockStore: Client[] = [...MOCK_CLIENTS];
 import type {
-  Client, RiskLevel, TimelineEvent, TimelineType, ClientStatus,
+  Client, RiskLevel, TimelineEvent, TimelineType,
+  ClientStatus, Gender, FileType, NutritionPlan,
 } from "@/admin/data/clients";
 import type { AssessmentResult } from "@/admin/services/assessment.service";
 
-// ─── Mutable in-memory store ───────────────────────────────────────────────────
+// ─── Country lookup for AR labels ─────────────────────────────────────────────
+const COUNTRY_AR: Record<string, string> = {
+  "Kuwait":       "الكويت",
+  "Saudi Arabia": "المملكة العربية السعودية",
+  "UAE":          "الإمارات العربية المتحدة",
+  "Bahrain":      "البحرين",
+  "Qatar":        "قطر",
+  "Jordan":       "الأردن",
+  "Oman":         "عُمان",
+  "Egypt":        "مصر",
+  "Lebanon":      "لبنان",
+};
 
-let _clients: Client[] = [...MOCK_CLIENTS];
-const _listeners = new Set<() => void>();
+// ─── Row → Client mapper ───────────────────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapRowToClient(row: any): Client {
+  // Nested selects return arrays, ordered by their default sort
+  const latestAssessment  = (row.assessments   as any[])?.[0] ?? null;
+  const nutritionPlanRow  = (row.nutrition_plans as any[])?.[0] ?? null;
+  const timelineRows      = (row.timeline_events as any[]) ?? [];
+  const fileRows          = (row.uploaded_files  as any[]) ?? [];
 
-function _notify() {
-  _listeners.forEach((fn) => fn());
+  const country    = row.location   ?? "";
+  const countryAr  = COUNTRY_AR[country] ?? country;
+
+  return {
+    id:              row.id,
+    fullName:        row.full_name ?? "",
+    fullNameAr:      row.full_name_ar ?? row.full_name ?? "",
+    gender:          (row.gender   ?? "Female") as Gender,
+    age:             row.age       ?? 0,
+    country,
+    countryAr,
+    phone:           row.phone     ?? "",
+    email:           row.email     ?? "",
+    avatarInitials:  row.initials  ?? "",
+    avatarGradient:  row.avatar_color ?? "bg-gradient-to-br from-primary-pink to-soft-pink",
+
+    assessmentScore: latestAssessment?.score ?? null,
+    riskLevel:       (row.risk_level ?? "Low") as RiskLevel,
+    currentPlan:     latestAssessment?.diagnosis_category ?? "",
+    currentPlanAr:   latestAssessment?.diagnosis_category_ar ?? "",
+    lastAppointment: row.last_visit
+      ? new Date(row.last_visit).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : "",
+    status:          (row.status ?? "Waiting") as ClientStatus,
+    joinedDate:      row.join_date ?? row.created_at?.slice(0, 10) ?? "",
+
+    diagnoses:       row.diagnosis_category    ? [row.diagnosis_category]    : [],
+    diagnosesAr:     row.diagnosis_category_ar ? [row.diagnosis_category_ar] : [],
+    riskIndicators:  Array.isArray(row.risk_indicators)  ? row.risk_indicators  : [],
+    medicalNotes:    row.notes    ?? "",
+    medicalNotesAr:  row.notes_ar ?? "",
+    privateNotes:    "",
+    privateNotesAr:  "",
+    consultations:   Array.isArray(row.consultations) ? row.consultations : [],
+
+    nutritionPlan: nutritionPlanRow
+      ? (nutritionPlanRow.plan_data as NutritionPlan)
+      : null,
+
+    files: fileRows.map((f: any) => ({
+      id:         f.id,
+      name:       f.filename,
+      type:       (f.type ?? "PDF") as FileType,
+      size:       f.size ? `${(Number(f.size) / 1_048_576).toFixed(1)} MB` : "",
+      uploadedAt: f.uploaded_at ?? "",
+    })),
+
+    timeline: [...timelineRows]
+      .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .map((t: any) => ({
+        id:      t.id,
+        event:   t.event,
+        eventAr: t.event_ar ?? t.event,
+        date:    t.date,
+        type:    (t.type ?? "assessment") as TimelineType,
+      })),
+
+    assessment: latestAssessment
+      ? {
+          completedDate:       latestAssessment.submitted_at?.slice(0, 10) ?? "",
+          score:               latestAssessment.score          ?? 0,
+          riskPercentage:      latestAssessment.risk_percentage ?? 0,
+          diagnosisCategory:   latestAssessment.diagnosis_category    ?? "",
+          diagnosisCategoryAr: latestAssessment.diagnosis_category_ar ?? "",
+        }
+      : null,
+  };
 }
 
-/** Subscribe to store changes — compatible with useSyncExternalStore */
-export function subscribe(callback: () => void): () => void {
-  _listeners.add(callback);
-  return () => _listeners.delete(callback);
-}
-
-/** Snapshot for useSyncExternalStore */
-export function getClientsSnapshot(): readonly Client[] {
-  return _clients;
-}
+// Nested select string reused by getAllClients and getClient
+const FULL_SELECT = `
+  *,
+  assessments(id, score, risk_level, risk_percentage, diagnosis_category, diagnosis_category_ar, submitted_at),
+  timeline_events(id, event, event_ar, type, date),
+  nutrition_plans(id, plan_data),
+  uploaded_files(id, filename, type, size, uploaded_at)
+`.trim();
 
 // ─── Read operations ───────────────────────────────────────────────────────────
 
 /**
- * Returns all clients (sorted newest-first by joinedDate).
- * TODO Supabase: supabase.from('clients').select('*').order('joined_date', { ascending: false })
+ * Returns all clients sorted newest-first by join_date.
  */
-export function getAllClients(): Client[] {
-  return [..._clients].sort(
-    (a, b) => new Date(b.joinedDate).getTime() - new Date(a.joinedDate).getTime(),
-  );
+export async function getAllClients(): Promise<Client[]> {
+  if (!isSupabaseConfigured) return [..._mockStore];
+
+  const { data, error } = await supabase
+    .from("clients")
+    .select(FULL_SELECT)
+    .order("join_date", { ascending: false });
+
+  if (error) {
+    console.error("[clients] getAllClients:", error.message);
+    return [..._mockStore]; // graceful fallback
+  }
+
+  return (data ?? []).map(mapRowToClient);
 }
 
 /**
  * Returns a single client by ID, or null if not found.
- * TODO Supabase: supabase.from('clients').select('*').eq('id', id).single()
  */
-export function getClient(id: string): Client | null {
-  return _clients.find((c) => c.id === id) ?? null;
+export async function getClient(id: string): Promise<Client | null> {
+  if (!isSupabaseConfigured) {
+    return _mockStore.find((c) => c.id === id) ?? null;
+  }
+
+  const { data, error } = await supabase
+    .from("clients")
+    .select(FULL_SELECT)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[clients] getClient:", error.message);
+    return _mockStore.find((c) => c.id === id) ?? null;
+  }
+
+  return data ? mapRowToClient(data) : null;
 }
 
 /**
- * Finds a client by email (case-insensitive).
- * TODO Supabase: supabase.from('clients').select('*').ilike('email', email).maybeSingle()
+ * Finds a client by email (case-insensitive). Returns null if not found.
  */
-export function findClientByEmail(email: string): Client | null {
+export async function findClientByEmail(email: string): Promise<Client | null> {
   if (!email.trim()) return null;
-  const q = email.toLowerCase().trim();
-  return _clients.find((c) => c.email.toLowerCase() === q) ?? null;
+  if (!isSupabaseConfigured) {
+    const q = email.toLowerCase().trim();
+    return _mockStore.find((c) => c.email.toLowerCase() === q) ?? null;
+  }
+
+  const { data, error } = await supabase
+    .from("clients")
+    .select(FULL_SELECT)
+    .ilike("email", email.trim())
+    .maybeSingle();
+
+  if (error) {
+    console.error("[clients] findClientByEmail:", error.message);
+    return null;
+  }
+
+  return data ? mapRowToClient(data) : null;
 }
 
 /**
- * Finds a client by phone (strips spaces for comparison).
- * TODO Supabase: supabase.from('clients').select('*').eq('phone', normalise(phone)).maybeSingle()
+ * Finds a client by phone. Returns null if not found.
  */
-export function findClientByPhone(phone: string): Client | null {
+export async function findClientByPhone(phone: string): Promise<Client | null> {
   if (!phone.trim()) return null;
-  const q = phone.replace(/\s/g, "");
-  return _clients.find((c) => c.phone.replace(/\s/g, "") === q) ?? null;
+  if (!isSupabaseConfigured) {
+    const q = phone.replace(/\s/g, "");
+    return MOCK_CLIENTS.find((c) => c.phone.replace(/\s/g, "") === q) ?? null;
+  }
+
+  const { data, error } = await supabase
+    .from("clients")
+    .select(FULL_SELECT)
+    .eq("phone", phone.replace(/\s/g, ""))
+    .maybeSingle();
+
+  if (error) {
+    console.error("[clients] findClientByPhone:", error.message);
+    return null;
+  }
+
+  return data ? mapRowToClient(data) : null;
 }
 
 // ─── Write operations ──────────────────────────────────────────────────────────
 
 /**
  * Creates a new client from an assessment result.
- * Returns the created client.
- * TODO Supabase: supabase.from('clients').insert(data).select().single()
+ * Also creates the initial assessment row and first timeline event.
  */
-export function createClient(result: AssessmentResult): Client {
-  const now    = new Date();
-  const id     = `c-${Date.now()}`;
-  const today  = now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  const iso    = now.toISOString().slice(0, 10);
+export async function createClient(result: AssessmentResult): Promise<Client | null> {
+  const now   = new Date();
+  const today = now.toISOString().slice(0, 10);
 
-  const diagnoses    = _buildDiagnosisStrings(result);
-  const riskIndicators = _buildRiskIndicators(result);
-
-  const newClient: Client = {
-    id,
-    fullName:         result.fullName,
-    fullNameAr:       result.fullName, // will be updated by admin if needed
-    gender:           result.gender,
-    age:              result.age,
-    country:          result.country,
-    countryAr:        result.countryAr,
-    phone:            result.phone,
-    email:            result.email,
-    avatarInitials:   result.avatarInitials,
-    avatarGradient:   result.avatarGradient,
-
-    assessmentScore:  result.score,
-    riskLevel:        result.riskLevel,
-    currentPlan:      result.planEn,
-    currentPlanAr:    result.planAr,
-    lastAppointment:  today,
-    status:           "Waiting" as const,
-    joinedDate:       iso,
-
-    diagnoses:        diagnoses.en,
-    diagnosesAr:      diagnoses.ar,
-    riskIndicators,
-    medicalNotes:     "",
-    medicalNotesAr:   "",
-    privateNotes:     `Assessment submitted on ${today}. ${result.recommendation}`,
-    privateNotesAr:   `تم تقديم التقييم في ${today}. ${result.recommendationAr}`,
-    consultations:    [],
-    nutritionPlan:    null,
-    files:            [],
-
-    timeline: [
-      {
-        id:      `t-${Date.now()}-1`,
-        event:   "Assessment Submitted",
-        eventAr: "تم تقديم التقييم",
-        date:    today,
-        type:    "assessment" as TimelineType,
+  if (!isSupabaseConfigured) {
+    // Offline fallback — build a minimal Client record and store in memory
+    const mockClient: Client = {
+      id:             `mock-${Date.now()}`,
+      fullName:       result.fullName,
+      fullNameAr:     result.fullName,
+      gender:         (result.gender ?? "Female") as Gender,
+      age:            result.age ?? 0,
+      country:        result.country ?? "",
+      countryAr:      COUNTRY_AR[result.country ?? ""] ?? result.country ?? "",
+      phone:          result.phone ?? "",
+      email:          result.email ?? "",
+      avatarInitials: result.avatarInitials,
+      avatarGradient: result.avatarGradient,
+      assessmentScore: result.score,
+      riskLevel:       result.riskLevel as RiskLevel,
+      currentPlan:    result.diagnosisCategory,
+      currentPlanAr:  result.diagnosisCategoryAr,
+      lastAppointment: now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      status:          "Waiting" as ClientStatus,
+      joinedDate:      today,
+      diagnoses:       [result.diagnosisCategory],
+      diagnosesAr:     [result.diagnosisCategoryAr],
+      riskIndicators:  _buildRiskIndicators(result) as Client["riskIndicators"],
+      medicalNotes:    "",
+      medicalNotesAr:  "",
+      privateNotes:    "",
+      privateNotesAr:  "",
+      consultations:   [],
+      nutritionPlan:   null,
+      timeline:        [{ id: `te-${Date.now()}`, event: "Assessment Submitted", eventAr: "تم تقديم التقييم", date: today, type: "assessment" as TimelineType }],
+      files:           [],
+      assessment: {
+        completedDate:      today,
+        score:              result.score,
+        riskPercentage:     result.riskPercentage,
+        diagnosisCategory:  result.diagnosisCategory,
+        diagnosisCategoryAr: result.diagnosisCategoryAr,
       },
-    ],
+    };
+    _mockStore = [mockClient, ..._mockStore];
+    return mockClient;
+  }
 
-    assessment: {
-      completedDate:        today,
-      score:                result.score,
-      riskPercentage:       result.riskPercentage,
-      diagnosisCategory:    result.diagnosisCategory,
-      diagnosisCategoryAr:  result.diagnosisCategoryAr,
-    },
-  };
+  // 1. Insert client
+  const { data: clientRow, error: clientErr } = await supabase
+    .from("clients")
+    .insert({
+      full_name:            result.fullName,
+      email:                result.email     || null,
+      phone:                result.phone?.replace(/\s/g, "") || null,
+      age:                  result.age       || null,
+      gender:               result.gender    || null,
+      location:             result.country   || null,
+      initials:             result.avatarInitials,
+      avatar_color:         result.avatarGradient,
+      bmi:                  result.bmi       || null,
+      status:               "Waiting",
+      risk_level:           result.riskLevel,
+      risk_percentage:      result.riskPercentage,
+      diagnosis_category:   result.diagnosisCategory,
+      diagnosis_category_ar:result.diagnosisCategoryAr,
+      join_date:            today,
+      last_visit:           today,
+      risk_indicators:      _buildRiskIndicators(result),
+    })
+    .select()
+    .single();
 
-  _clients = [newClient, ..._clients];
-  _notify();
-  return newClient;
+  if (clientErr || !clientRow) {
+    console.error("[clients] createClient insert:", clientErr?.message);
+    return null;
+  }
+
+  const clientId = clientRow.id as string;
+
+  // 2. Insert first assessment record
+  await supabase.from("assessments").insert({
+    client_id:             clientId,
+    score:                 result.score,
+    risk_level:            result.riskLevel,
+    risk_percentage:       result.riskPercentage,
+    diagnosis_category:    result.diagnosisCategory,
+    diagnosis_category_ar: result.diagnosisCategoryAr,
+  });
+
+  // 3. Insert initial timeline event
+  await supabase.from("timeline_events").insert({
+    client_id: clientId,
+    event:     "Assessment Submitted",
+    event_ar:  "تم تقديم التقييم",
+    type:      "assessment",
+    date:      today,
+  });
+
+  return getClient(clientId);
 }
 
 /**
  * Saves a new assessment onto an existing client.
- * Updates score, risk, plan, diagnosis, and assessment details.
- * TODO Supabase: supabase.from('clients').update(patch).eq('id', clientId)
+ * Updates the client row and inserts an assessment record.
  */
-export function saveAssessment(clientId: string, result: AssessmentResult): Client | null {
-  const idx = _clients.findIndex((c) => c.id === clientId);
-  if (idx === -1) return null;
+export async function saveAssessment(
+  clientId: string,
+  result: AssessmentResult,
+): Promise<Client | null> {
+  const today = new Date().toISOString().slice(0, 10);
 
-  const today = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-
-  _clients = _clients.map((c, i) => {
-    if (i !== idx) return c;
-    return {
-      ...c,
-      assessmentScore:  result.score,
-      riskLevel:        result.riskLevel,
-      currentPlan:      result.planEn,
-      currentPlanAr:    result.planAr,
-      lastAppointment:  today,
-      status:           "Waiting" as ClientStatus,
-      assessment: {
-        completedDate:       today,
-        score:               result.score,
-        riskPercentage:      result.riskPercentage,
-        diagnosisCategory:   result.diagnosisCategory,
-        diagnosisCategoryAr: result.diagnosisCategoryAr,
+  if (!isSupabaseConfigured) {
+    // Offline: update the in-memory record
+    _mockStore = _mockStore.map((c) =>
+      c.id !== clientId ? c : {
+        ...c,
+        riskLevel:      result.riskLevel as RiskLevel,
+        currentPlan:    result.diagnosisCategory,
+        currentPlanAr:  result.diagnosisCategoryAr,
+        assessmentScore: result.score,
+        status:         "Waiting" as ClientStatus,
       },
-    };
+    );
+    return _mockStore.find((c) => c.id === clientId) ?? null;
+  }
+
+  // 1. Update client overview fields
+  await supabase
+    .from("clients")
+    .update({
+      risk_level:            result.riskLevel,
+      risk_percentage:       result.riskPercentage,
+      diagnosis_category:    result.diagnosisCategory,
+      diagnosis_category_ar: result.diagnosisCategoryAr,
+      status:                "Waiting",
+      last_visit:            today,
+    })
+    .eq("id", clientId);
+
+  // 2. Insert new assessment record
+  await supabase.from("assessments").insert({
+    client_id:             clientId,
+    score:                 result.score,
+    risk_level:            result.riskLevel,
+    risk_percentage:       result.riskPercentage,
+    diagnosis_category:    result.diagnosisCategory,
+    diagnosis_category_ar: result.diagnosisCategoryAr,
   });
-  _notify();
-  return _clients[idx] ?? null;
+
+  return getClient(clientId);
 }
 
 /**
  * Updates arbitrary fields on an existing client.
- * TODO Supabase: supabase.from('clients').update(updates).eq('id', id)
  */
-export function updateClient(id: string, updates: Partial<Client>): Client | null {
-  const idx = _clients.findIndex((c) => c.id === id);
-  if (idx === -1) return null;
-  _clients = _clients.map((c, i) => (i === idx ? { ...c, ...updates } : c));
-  _notify();
-  return _clients[idx] ?? null;
+export async function updateClient(
+  id: string,
+  updates: Partial<Client>,
+): Promise<Client | null> {
+  if (!isSupabaseConfigured) {
+    console.info("[clients] updateClient (mock fallback)");
+    return null;
+  }
+
+  // Map camelCase Client fields to snake_case DB columns
+  const dbUpdates: Record<string, unknown> = {};
+  if (updates.fullName       !== undefined) dbUpdates.full_name        = updates.fullName;
+  if (updates.fullNameAr     !== undefined) dbUpdates.full_name_ar     = updates.fullNameAr;
+  if (updates.email          !== undefined) dbUpdates.email            = updates.email;
+  if (updates.phone          !== undefined) dbUpdates.phone            = updates.phone;
+  if (updates.age            !== undefined) dbUpdates.age              = updates.age;
+  if (updates.gender         !== undefined) dbUpdates.gender           = updates.gender;
+  if (updates.country        !== undefined) dbUpdates.location         = updates.country;
+  if (updates.status         !== undefined) dbUpdates.status           = updates.status;
+  if (updates.riskLevel      !== undefined) dbUpdates.risk_level       = updates.riskLevel;
+  if (updates.medicalNotes   !== undefined) dbUpdates.notes            = updates.medicalNotes;
+  if (updates.medicalNotesAr !== undefined) dbUpdates.notes_ar         = updates.medicalNotesAr;
+  if (updates.consultations  !== undefined) dbUpdates.consultations    = updates.consultations;
+  if (updates.riskIndicators !== undefined) dbUpdates.risk_indicators  = updates.riskIndicators;
+
+  if (Object.keys(dbUpdates).length === 0) return getClient(id);
+
+  const { error } = await supabase.from("clients").update(dbUpdates).eq("id", id);
+  if (error) { console.error("[clients] updateClient:", error.message); return null; }
+
+  return getClient(id);
 }
 
 /**
  * Appends a timeline event to an existing client.
- * TODO Supabase: supabase.from('timeline_events').insert({ client_id: clientId, ...event })
  */
-export function appendTimelineEvent(
+export async function appendTimelineEvent(
   clientId: string,
   event: Omit<TimelineEvent, "id">,
-): void {
-  const idx = _clients.findIndex((c) => c.id === clientId);
-  if (idx === -1) return;
-  const newEvent: TimelineEvent = { id: `t-${Date.now()}`, ...event };
-  _clients = _clients.map((c, i) =>
-    i === idx ? { ...c, timeline: [newEvent, ...c.timeline] } : c,
-  );
-  _notify();
+): Promise<void> {
+  if (!isSupabaseConfigured) {
+    // Offline: append event to the in-memory record's timeline
+    _mockStore = _mockStore.map((c) =>
+      c.id !== clientId ? c : {
+        ...c,
+        timeline: [
+          ...c.timeline,
+          { id: `te-${Date.now()}`, event: event.event, eventAr: event.eventAr ?? "", date: event.date, type: event.type },
+        ],
+      },
+    );
+    return;
+  }
+
+  const { error } = await supabase.from("timeline_events").insert({
+    client_id: clientId,
+    event:     event.event,
+    event_ar:  event.eventAr,
+    type:      event.type,
+    date:      event.date,
+  });
+
+  if (error) {
+    console.error("[clients] appendTimelineEvent:", error.message);
+  }
 }
 
 // ─── Private helpers ───────────────────────────────────────────────────────────
-
-function _buildDiagnosisStrings(result: AssessmentResult): { en: string[]; ar: string[] } {
-  const en: string[] = [result.diagnosisCategory];
-  const ar: string[] = [result.diagnosisCategoryAr];
-  if (result.bmi !== null) {
-    en.push(`BMI: ${result.bmi}`);
-    ar.push(`مؤشر كتلة الجسم: ${result.bmi}`);
-  }
-  return { en, ar };
-}
 
 function _buildRiskIndicators(result: AssessmentResult) {
   const level: "normal" | "warning" | "critical" =
@@ -228,14 +449,14 @@ function _buildRiskIndicators(result: AssessmentResult) {
     : result.riskLevel === "Medium" ? "warning"
     : "normal";
 
-  const indicators = [];
+  const indicators: Array<{ label: string; labelAr: string; value: string; level: string }> = [];
 
-  if (result.bmi !== null) {
+  if (result.bmi !== null && result.bmi !== undefined) {
     indicators.push({
       label:   "BMI",
       labelAr: "مؤشر كتلة الجسم",
       value:   String(result.bmi),
-      level:   (result.bmi >= 30 ? "critical" : result.bmi >= 25 ? "warning" : "normal") as "normal" | "warning" | "critical",
+      level:   result.bmi >= 30 ? "critical" : result.bmi >= 25 ? "warning" : "normal",
     });
   }
 

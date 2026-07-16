@@ -378,9 +378,9 @@ export default function AssessmentWizard({ data, strings }: AssessmentWizardProp
 
         // 2. Deduplicate: match by email first, then phone
         let existingClient =
-          result.email ? findClientByEmail(result.email) : null;
+          result.email ? await findClientByEmail(result.email) : null;
         if (!existingClient && result.phone) {
-          existingClient = findClientByPhone(result.phone);
+          existingClient = await findClientByPhone(result.phone);
         }
 
         const today = new Date().toLocaleDateString("en-US", {
@@ -389,8 +389,8 @@ export default function AssessmentWizard({ data, strings }: AssessmentWizardProp
 
         // 3a. Existing client — update assessment, append timeline event
         if (existingClient) {
-          saveAssessment(existingClient.id, result);
-          appendTimelineEvent(existingClient.id, {
+          await saveAssessment(existingClient.id, result);
+          await appendTimelineEvent(existingClient.id, {
             event:   "Assessment Re-submitted",
             eventAr: "تم تقديم التقييم مجدداً",
             date:    today,
@@ -398,7 +398,7 @@ export default function AssessmentWizard({ data, strings }: AssessmentWizardProp
           });
         } else {
           // 3b. New client — create full record
-          createClient(result);
+          await createClient(result);
           incrementClients();
         }
 

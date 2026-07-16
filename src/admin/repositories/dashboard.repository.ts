@@ -1,41 +1,41 @@
 /**
  * dashboard.repository.ts — SHELAN Admin Portal
  *
- * In-memory singleton for dashboard stats and the recent-assessment queue.
- * Reactive via useSyncExternalStore — DashboardPage re-renders automatically
- * whenever an assessment submission lands.
+ * Live-query hook for dashboard stats.
+ * Fetches from Supabase on mount; falls back to MOCK_CLIENTS data
+ * when Supabase is not configured.
  *
- * Supabase migration path:
- *   - Replace each function body with the corresponding Supabase call.
- *   - The hook `useDashboardStore` stays the same — DashboardPage needs no change.
+ * Mutation helpers (incrementClients, addAssessmentEntry, …) are kept
+ * as no-ops so AssessmentWizard can continue calling them without
+ * changes — the dashboard will pick up fresh data on next mount.
  */
 
-import { useSyncExternalStore } from "react";
+import { useState, useEffect } from "react";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { MOCK_CLIENTS } from "@/admin/data/clients";
 import type { RiskLevel } from "@/admin/data/clients";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 export interface DashboardAssessmentEntry {
-  client: string;
+  client:   string;
   initials: string;
-  date: string;
-  risk: RiskLevel;
-  status: "Pending" | "Reviewed" | "Flagged";
+  date:     string;
+  risk:     RiskLevel;
+  status:   "Pending" | "Reviewed" | "Flagged";
 }
 
 export interface DashboardStats {
-  totalClients: number;
+  totalClients:       number;
   pendingAssessments: number;
-  assessmentEntries: DashboardAssessmentEntry[];
+  assessmentEntries:  DashboardAssessmentEntry[];
   newClientsThisMonth: number;
 }
 
-// ─── Initial seed data ─────────────────────────────────────────────────────────
+// ─── Seed fallback (used when Supabase is not configured) ─────────────────────
 
 const BASE_PENDING_ASSESSMENTS = 7;
 
-/** Pre-populated assessment queue — mirrors what was hardcoded in DashboardPage */
 const SEED_ASSESSMENTS: DashboardAssessmentEntry[] = [
   { client: "Mira Al-Ali",     initials: "MA", date: "Jul 16, 2026", risk: "High",   status: "Flagged"  },
   { client: "Dana Al-Shamri",  initials: "DS", date: "Jul 15, 2026", risk: "Medium", status: "Pending"  },
@@ -44,84 +44,108 @@ const SEED_ASSESSMENTS: DashboardAssessmentEntry[] = [
   { client: "Salma Al-Dosari", initials: "SD", date: "Jul 13, 2026", risk: "High",   status: "Flagged"  },
 ];
 
-// ─── Mutable store ─────────────────────────────────────────────────────────────
-
-interface StoreState {
-  totalClients: number;
-  pendingAssessments: number;
-  assessmentEntries: DashboardAssessmentEntry[];
+function _getNewThisMonthFromMock(): number {
+  const now = new Date();
+  return MOCK_CLIENTS.filter((c) => {
+    const d = new Date(c.joinedDate);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
 }
 
-let _state: StoreState = {
-  totalClients:      MOCK_CLIENTS.length,
-  pendingAssessments: BASE_PENDING_ASSESSMENTS,
-  assessmentEntries: SEED_ASSESSMENTS,
-};
-
-const _listeners = new Set<() => void>();
-
-function _notify() {
-  // Snapshot must be a new reference so useSyncExternalStore detects the change
-  _state = { ..._state };
-  _listeners.forEach((fn) => fn());
+function _mockStats(): DashboardStats {
+  return {
+    totalClients:        MOCK_CLIENTS.length,
+    pendingAssessments:  BASE_PENDING_ASSESSMENTS,
+    assessmentEntries:   SEED_ASSESSMENTS,
+    newClientsThisMonth: _getNewThisMonthFromMock(),
+  };
 }
 
-/** useSyncExternalStore subscribe */
-export function dashboardSubscribe(callback: () => void): () => void {
-  _listeners.add(callback);
-  return () => _listeners.delete(callback);
-}
+// ─── Live fetcher ─────────────────────────────────────────────────────────────
 
-/** useSyncExternalStore getSnapshot */
-export function getDashboardSnapshot(): StoreState {
-  return _state;
-}
+async function fetchDashboardStats(): Promise<DashboardStats> {
+  const now        = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
 
-// ─── Mutations ─────────────────────────────────────────────────────────────────
+  // Run all queries in parallel
+  const [clientsRes, newRes, assessmentsRes, recentRes] = await Promise.all([
+    supabase.from("clients").select("id", { count: "exact", head: true }),
+    supabase.from("clients").select("id", { count: "exact", head: true }).gte("join_date", monthStart),
+    supabase.from("assessments").select("id", { count: "exact", head: true }),
+    supabase
+      .from("assessments")
+      .select("id, risk_level, risk_percentage, submitted_at, clients(full_name, initials)")
+      .order("submitted_at", { ascending: false })
+      .limit(5),
+  ]);
 
-/**
- * Increments the total client count by 1.
- * TODO Supabase: await supabase.rpc('increment_client_count')
- */
-export function incrementClients(): void {
-  _state = { ..._state, totalClients: _state.totalClients + 1 };
-  _notify();
-}
+  const totalClients       = clientsRes.count       ?? MOCK_CLIENTS.length;
+  const newClientsThisMonth = newRes.count           ?? _getNewThisMonthFromMock();
+  const pendingAssessments  = assessmentsRes.count   ?? BASE_PENDING_ASSESSMENTS;
 
-/**
- * Increments the pending assessment counter by 1.
- * TODO Supabase: await supabase.rpc('increment_pending_assessments')
- */
-export function incrementAssessmentRequests(): void {
-  _state = { ..._state, pendingAssessments: _state.pendingAssessments + 1 };
-  _notify();
-}
+  const assessmentEntries: DashboardAssessmentEntry[] =
+    recentRes.data?.map((a) => {
+      const clientInfo = a.clients as { full_name?: string; initials?: string } | null;
+      const riskRaw    = (a.risk_level ?? "low") as string;
+      const risk: RiskLevel =
+        riskRaw.toLowerCase() === "high"   ? "High"
+        : riskRaw.toLowerCase() === "medium" ? "Medium"
+        : "Low";
+      return {
+        client:   clientInfo?.full_name ?? "Unknown",
+        initials: clientInfo?.initials  ?? "??",
+        date:     new Date(a.submitted_at).toLocaleDateString("en-US", {
+          month: "short", day: "numeric", year: "numeric",
+        }),
+        risk,
+        status: risk === "High" ? "Flagged" : "Pending",
+      };
+    }) ?? SEED_ASSESSMENTS;
 
-/**
- * Prepends a new entry to the Recent Assessment Requests table.
- * Keeps the list capped at 20 entries.
- * TODO Supabase: await supabase.from('dashboard_assessment_queue').insert(entry)
- */
-export function addAssessmentEntry(entry: DashboardAssessmentEntry): void {
-  const entries = [entry, ..._state.assessmentEntries].slice(0, 20);
-  _state = { ..._state, assessmentEntries: entries };
-  _notify();
-}
-
-/**
- * Updates risk counters (future use — risk breakdown widget).
- * TODO Supabase: await supabase.rpc('update_risk_counters', { risk_level: level })
- */
-export function updateRiskCounters(_level: RiskLevel): void {
-  // No-op in mock layer; tracked via assessmentEntries risk distribution
+  return { totalClients, pendingAssessments, assessmentEntries, newClientsThisMonth };
 }
 
 // ─── React hook ───────────────────────────────────────────────────────────────
 
 /**
  * Reactive hook for DashboardPage.
- * Subscribes to store mutations and re-renders automatically.
+ * Fetches live counts from Supabase; falls back to mock data.
  */
-export function useDashboardStore(): StoreState {
-  return useSyncExternalStore(dashboardSubscribe, getDashboardSnapshot);
+export function useDashboardStore(): DashboardStats & { loading: boolean } {
+  const [stats, setStats]   = useState<DashboardStats>(_mockStats);
+  const [loading, setLoading] = useState(isSupabaseConfigured);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    let cancelled = false;
+
+    setLoading(true);
+    fetchDashboardStats()
+      .then((s) => { if (!cancelled) setStats(s); })
+      .catch((err) => console.error("[dashboard] fetchStats:", err))
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  return { ...stats, loading };
 }
+
+// ─── Mutation no-ops ──────────────────────────────────────────────────────────
+// Kept for backward-compat with AssessmentWizard. Dashboard re-fetches on mount.
+
+/** No-op: client count re-fetched from DB on next dashboard mount. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function incrementClients(): void {}
+
+/** No-op: assessment count re-fetched from DB on next dashboard mount. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function incrementAssessmentRequests(): void {}
+
+/** No-op: recent assessments re-fetched from DB on next dashboard mount. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function addAssessmentEntry(_entry: DashboardAssessmentEntry): void {}
+
+/** No-op: risk distribution re-fetched from DB on next dashboard mount. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function updateRiskCounters(_level: RiskLevel): void {}

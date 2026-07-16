@@ -10,23 +10,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, User, MapPin, Phone, Mail, Calendar, FileText,
   AlertTriangle, CheckCircle2, Clock, ChevronRight,
-  Flame, Dumbbell, Wheat, Droplets, Paperclip,
-  Image as ImageIcon, FlaskConical, MessageSquare,
+  Flame, Wheat, Droplets, Paperclip,
+  Image as ImageIcon, FlaskConical,
   ShieldCheck, Stethoscope, Lock, Printer, Download,
   Edit2, Archive, Trash2,
 } from "lucide-react";
-import type { Client, RiskLevel, TimelineType, FileType, RiskIndicatorLevel } from "../data/clients";
+import type { Client, TimelineType, FileType, RiskIndicatorLevel } from "../data/clients";
 
 // ─── Risk helpers ──────────────────────────────────────────────────────────────
-
-const riskColors: Record<RiskLevel, string> = {
-  Low:    "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
-  Medium: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-  High:   "bg-red-50 text-red-600 ring-1 ring-red-200",
-};
-const riskDot: Record<RiskLevel, string> = {
-  Low: "bg-emerald-500", Medium: "bg-amber-400", High: "bg-red-500",
-};
 
 const indicatorBg: Record<RiskIndicatorLevel, string> = {
   normal:   "bg-emerald-50 border-emerald-100 text-emerald-700",

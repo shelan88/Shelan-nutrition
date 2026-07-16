@@ -5,7 +5,7 @@
  * Replaces PlaceholderPage. All data from MOCK_CLIENTS (src/admin/data/clients.ts).
  * Supabase-ready: swap MOCK_CLIENTS queries for async hooks when backend is live.
  */
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Users, UserPlus, AlertTriangle, Activity,
@@ -15,10 +15,8 @@ import {
 import { useLanguage } from "@/context/LanguageContext";
 import PageHeader from "../components/PageHeader";
 import ClientDrawer from "./ClientDrawer";
-import {
-  MOCK_CLIENTS,
-  getTotalClients, getNewThisMonth, getHighRiskCount, getActivePlanCount,
-} from "../data/clients";
+import { MOCK_CLIENTS } from "../data/clients";
+import { getAllClients } from "../repositories/clients.repository";
 import type { Client, RiskLevel, ClientStatus, Gender } from "../data/clients";
 
 // ─── Animation preset ─────────────────────────────────────────────────────────
@@ -154,6 +152,20 @@ export default function ClientsPage() {
   const { lang } = useLanguage();
   const isAr = lang === "ar";
 
+  // ── Live data from Supabase (falls back to MOCK_CLIENTS) ──
+  const [clients,  setClients]  = useState<Client[]>(MOCK_CLIENTS);
+  const [loading,  setLoading]  = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getAllClients()
+      .then((data) => { if (!cancelled) setClients(data); })
+      .catch(() => { /* keep MOCK_CLIENTS fallback */ })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
   // ── Drawer state ──
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
@@ -175,12 +187,12 @@ export default function ClientsPage() {
 
   // ── Derived data ──
   const uniquePlans = useMemo(
-    () => Array.from(new Set(MOCK_CLIENTS.map((c) => c.currentPlan))),
-    [],
+    () => Array.from(new Set(clients.map((c) => c.currentPlan))),
+    [clients],
   );
 
   const filtered = useMemo(() => {
-    let list = MOCK_CLIENTS.filter((c) => {
+    let list = clients.filter((c) => {
       const q = search.toLowerCase();
       if (q && !c.fullName.toLowerCase().includes(q) &&
                !c.phone.includes(q) &&
@@ -192,14 +204,23 @@ export default function ClientsPage() {
       return true;
     });
     return sortClients(list, sortKey);
-  }, [search, filterRisk, filterGender, filterPlan, filterStatus, sortKey]);
+  }, [clients, search, filterRisk, filterGender, filterPlan, filterStatus, sortKey]);
 
-  // ── Stat cards ──
+  // ── Stat cards (derived inline from live clients array) ──
+  const now          = new Date();
+  const totalClients = clients.length;
+  const newThisMonth = clients.filter((c) => {
+    const d = new Date(c.joinedDate);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+  const highRiskCount   = clients.filter((c) => c.riskLevel === "High").length;
+  const activePlanCount = clients.filter((c) => c.status === "Active").length;
+
   const stats: StatProps[] = [
-    { label: isAr ? "إجمالي العملاء" : "Total Clients",    value: getTotalClients(),    icon: Users,         gradient: "bg-gradient-to-br from-primary-pink to-soft-pink",      delay: 0.05 },
-    { label: isAr ? "جدد هذا الشهر"  : "New This Month",   value: getNewThisMonth(),    icon: UserPlus,      gradient: "bg-gradient-to-br from-lavender-purple to-soft-purple",  delay: 0.10 },
-    { label: isAr ? "حالات خطر مرتفع": "High Risk Cases",  value: getHighRiskCount(),   icon: AlertTriangle, gradient: "bg-gradient-to-br from-red-400 to-orange-400",            delay: 0.15 },
-    { label: isAr ? "خطط نشطة"        : "Active Plans",     value: getActivePlanCount(), icon: Activity,      gradient: "bg-gradient-to-br from-deep-purple to-soft-purple",       delay: 0.20 },
+    { label: isAr ? "إجمالي العملاء" : "Total Clients",    value: totalClients,    icon: Users,         gradient: "bg-gradient-to-br from-primary-pink to-soft-pink",      delay: 0.05 },
+    { label: isAr ? "جدد هذا الشهر"  : "New This Month",   value: newThisMonth,    icon: UserPlus,      gradient: "bg-gradient-to-br from-lavender-purple to-soft-purple",  delay: 0.10 },
+    { label: isAr ? "حالات خطر مرتفع": "High Risk Cases",  value: highRiskCount,   icon: AlertTriangle, gradient: "bg-gradient-to-br from-red-400 to-orange-400",            delay: 0.15 },
+    { label: isAr ? "خطط نشطة"        : "Active Plans",     value: activePlanCount, icon: Activity,      gradient: "bg-gradient-to-br from-deep-purple to-soft-purple",       delay: 0.20 },
   ];
 
   // ── Table column labels ──
@@ -377,11 +398,15 @@ export default function ClientsPage() {
                       <div className="flex flex-col items-center gap-2">
                         <Users size={28} className="text-[var(--admin-text-faint)]" strokeWidth={1.4} />
                         <p className="text-[13.5px] font-semibold text-[var(--admin-text-muted)]">
-                          {isAr ? "لا توجد نتائج" : "No clients found"}
+                          {loading
+                            ? (isAr ? "جارٍ تحميل العملاء…" : "Loading clients…")
+                            : (isAr ? "لا توجد نتائج" : "No clients found")}
                         </p>
-                        <p className="text-[12px] text-[var(--admin-text-faint)]">
-                          {isAr ? "جرّب تغيير معايير البحث أو التصفية." : "Try adjusting your search or filters."}
-                        </p>
+                        {!loading && (
+                          <p className="text-[12px] text-[var(--admin-text-faint)]">
+                            {isAr ? "جرّب تغيير معايير البحث أو التصفية." : "Try adjusting your search or filters."}
+                          </p>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -490,16 +515,18 @@ export default function ClientsPage() {
           {/* Footer */}
           <div className="flex items-center justify-between px-5 py-3 border-t border-[var(--admin-border)] bg-[var(--admin-hover-bg)]">
             <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className={`w-1.5 h-1.5 rounded-full ${loading ? "bg-amber-400 animate-pulse" : "bg-emerald-500 animate-pulse"}`} />
               <span className="text-[11px] text-[var(--admin-text-faint)]">
-                {isAr ? "البيانات: وهمية — جاهز لـ Supabase" : "Data: mock — Supabase-ready"}
+                {loading
+                  ? (isAr ? "جارٍ التحميل…" : "Loading…")
+                  : (isAr ? "البيانات: Supabase مباشر" : "Data: live via Supabase")}
               </span>
             </div>
             <div className="flex items-center gap-1.5 text-[11px] text-[var(--admin-text-faint)]">
               <TrendingUp size={11} />
               {isAr
-                ? `${filtered.length} من ${MOCK_CLIENTS.length} عميل`
-                : `${filtered.length} of ${MOCK_CLIENTS.length} clients`}
+                ? `${filtered.length} من ${clients.length} عميل`
+                : `${filtered.length} of ${clients.length} clients`}
             </div>
           </div>
         </motion.div>

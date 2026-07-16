@@ -16,9 +16,9 @@ import { Link } from "react-router-dom";
 import {
   Calendar, Users, FileText, CreditCard,
   TrendingUp, TrendingDown, ArrowUpRight,
-  Clock, CheckCircle2, AlertCircle, MinusCircle,
+  Clock, AlertCircle,
   Plus, BookOpen, Upload, Star, Briefcase, BarChart3,
-  MessageSquare, ChevronRight, Sparkles, Dot,
+  MessageSquare, ChevronRight, Sparkles,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useDashboardStore } from "@/admin/repositories/dashboard.repository";
@@ -72,7 +72,7 @@ function useCountUp(target: number, duration = 1100, delay = 0) {
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 14 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.42, delay, ease: [0.22, 1, 0.36, 1] },
+  transition: { duration: 0.42, delay, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
 });
 
 // ─── 1. KPI Card ───────────────────────────────────────────────────────────────

@@ -238,7 +238,7 @@ interface PlanResult {
   planAr: string;
 }
 
-function assignPlan(answers: AssessmentAnswers, bmi: number | null, risk: RiskLevel): PlanResult {
+function assignPlan(answers: AssessmentAnswers, bmi: number | null, _risk: RiskLevel): PlanResult {
   const goals     = arr(answers.main_goal);
   const conditions = arr(answers.health_conditions);
   const symptoms  = arr(answers.lipedema_symptoms).filter((s) => s !== "none");
@@ -285,7 +285,7 @@ function buildDiagnosis(answers: AssessmentAnswers, risk: RiskLevel, bmi: number
 
 // ─── Recommendation ────────────────────────────────────────────────────────────
 
-function buildRecommendation(risk: RiskLevel, planEn: string): { en: string; ar: string } {
+function buildRecommendation(risk: RiskLevel, _planEn: string): { en: string; ar: string } {
   const base: Record<RiskLevel, { en: string; ar: string }> = {
     High: {
       en: "Urgent nutritional review recommended. A personalised plan will be prioritised for your case.",
