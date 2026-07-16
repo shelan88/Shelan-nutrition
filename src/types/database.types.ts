@@ -1,8 +1,7 @@
 /**
- * database.types.ts
+ * database.types.ts — SHELAN PostgreSQL schema types
  *
- * TypeScript type stubs that mirror the SHELAN PostgreSQL schema.
- * Generated manually; regenerate with `supabase gen types typescript` once auth is wired.
+ * Manually maintained; regenerate with `supabase gen types typescript` when needed.
  */
 
 export type Json =
@@ -13,7 +12,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-// ─── Row shapes (snake_case, matching DB columns) ────────────────────────────
+// ─── Row shapes ────────────────────────────────────────────────────────────────
 
 export interface ClientRow {
   id: string;
@@ -43,8 +42,8 @@ export interface ClientRow {
   diagnosis_category_ar: string | null;
   notes: string | null;
   notes_ar: string | null;
-  consultations: Json | null;       // JSONB array of Consultation
-  risk_indicators: Json | null;     // JSONB array of RiskIndicator
+  consultations: Json | null;
+  risk_indicators: Json | null;
   created_at: string;
   updated_at: string;
 }
@@ -75,7 +74,7 @@ export interface TimelineEventRow {
 export interface NutritionPlanRow {
   id: string;
   client_id: string;
-  plan_data: Json;  // full NutritionPlan object serialised as JSON
+  plan_data: Json;
   created_at: string;
   updated_at: string;
 }
@@ -126,6 +125,12 @@ export interface BlogPostRow {
   published: boolean;
   published_at: string | null;
   tags: string[] | null;
+  // Extended columns (added by CMS migration)
+  read_time_minutes: number | null;
+  category: string | null;
+  author_name: string | null;
+  author_avatar: string | null;
+  details: Json | null; // { accentFrom, accentTo, featured }
   created_at: string;
   updated_at: string;
 }
@@ -136,6 +141,13 @@ export interface ServiceRow {
   name_ar: string | null;
   description_en: string | null;
   description_ar: string | null;
+  // Extended columns (added by CMS migration)
+  short_description_en: string | null;
+  short_description_ar: string | null;
+  icon: string | null;
+  image_url: string | null;
+  slug: string | null;
+  details: Json | null; // { accentFrom, accentTo, whoIsItFor, benefits, consultation, faq, cta }
   price: number | null;
   duration_minutes: number | null;
   active: boolean;
@@ -152,6 +164,10 @@ export interface TestimonialRow {
   content_ar: string | null;
   rating: number | null;
   published: boolean;
+  // Extended columns (added by CMS migration)
+  avatar_url: string | null;
+  role_en: string | null;
+  role_ar: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -185,121 +201,78 @@ export interface AdminProfileRow {
   updated_at: string;
 }
 
-// ─── Database type map (used by createClient<Database>) ─────────────────────
+// ── New tables (added by CMS migration) ───────────────────────────────────────
+
+export interface ProgramRow {
+  id: string;
+  name_en: string;
+  name_ar: string | null;
+  short_description_en: string | null;
+  short_description_ar: string | null;
+  full_description_en: string | null;
+  full_description_ar: string | null;
+  icon: string | null;
+  price: number | null;
+  duration_weeks: number | null;
+  features_en: string[] | null;
+  features_ar: string[] | null;
+  active: boolean;
+  sort_order: number | null;
+  image_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FAQRow {
+  id: string;
+  question_en: string;
+  question_ar: string | null;
+  answer_en: string;
+  answer_ar: string | null;
+  category: string | null;
+  sort_order: number | null;
+  published: boolean;
+  created_at: string;
+}
+
+export interface SuccessStoryRow {
+  id: string;
+  client_name_en: string;
+  client_name_ar: string | null;
+  story_en: string | null;
+  story_ar: string | null;
+  before_description_en: string | null;
+  before_description_ar: string | null;
+  result_description_en: string | null;
+  result_description_ar: string | null;
+  image_url: string | null;
+  published: boolean;
+  sort_order: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Database type map ─────────────────────────────────────────────────────────
 
 export interface Database {
   public: {
     Tables: {
-      clients: {
-        Row: ClientRow;
-        Insert: Omit<ClientRow, "id" | "created_at" | "updated_at"> & {
-          id?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: Partial<ClientRow>;
-      };
-      assessments: {
-        Row: AssessmentRow;
-        Insert: Omit<AssessmentRow, "id" | "created_at"> & {
-          id?: string;
-          created_at?: string;
-        };
-        Update: Partial<AssessmentRow>;
-      };
-      timeline_events: {
-        Row: TimelineEventRow;
-        Insert: Omit<TimelineEventRow, "id" | "created_at"> & {
-          id?: string;
-          created_at?: string;
-        };
-        Update: Partial<TimelineEventRow>;
-      };
-      nutrition_plans: {
-        Row: NutritionPlanRow;
-        Insert: Omit<NutritionPlanRow, "id" | "created_at" | "updated_at"> & {
-          id?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: Partial<NutritionPlanRow>;
-      };
-      uploaded_files: {
-        Row: UploadedFileRow;
-        Insert: Omit<UploadedFileRow, "id" | "created_at"> & {
-          id?: string;
-          created_at?: string;
-        };
-        Update: Partial<UploadedFileRow>;
-      };
-      appointments: {
-        Row: AppointmentRow;
-        Insert: Omit<AppointmentRow, "id" | "created_at"> & {
-          id?: string;
-          created_at?: string;
-        };
-        Update: Partial<AppointmentRow>;
-      };
-      messages: {
-        Row: MessageRow;
-        Insert: Omit<MessageRow, "id" | "created_at"> & {
-          id?: string;
-          created_at?: string;
-        };
-        Update: Partial<MessageRow>;
-      };
-      blog_posts: {
-        Row: BlogPostRow;
-        Insert: Omit<BlogPostRow, "id" | "created_at" | "updated_at"> & {
-          id?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: Partial<BlogPostRow>;
-      };
-      services: {
-        Row: ServiceRow;
-        Insert: Omit<ServiceRow, "id" | "created_at" | "updated_at"> & {
-          id?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: Partial<ServiceRow>;
-      };
-      testimonials: {
-        Row: TestimonialRow;
-        Insert: Omit<TestimonialRow, "id" | "created_at" | "updated_at"> & {
-          id?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: Partial<TestimonialRow>;
-      };
-      media_library: {
-        Row: MediaLibraryRow;
-        Insert: Omit<MediaLibraryRow, "id" | "created_at"> & {
-          id?: string;
-          created_at?: string;
-        };
-        Update: Partial<MediaLibraryRow>;
-      };
-      website_settings: {
-        Row: WebsiteSettingRow;
-        Insert: Omit<WebsiteSettingRow, "id" | "updated_at"> & {
-          id?: string;
-          updated_at?: string;
-        };
-        Update: Partial<WebsiteSettingRow>;
-      };
-      admin_profiles: {
-        Row: AdminProfileRow;
-        Insert: Omit<AdminProfileRow, "id" | "created_at" | "updated_at"> & {
-          id?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: Partial<AdminProfileRow>;
-      };
+      clients:         { Row: ClientRow;         Insert: Omit<ClientRow,         "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<ClientRow>; };
+      assessments:     { Row: AssessmentRow;     Insert: Omit<AssessmentRow,     "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<AssessmentRow>; };
+      timeline_events: { Row: TimelineEventRow;  Insert: Omit<TimelineEventRow,  "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<TimelineEventRow>; };
+      nutrition_plans: { Row: NutritionPlanRow;  Insert: Omit<NutritionPlanRow,  "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<NutritionPlanRow>; };
+      uploaded_files:  { Row: UploadedFileRow;   Insert: Omit<UploadedFileRow,   "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<UploadedFileRow>; };
+      appointments:    { Row: AppointmentRow;    Insert: Omit<AppointmentRow,    "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<AppointmentRow>; };
+      messages:        { Row: MessageRow;        Insert: Omit<MessageRow,        "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<MessageRow>; };
+      blog_posts:      { Row: BlogPostRow;       Insert: Omit<BlogPostRow,       "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<BlogPostRow>; };
+      services:        { Row: ServiceRow;        Insert: Omit<ServiceRow,        "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<ServiceRow>; };
+      testimonials:    { Row: TestimonialRow;    Insert: Omit<TestimonialRow,    "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<TestimonialRow>; };
+      media_library:   { Row: MediaLibraryRow;   Insert: Omit<MediaLibraryRow,   "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<MediaLibraryRow>; };
+      website_settings:{ Row: WebsiteSettingRow; Insert: Omit<WebsiteSettingRow, "id"|"updated_at"> & { id?:string; updated_at?:string; }; Update: Partial<WebsiteSettingRow>; };
+      admin_profiles:  { Row: AdminProfileRow;   Insert: Omit<AdminProfileRow,   "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<AdminProfileRow>; };
+      programs:        { Row: ProgramRow;        Insert: Omit<ProgramRow,        "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<ProgramRow>; };
+      success_stories: { Row: SuccessStoryRow;   Insert: Omit<SuccessStoryRow,   "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<SuccessStoryRow>; };
+      faqs:            { Row: FAQRow;            Insert: Omit<FAQRow,            "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<FAQRow>; };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

@@ -3,9 +3,6 @@
  *
  * Each item declares its icon by name (resolved at render time in NavigationItem).
  * Groups map to labeled sections in the sidebar.
- *
- * CMS-ready: replace this static array with a Supabase fetch from
- * `admin_nav_items` when role-based navigation is needed.
  */
 
 export type NavGroup = "main" | "content" | "business" | "insights" | "system";
@@ -44,8 +41,8 @@ export const NAV_ITEMS: NavItem[] = [
   // ── Content ────────────────────────────────────────────────────────────────
   {
     id: "website-builder",
-    label: "Website Builder",
-    labelAr: "منشئ الموقع",
+    label: "Website Settings",
+    labelAr: "إعدادات الموقع",
     href: "/admin/website-builder",
     iconName: "Globe",
     group: "content",
@@ -56,14 +53,6 @@ export const NAV_ITEMS: NavItem[] = [
     labelAr: "الخدمات",
     href: "/admin/services",
     iconName: "Briefcase",
-    group: "content",
-  },
-  {
-    id: "assessment-templates",
-    label: "Assessment Templates",
-    labelAr: "قوالب التقييم",
-    href: "/admin/assessment-templates",
-    iconName: "ClipboardList",
     group: "content",
   },
   {
@@ -80,6 +69,30 @@ export const NAV_ITEMS: NavItem[] = [
     labelAr: "الشهادات",
     href: "/admin/testimonials",
     iconName: "Star",
+    group: "content",
+  },
+  {
+    id: "programs",
+    label: "Programs",
+    labelAr: "البرامج",
+    href: "/admin/programs",
+    iconName: "Target",
+    group: "content",
+  },
+  {
+    id: "faqs",
+    label: "FAQs",
+    labelAr: "الأسئلة الشائعة",
+    href: "/admin/faqs",
+    iconName: "HelpCircle",
+    group: "content",
+  },
+  {
+    id: "success-stories",
+    label: "Success Stories",
+    labelAr: "قصص النجاح",
+    href: "/admin/success-stories",
+    iconName: "Trophy",
     group: "content",
   },
   {
@@ -176,10 +189,10 @@ export const PAGE_META: Record<string, PageMeta> = {
     illustrationVariant: "dashboard",
   },
   "website-builder": {
-    title: "Website Builder",
-    titleAr: "منشئ الموقع",
-    description: "Edit your public website content, hero sections, and page layouts without writing code.",
-    descriptionAr: "تعديل محتوى موقعك العام والأقسام الرئيسية وتخطيطات الصفحات دون كتابة كود.",
+    title: "Website Settings",
+    titleAr: "إعدادات الموقع",
+    description: "Edit your public website content — hero, about, contact, and social media.",
+    descriptionAr: "تعديل محتوى موقعك العام — الرئيسية، من أنا، التواصل، والتواصل الاجتماعي.",
     illustrationVariant: "builder",
   },
   services: {
@@ -208,6 +221,27 @@ export const PAGE_META: Record<string, PageMeta> = {
     titleAr: "الشهادات",
     description: "Curate and showcase client success stories and reviews on your public website.",
     descriptionAr: "تنظيم وعرض قصص نجاح العملاء والمراجعات على موقعك العام.",
+    illustrationVariant: "testimonials",
+  },
+  programs: {
+    title: "Programs",
+    titleAr: "البرامج",
+    description: "Create and manage your nutrition programs, packages, and featured offerings.",
+    descriptionAr: "إنشاء وإدارة برامجك ووحزمك التغذوية.",
+    illustrationVariant: "services",
+  },
+  faqs: {
+    title: "FAQs",
+    titleAr: "الأسئلة الشائعة",
+    description: "Manage frequently asked questions shown on your public website.",
+    descriptionAr: "إدارة الأسئلة الشائعة المعروضة على موقعك العام.",
+    illustrationVariant: "assessment",
+  },
+  "success-stories": {
+    title: "Success Stories",
+    titleAr: "قصص النجاح",
+    description: "Showcase client transformations and results on your public website.",
+    descriptionAr: "إبراز تحولات ونتائج العملاء على موقعك العام.",
     illustrationVariant: "testimonials",
   },
   "media-library": {

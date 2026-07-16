@@ -1,0 +1,339 @@
+import { useLanguage } from "@/context/LanguageContext";
+import PageHeader from "../components/PageHeader";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useCallback } from "react";
+import { Plus, Pencil, Trash2, ArrowLeft, Save, X, Search } from "lucide-react";
+import {
+  getAllFAQs,
+  createFAQ,
+  updateFAQ,
+  deleteFAQ,
+} from "@/admin/repositories/faqs.repository";
+import type { FAQRow } from "@/types/database.types";
+
+const fadeUp = (delay = 0) => ({
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.42, delay, ease: [0.22, 1, 0.36, 1] as const },
+});
+
+type Row = FAQRow;
+
+const CATEGORIES = ["general", "lipedema", "nutrition", "wellness", "booking"] as const;
+type Category = (typeof CATEGORIES)[number];
+
+function initForm(): Omit<Row, "id" | "created_at"> {
+  return {
+    question_en: "",
+    question_ar: "",
+    answer_en: "",
+    answer_ar: "",
+    category: "general",
+    sort_order: 0,
+    published: false,
+  };
+}
+
+export default function FAQAdminPage() {
+  const { language } = useLanguage();
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<"list" | "edit">("list");
+  const [editing, setEditing] = useState<Row | null>(null);
+  const [form, setForm] = useState(initForm());
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<"all" | Category>("all");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const data = await getAllFAQs();
+    setRows(data);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  function openNew() {
+    setEditing(null);
+    setForm(initForm());
+    setView("edit");
+  }
+
+  function openEdit(row: Row) {
+    setEditing(row);
+    setForm({
+      question_en: row.question_en ?? "",
+      question_ar: row.question_ar ?? "",
+      answer_en: row.answer_en ?? "",
+      answer_ar: row.answer_ar ?? "",
+      category: row.category ?? "general",
+      sort_order: row.sort_order ?? 0,
+      published: row.published ?? false,
+    });
+    setView("edit");
+  }
+
+  function cancel() {
+    setView("list");
+    setEditing(null);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    if (editing) {
+      await updateFAQ(editing.id, form);
+    } else {
+      await createFAQ(form);
+    }
+    await load();
+    setSaving(false);
+    setView("list");
+  }
+
+  async function handleDelete(id: string) {
+    if (!window.confirm("Delete this FAQ?")) return;
+    setDeletingId(id);
+    await deleteFAQ(id);
+    await load();
+    setDeletingId(null);
+  }
+
+  function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  const filtered = rows.filter((r) => {
+    const matchCat = categoryFilter === "all" || r.category === categoryFilter;
+    const q = search.toLowerCase();
+    const matchSearch = !q || (r.question_en ?? "").toLowerCase().includes(q) || (r.question_ar ?? "").toLowerCase().includes(q);
+    return matchCat && matchSearch;
+  });
+
+  return (
+    <div>
+      <PageHeader
+        title="FAQs"
+        description="Manage frequently asked questions displayed on the website."
+        breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "FAQs" }]}
+      />
+
+      <AnimatePresence mode="wait">
+        {view === "list" ? (
+          <motion.div key="list" {...fadeUp()}>
+            <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
+              {/* Toolbar */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-border)]">
+                <div className="flex items-center gap-3">
+                  {/* Search */}
+                  <div className="relative">
+                    <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--admin-text-faint)]" />
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search questions…"
+                      className="pl-8 pr-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors w-48"
+                    />
+                  </div>
+                  {/* Category filter */}
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value as "all" | Category)}
+                    className="px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors cursor-pointer"
+                  >
+                    <option value="all">All Categories</option>
+                    {CATEGORIES.map((c) => (
+                      <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                    ))}
+                  </select>
+                </div>
+                <button onClick={openNew} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all">
+                  <Plus size={15} />
+                  New FAQ
+                </button>
+              </div>
+
+              {/* Table */}
+              {loading ? (
+                <div className="py-12 text-center text-[13px] text-[var(--admin-text-muted)]">Loading…</div>
+              ) : filtered.length === 0 ? (
+                <div className="py-12 text-center text-[13px] text-[var(--admin-text-muted)]">No FAQs found.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-[var(--admin-hover-bg)]">
+                      <tr>
+                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">#</th>
+                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Question</th>
+                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Category</th>
+                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Status</th>
+                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((row, i) => (
+                        <tr key={row.id} className="border-b border-[var(--admin-border)] last:border-0 hover:bg-[var(--admin-hover-bg)] transition-colors">
+                          <td className="py-3 px-4 text-[13px] text-[var(--admin-text-muted)]">{row.sort_order ?? i + 1}</td>
+                          <td className="py-3 px-4 text-[13px] text-[var(--admin-text)] max-w-xs">
+                            <p className="truncate font-medium">{row.question_en}</p>
+                            <p className="truncate text-[11px] text-[var(--admin-text-muted)] mt-0.5" dir="rtl">{row.question_ar}</p>
+                          </td>
+                          <td className="py-3 px-4 text-[13px] text-[var(--admin-text)]">
+                            <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--admin-hover-bg)] text-[var(--admin-text-muted)] ring-1 ring-[var(--admin-border)] capitalize">
+                              {row.category}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-[13px]">
+                            {row.published ? (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200">Published</span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)] ring-1 ring-[var(--admin-border)]">Draft</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => openEdit(row)} className="px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors flex items-center gap-1">
+                                <Pencil size={12} /> Edit
+                              </button>
+                              <button onClick={() => handleDelete(row.id)} disabled={deletingId === row.id} className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-red-500 hover:bg-red-50 transition-colors flex items-center gap-1">
+                                <Trash2 size={12} /> {deletingId === row.id ? "…" : "Delete"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div key="edit" {...fadeUp()}>
+            {/* Edit toolbar */}
+            <div className="flex items-center justify-between mb-6">
+              <button onClick={cancel} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors">
+                <ArrowLeft size={13} /> Back
+              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={cancel} className="px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors">
+                  <X size={13} className="inline mr-1" /> Cancel
+                </button>
+                <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all">
+                  <Save size={14} />
+                  {saving ? "Saving…" : editing ? "Save Changes" : "Create FAQ"}
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-border)]">
+                <h2 className="text-[13px] font-bold text-[var(--admin-text)]">
+                  {editing ? "Edit FAQ" : "New FAQ"}
+                </h2>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Question bilingual */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Question (EN)</label>
+                    <textarea
+                      rows={2}
+                      value={form.question_en}
+                      onChange={(e) => set("question_en", e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
+                      placeholder="Type the question in English…"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Question (AR)</label>
+                    <textarea
+                      dir="rtl"
+                      rows={2}
+                      value={form.question_ar}
+                      onChange={(e) => set("question_ar", e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
+                      placeholder="اكتب السؤال بالعربية…"
+                    />
+                  </div>
+                </div>
+
+                {/* Answer bilingual */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Answer (EN)</label>
+                    <textarea
+                      rows={4}
+                      value={form.answer_en}
+                      onChange={(e) => set("answer_en", e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
+                      placeholder="Write the answer in English…"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Answer (AR)</label>
+                    <textarea
+                      dir="rtl"
+                      rows={4}
+                      value={form.answer_ar}
+                      onChange={(e) => set("answer_ar", e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
+                      placeholder="اكتب الإجابة بالعربية…"
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t border-[var(--admin-border)] pt-6 mt-6">
+                  <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">Settings</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Category */}
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Category</label>
+                      <select
+                        value={form.category ?? "general"}
+                        onChange={(e) => set("category", e.target.value as Category)}
+                        className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors cursor-pointer"
+                      >
+                        {CATEGORIES.map((c) => (
+                          <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Sort Order */}
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Sort Order</label>
+                      <input
+                        type="number"
+                        value={form.sort_order ?? 0}
+                        onChange={(e) => set("sort_order", Number(e.target.value))}
+                        className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
+                        min={0}
+                      />
+                    </div>
+
+                    {/* Published */}
+                    <div className="flex items-center gap-3 pt-6">
+                      <input
+                        id="faq-published"
+                        type="checkbox"
+                        checked={form.published ?? false}
+                        onChange={(e) => set("published", e.target.checked)}
+                        className="w-4 h-4 accent-pink-500 rounded cursor-pointer"
+                      />
+                      <label htmlFor="faq-published" className="text-[13px] text-[var(--admin-text)] cursor-pointer select-none">
+                        Published (visible on site)
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

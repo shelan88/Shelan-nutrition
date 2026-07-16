@@ -26,6 +26,14 @@ import Topbar from "./Topbar";
 import ContentContainer from "./ContentContainer";
 import DashboardPage from "../pages/DashboardPage";
 import ClientsPage from "../pages/ClientsPage";
+import BlogAdminPage from "../pages/BlogAdminPage";
+import ServicesAdminPage from "../pages/ServicesAdminPage";
+import TestimonialsAdminPage from "../pages/TestimonialsAdminPage";
+import FAQAdminPage from "../pages/FAQAdminPage";
+import ProgramsAdminPage from "../pages/ProgramsAdminPage";
+import SuccessStoriesAdminPage from "../pages/SuccessStoriesAdminPage";
+import WebsiteSettingsPage from "../pages/WebsiteSettingsPage";
+import MediaLibraryPage from "../pages/MediaLibraryPage";
 import PlaceholderPage from "../pages/PlaceholderPage";
 
 export default function AdminLayout() {
@@ -44,13 +52,19 @@ export default function AdminLayout() {
               {/* Dashboard */}
               <Route index element={<DashboardPage />} />
 
-              {/* Content */}
-              <Route path="website-builder"       element={<PlaceholderPage pageId="website-builder" />} />
-              <Route path="services"              element={<PlaceholderPage pageId="services" />} />
+              {/* Content — CMS-powered pages */}
+              <Route path="website-builder"       element={<WebsiteSettingsPage />} />
+              <Route path="website-settings"      element={<WebsiteSettingsPage />} />
+              <Route path="services"              element={<ServicesAdminPage />} />
+              <Route path="blog"                  element={<BlogAdminPage />} />
+              <Route path="testimonials"          element={<TestimonialsAdminPage />} />
+              <Route path="media-library"         element={<MediaLibraryPage />} />
+              <Route path="faqs"                  element={<FAQAdminPage />} />
+              <Route path="programs"              element={<ProgramsAdminPage />} />
+              <Route path="success-stories"       element={<SuccessStoriesAdminPage />} />
+
+              {/* Content — still placeholder */}
               <Route path="assessment-templates"  element={<PlaceholderPage pageId="assessment-templates" />} />
-              <Route path="blog"                  element={<PlaceholderPage pageId="blog" />} />
-              <Route path="testimonials"          element={<PlaceholderPage pageId="testimonials" />} />
-              <Route path="media-library"         element={<PlaceholderPage pageId="media-library" />} />
 
               {/* Business */}
               <Route path="bookings"              element={<PlaceholderPage pageId="bookings" />} />
