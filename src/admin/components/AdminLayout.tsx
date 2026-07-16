@@ -25,6 +25,7 @@ import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import ContentContainer from "./ContentContainer";
 import DashboardPage from "../pages/DashboardPage";
+import ClientsPage from "../pages/ClientsPage";
 import PlaceholderPage from "../pages/PlaceholderPage";
 
 export default function AdminLayout() {
@@ -53,7 +54,7 @@ export default function AdminLayout() {
 
               {/* Business */}
               <Route path="bookings"              element={<PlaceholderPage pageId="bookings" />} />
-              <Route path="clients"               element={<PlaceholderPage pageId="clients" />} />
+              <Route path="clients"               element={<ClientsPage />} />
               <Route path="payments"              element={<PlaceholderPage pageId="payments" />} />
               <Route path="messages"              element={<PlaceholderPage pageId="messages" />} />
 
