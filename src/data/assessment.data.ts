@@ -169,6 +169,28 @@ export const assessmentData: { en: CMSAssessmentData; ar: CMSAssessmentData } = 
           { value: "other", label: "Other" },
         ],
       },
+      {
+        id: "email",
+        stepId: "basic-info",
+        category: "basic-info",
+        title: "Email Address",
+        description: "Used to match your record if you've assessed before. Never shared.",
+        type: "text",
+        required: true,
+        order: 7,
+        placeholder: "your@email.com",
+      },
+      {
+        id: "phone",
+        stepId: "basic-info",
+        category: "basic-info",
+        title: "Phone Number",
+        description: "Optional — helps Shelan reach you to confirm your consultation.",
+        type: "text",
+        required: false,
+        order: 8,
+        placeholder: "+971 50 000 0000",
+      },
 
       // ── Step 2: Main Goal ─────────────────────────────────────────────────────
       {
@@ -638,6 +660,28 @@ export const assessmentData: { en: CMSAssessmentData; ar: CMSAssessmentData } = 
           { value: "au", label: "أستراليا" },
           { value: "other", label: "دولة أخرى" },
         ],
+      },
+      {
+        id: "email",
+        stepId: "basic-info",
+        category: "basic-info",
+        title: "البريد الإلكتروني",
+        description: "يُستخدم لمطابقة سجلّكِ إن كنتِ قد أجريتِ تقييماً من قبل. لن يُشارَك مع أي جهة.",
+        type: "text",
+        required: true,
+        order: 7,
+        placeholder: "your@email.com",
+      },
+      {
+        id: "phone",
+        stepId: "basic-info",
+        category: "basic-info",
+        title: "رقم الهاتف",
+        description: "اختياري — يساعد شيلان في التواصل معكِ لتأكيد موعد الاستشارة.",
+        type: "text",
+        required: false,
+        order: 8,
+        placeholder: "+971 50 000 0000",
       },
 
       // ── Step 2: Main Goal ──────────────────────────────────────────────────────

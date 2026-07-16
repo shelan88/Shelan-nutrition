@@ -19,7 +19,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, CheckCircle2 } from "lucide-react";
+import { Clock, CheckCircle2, Loader2 } from "lucide-react";
 
 import ProgressStepper from "@/components/assessment/ProgressStepper";
 import QuestionCard from "@/components/assessment/QuestionCard";
@@ -28,6 +28,22 @@ import SummaryCard from "@/components/assessment/SummaryCard";
 import NavigationFooter from "@/components/assessment/NavigationFooter";
 
 import type { CMSAssessmentData, CMSAssessmentQuestion } from "@/types/cms.types";
+
+// ─── Admin data layer ──────────────────────────────────────────────────────────
+import { calculateAssessment } from "@/admin/services/assessment.service";
+import {
+  findClientByEmail,
+  findClientByPhone,
+  createClient,
+  saveAssessment,
+  appendTimelineEvent,
+} from "@/admin/repositories/clients.repository";
+import {
+  addAssessmentEntry,
+  incrementAssessmentRequests,
+  incrementClients,
+  updateRiskCounters,
+} from "@/admin/repositories/dashboard.repository";
 
 const LS_KEY = "shelan_assessment_draft";
 
@@ -233,6 +249,7 @@ export default function AssessmentWizard({ data, strings }: AssessmentWizardProp
   const [direction, setDirection] = useState(1); // 1 = forward, -1 = backward
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [showValidation, setShowValidation] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   // When non-null, edit mode jumped back from summary to this step index
   const [editFromSummary, setEditFromSummary] = useState<number | null>(null);
 
@@ -314,7 +331,9 @@ export default function AssessmentWizard({ data, strings }: AssessmentWizardProp
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    if (isSubmitting) return;
+
     if (view === "welcome") {
       setDirection(1);
       setView("questions");
@@ -349,11 +368,62 @@ export default function AssessmentWizard({ data, strings }: AssessmentWizardProp
     }
 
     if (view === "summary") {
-      // TODO: replace with supabase.from('assessments').insert({ answers, submittedAt: new Date() })
-      localStorage.removeItem(LS_KEY);
-      setDirection(1);
-      setView("success");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      setIsSubmitting(true);
+      // Yield to React so the loading indicator renders before sync work begins
+      await Promise.resolve();
+
+      try {
+        // 1. Calculate score, risk level, plan, and diagnosis
+        const result = calculateAssessment(answers);
+
+        // 2. Deduplicate: match by email first, then phone
+        let existingClient =
+          result.email ? findClientByEmail(result.email) : null;
+        if (!existingClient && result.phone) {
+          existingClient = findClientByPhone(result.phone);
+        }
+
+        const today = new Date().toLocaleDateString("en-US", {
+          month: "short", day: "numeric", year: "numeric",
+        });
+
+        // 3a. Existing client — update assessment, append timeline event
+        if (existingClient) {
+          saveAssessment(existingClient.id, result);
+          appendTimelineEvent(existingClient.id, {
+            event:   "Assessment Re-submitted",
+            eventAr: "تم تقديم التقييم مجدداً",
+            date:    today,
+            type:    "assessment",
+          });
+        } else {
+          // 3b. New client — create full record
+          createClient(result);
+          incrementClients();
+        }
+
+        // 4. Dashboard: prepend to recent-assessment queue, bump counter
+        addAssessmentEntry({
+          client:   result.fullName,
+          initials: result.avatarInitials,
+          date:     today,
+          risk:     result.riskLevel,
+          status:   result.riskLevel === "High" ? "Flagged" : "Pending",
+        });
+        incrementAssessmentRequests();
+        updateRiskCounters(result.riskLevel);
+
+        // 5. Clear draft
+        // TODO Supabase: supabase.from('assessments').insert({ answers, submittedAt: new Date() })
+        localStorage.removeItem(LS_KEY);
+        setDirection(1);
+        setView("success");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } catch (err) {
+        console.error("[SHELAN] Assessment submission failed:", err);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -509,18 +579,31 @@ export default function AssessmentWizard({ data, strings }: AssessmentWizardProp
 
       {/* Navigation footer — hidden on welcome and success */}
       {view !== "welcome" && view !== "success" && (
-        <NavigationFooter
-          currentStepIndex={stepIndex}
-          totalSteps={data.steps.length}
-          canProceed={canProceed}
-          isLastStep={stepIndex === data.steps.length - 1}
-          isSummary={view === "summary"}
-          backLabel={strings.backLabel}
-          nextLabel={strings.nextLabel}
-          submitLabel={data.summary.submitLabel}
-          onBack={handleBack}
-          onNext={handleNext}
-        />
+        <>
+          {/* Submitting indicator — shown while processing the assessment */}
+          {isSubmitting && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center justify-center gap-2.5 mt-6 text-[13px] font-semibold text-primary-pink"
+            >
+              <Loader2 size={15} className="animate-spin" />
+              Processing your assessment…
+            </motion.div>
+          )}
+          <NavigationFooter
+            currentStepIndex={stepIndex}
+            totalSteps={data.steps.length}
+            canProceed={canProceed && !isSubmitting}
+            isLastStep={stepIndex === data.steps.length - 1}
+            isSummary={view === "summary"}
+            backLabel={strings.backLabel}
+            nextLabel={strings.nextLabel}
+            submitLabel={data.summary.submitLabel}
+            onBack={handleBack}
+            onNext={handleNext}
+          />
+        </>
       )}
     </div>
   );

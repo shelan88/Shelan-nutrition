@@ -21,6 +21,7 @@ import {
   MessageSquare, ChevronRight, Sparkles, Dot,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useDashboardStore } from "@/admin/repositories/dashboard.repository";
 
 // ─── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -315,6 +316,7 @@ function QuickActionCard({ label, icon: Icon, gradient, href, delay }: QuickActi
 export default function DashboardPage() {
   const { lang } = useLanguage();
   const isAr = lang === "ar";
+  const store = useDashboardStore();
 
   // ── KPI data ──
   const kpis: KpiProps[] = [
@@ -331,7 +333,7 @@ export default function DashboardPage() {
     },
     {
       label:    isAr ? "إجمالي العملاء"    : "Total Clients",
-      rawValue: 142,
+      rawValue: store.totalClients,
       change:   isAr ? "+٨ هذا الشهر"      : "+8 this month",
       positive: true,
       icon: Users,
@@ -342,7 +344,7 @@ export default function DashboardPage() {
     },
     {
       label:    isAr ? "تقييمات معلّقة"    : "Pending Assessments",
-      rawValue: 7,
+      rawValue: store.pendingAssessments,
       change:   isAr ? "تحتاج مراجعة"      : "needs attention",
       positive: false,
       icon: FileText,
@@ -374,14 +376,15 @@ export default function DashboardPage() {
     { time: "04:00 PM", client: isAr ? "سارة خالد"         : "Sara Khalid",        service: isAr ? "مراجعة خطة الأكل"   : "Meal Plan Review",       status: "upcoming",    isAr, isLast: true  },
   ];
 
-  // ── Assessment data ──
-  const assessments: AssessmentProps[] = [
-    { client: isAr ? "ميرا العلي"       : "Mira Al-Ali",       initials: "MA", date: isAr ? "١٦ يوليو ٢٠٢٦" : "Jul 16, 2026", risk: "High",   status: "Flagged",  isAr },
-    { client: isAr ? "دانا الشمري"      : "Dana Al-Shamri",    initials: "DS", date: isAr ? "١٥ يوليو ٢٠٢٦" : "Jul 15, 2026", risk: "Medium", status: "Pending",  isAr },
-    { client: isAr ? "لينا الزهراني"    : "Lina Al-Zahrani",   initials: "LZ", date: isAr ? "١٤ يوليو ٢٠٢٦" : "Jul 14, 2026", risk: "Low",    status: "Reviewed", isAr },
-    { client: isAr ? "هنا القحطاني"     : "Hana Al-Qahtani",   initials: "HQ", date: isAr ? "١٤ يوليو ٢٠٢٦" : "Jul 14, 2026", risk: "Medium", status: "Pending",  isAr },
-    { client: isAr ? "سلمى الدوسري"     : "Salma Al-Dosari",   initials: "SD", date: isAr ? "١٣ يوليو ٢٠٢٦" : "Jul 13, 2026", risk: "High",   status: "Flagged",  isAr },
-  ];
+  // ── Assessment data (live from dashboard repository) ──
+  const assessments: AssessmentProps[] = store.assessmentEntries.slice(0, 5).map((e) => ({
+    client:   e.client,
+    initials: e.initials,
+    date:     e.date,
+    risk:     e.risk,
+    status:   e.status,
+    isAr,
+  }));
 
   // ── Messages data ──
   const messages: MessageProps[] = [
