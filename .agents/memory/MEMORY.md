@@ -1,2 +1,3 @@
 - [lucide-react brand icons](lucide-react-brand-icons.md) — no Facebook/Instagram/Twitter/LinkedIn icons exist in current lucide-react; use generic outline icons instead.
 - [Tailwind v4 theme color indirection](tailwind-v4-theme-color-indirection.md) — chaining a @theme color to another custom prop breaks inheritance for scoped dark/light overrides; use a plain CSS class instead.
+- [Multi-page routing architecture](multipage-routing.md) — React Router v6 in App.tsx (BrowserRouter wraps LanguageProvider); Navbar uses pagesNav not nav; pages are thin orchestrators selecting lang then passing typed props to sections.

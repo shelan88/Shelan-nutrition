@@ -1,4 +1,7 @@
 // Centralized bilingual content for the entire site.
+// This file contains UI strings only (labels, placeholders, nav, aria-labels).
+// Page content (headlines, body copy, images) lives in src/data/*.data.ts.
+
 // Edit the strings here to update copy across the whole app — no component
 // changes required. `en` = English (LTR), `ar` = Arabic (RTL).
 
@@ -673,6 +676,218 @@ export const journey = {
         description: "تحقيق تحول حقيقي مع الوعي والثقة اللازمين للحفاظ عليه مدى الحياة.",
       },
     ],
+  },
+};
+
+// ─── Multi-page navigation ────────────────────────────────────────────────────
+// Used by Navbar for page-level routing (replaces scroll-anchor nav on sub-pages).
+
+export const pagesNav = {
+  en: [
+    { label: "About", href: "/about" },
+    { label: "Services", href: "/services" },
+    { label: "Blog", href: "/blog" },
+    { label: "Contact", href: "/contact" },
+    { label: "Book Now", href: "/booking", cta: true as const },
+  ],
+  ar: [
+    { label: "من أنا", href: "/about" },
+    { label: "الخدمات", href: "/services" },
+    { label: "المدونة", href: "/blog" },
+    { label: "تواصلي معي", href: "/contact" },
+    { label: "احجزي الآن", href: "/booking", cta: true as const },
+  ],
+};
+
+// ─── Contact page UI strings ──────────────────────────────────────────────────
+
+export const contactFormStrings = {
+  en: {
+    nameLabel: "Full Name",
+    namePlaceholder: "Your full name",
+    emailLabel: "Email Address",
+    emailPlaceholder: "your@email.com",
+    phoneLabel: "Phone (optional)",
+    phonePlaceholder: "+1 234 567 890",
+    subjectLabel: "Subject",
+    subjects: [
+      "General Inquiry",
+      "Service Question",
+      "Lipedema Care",
+      "Booking Help",
+      "Other",
+    ],
+    messageLabel: "Your Message",
+    messagePlaceholder:
+      "Tell me about your health goals and how I can help...",
+    submitLabel: "Send Message",
+    submittingLabel: "Sending…",
+    successTitle: "Message Received!",
+    successText:
+      "Thank you for reaching out. I'll respond within 24 business hours.",
+    emailLabel2: "Email",
+    locationLabel: "Location",
+    hoursLabel: "Business Hours",
+    closedLabel: "Closed",
+  },
+  ar: {
+    nameLabel: "الاسم الكامل",
+    namePlaceholder: "اسمكِ الكامل",
+    emailLabel: "البريد الإلكتروني",
+    emailPlaceholder: "your@email.com",
+    phoneLabel: "الهاتف (اختياري)",
+    phonePlaceholder: "+965 9000 0000",
+    subjectLabel: "الموضوع",
+    subjects: [
+      "استفسار عام",
+      "سؤال عن خدمة",
+      "رعاية الليبيديما",
+      "مساعدة في الحجز",
+      "أخرى",
+    ],
+    messageLabel: "رسالتكِ",
+    messagePlaceholder:
+      "أخبريني عن أهدافكِ الصحية وكيف يمكنني مساعدتكِ…",
+    submitLabel: "إرسال الرسالة",
+    submittingLabel: "جاري الإرسال…",
+    successTitle: "تم استلام الرسالة!",
+    successText: "شكراً على تواصلكِ. سأرد خلال 24 ساعة عمل.",
+    emailLabel2: "البريد الإلكتروني",
+    locationLabel: "الموقع",
+    hoursLabel: "ساعات العمل",
+    closedLabel: "مغلق",
+  },
+};
+
+// ─── Booking page UI strings ──────────────────────────────────────────────────
+
+export const bookingStrings = {
+  en: {
+    steps: ["Choose Service", "Pick a Time", "Your Details", "Confirm"],
+    nextLabel: "Continue",
+    backLabel: "Back",
+    selectTimeLabel: "Available Times",
+    calendarLabel: "Select Date",
+    noSlotsMessage: "No available slots for this date.",
+    firstNameLabel: "First Name",
+    firstNamePlaceholder: "Jane",
+    lastNameLabel: "Last Name",
+    lastNamePlaceholder: "Smith",
+    emailLabel: "Email Address",
+    emailPlaceholder: "your@email.com",
+    phoneLabel: "Phone Number",
+    phonePlaceholder: "+1 234 567 890",
+    notesLabel: "Additional Notes",
+    notesPlaceholder:
+      "Any health concerns, conditions, or questions you'd like to share…",
+    summaryTitle: "Booking Summary",
+    serviceLabel: "Service",
+    dateLabel: "Date",
+    timeLabel: "Time",
+    totalLabel: "Total",
+    paymentTitle: "Payment Details",
+    cardLabel: "Card Number",
+    cardPlaceholder: "•••• •••• •••• ••••",
+    secureNote: "Secure payment · No charge until confirmed",
+    confirmLabel: "Confirm Booking",
+    unavailableLabel: "Unavailable",
+  },
+  ar: {
+    steps: ["اختاري الخدمة", "حددي وقتاً", "بياناتكِ", "تأكيد"],
+    nextLabel: "متابعة",
+    backLabel: "رجوع",
+    selectTimeLabel: "الأوقات المتاحة",
+    calendarLabel: "اختاري التاريخ",
+    noSlotsMessage: "لا توجد مواعيد متاحة لهذا التاريخ.",
+    firstNameLabel: "الاسم الأول",
+    firstNamePlaceholder: "اسمكِ",
+    lastNameLabel: "الاسم الأخير",
+    lastNamePlaceholder: "الاسم العائلي",
+    emailLabel: "البريد الإلكتروني",
+    emailPlaceholder: "your@email.com",
+    phoneLabel: "رقم الهاتف",
+    phonePlaceholder: "+965 9000 0000",
+    notesLabel: "ملاحظات إضافية",
+    notesPlaceholder: "أي مخاوف صحية أو حالات أو أسئلة تودين مشاركتها…",
+    summaryTitle: "ملخص الحجز",
+    serviceLabel: "الخدمة",
+    dateLabel: "التاريخ",
+    timeLabel: "الوقت",
+    totalLabel: "الإجمالي",
+    paymentTitle: "تفاصيل الدفع",
+    cardLabel: "رقم البطاقة",
+    cardPlaceholder: "•••• •••• •••• ••••",
+    secureNote: "دفع آمن · لا رسوم حتى التأكيد",
+    confirmLabel: "تأكيد الحجز",
+    unavailableLabel: "غير متاح",
+  },
+};
+
+// ─── Blog UI strings ──────────────────────────────────────────────────────────
+
+export const blogStrings = {
+  en: {
+    searchPlaceholder: "Search articles…",
+    featuredLabel: "Featured Article",
+    readMoreLabel: "Read Article",
+    minReadLabel: "min read",
+    byLabel: "By",
+    noPosts: "No articles found in this category.",
+    prevLabel: "Previous",
+    nextLabel: "Next",
+    relatedTitle: "Related Articles",
+    tocTitle: "Table of Contents",
+    backToBlog: "Back to Blog",
+    publishedLabel: "Published",
+  },
+  ar: {
+    searchPlaceholder: "ابحثي في المقالات…",
+    featuredLabel: "المقال المميز",
+    readMoreLabel: "اقرأي المقال",
+    minReadLabel: "دقيقة قراءة",
+    byLabel: "بقلم",
+    noPosts: "لا توجد مقالات في هذه الفئة.",
+    prevLabel: "السابق",
+    nextLabel: "التالي",
+    relatedTitle: "مقالات ذات صلة",
+    tocTitle: "جدول المحتويات",
+    backToBlog: "العودة إلى المدونة",
+    publishedLabel: "نُشر",
+  },
+};
+
+// ─── Services UI strings ──────────────────────────────────────────────────────
+
+export const servicesStrings = {
+  en: {
+    learnMore: "Learn More",
+    bookThis: "Book This Service",
+    allServices: "View All Services",
+    backToServices: "Back to Services",
+  },
+  ar: {
+    learnMore: "اعرفي أكثر",
+    bookThis: "احجزي هذه الخدمة",
+    allServices: "عرض كل الخدمات",
+    backToServices: "العودة إلى الخدمات",
+  },
+};
+
+// ─── 404 page ─────────────────────────────────────────────────────────────────
+
+export const notFound = {
+  en: {
+    kicker: "404",
+    headline: "Page Not Found",
+    description:
+      "The page you're looking for doesn't exist or has been moved.",
+    buttonLabel: "Back to Home",
+  },
+  ar: {
+    kicker: "٤٠٤",
+    headline: "الصفحة غير موجودة",
+    description: "الصفحة التي تبحثين عنها غير موجودة أو تم نقلها.",
+    buttonLabel: "العودة للرئيسية",
   },
 };
 
