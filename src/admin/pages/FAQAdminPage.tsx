@@ -117,6 +117,14 @@ export default function FAQAdminPage() {
         title={lang === "ar" ? "الأسئلة الشائعة" : "FAQs"}
         description={lang === "ar" ? "إدارة الأسئلة الشائعة المعروضة على الموقع." : "Manage frequently asked questions displayed on the website."}
         breadcrumbs={[{ label: lang === "ar" ? "الإدارة" : "Admin", href: "/admin" }, { label: lang === "ar" ? "الأسئلة الشائعة" : "FAQs" }]}
+        actions={
+          view === "list" ? (
+            <button onClick={openNew} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all whitespace-nowrap">
+              <Plus size={15} />
+              {lang === "ar" ? "إضافة سؤال" : "New FAQ"}
+            </button>
+          ) : undefined
+        }
       />
 
       <AnimatePresence mode="wait">
@@ -124,34 +132,28 @@ export default function FAQAdminPage() {
           <motion.div key="list" {...fadeUp()}>
             <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
               {/* Toolbar */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-border)]">
-                <div className="flex items-center gap-3">
-                  {/* Search */}
-                  <div className="relative">
-                    <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--admin-text-faint)]" />
-                    <input
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder={lang === "ar" ? "ابحث عن سؤال…" : "Search questions…"}
-                      className="pl-8 pr-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors w-48"
-                    />
-                  </div>
-                  {/* Category filter */}
-                  <select
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value as "all" | Category)}
-                    className="px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors cursor-pointer"
-                  >
-                    <option value="all">{lang === "ar" ? "كل الفئات" : "All Categories"}</option>
-                    {CATEGORIES.map((c) => (
-                      <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
-                    ))}
-                  </select>
+              <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-[var(--admin-border)]">
+                {/* Search */}
+                <div className="relative flex-1 min-w-[160px]">
+                  <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--admin-text-faint)]" />
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={lang === "ar" ? "ابحث عن سؤال…" : "Search questions…"}
+                    className="w-full pl-8 pr-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
+                  />
                 </div>
-                <button onClick={openNew} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all">
-                  <Plus size={15} />
-                  {lang === "ar" ? "إضافة سؤال" : "New FAQ"}
-                </button>
+                {/* Category filter */}
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value as "all" | Category)}
+                  className="px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors cursor-pointer shrink-0"
+                >
+                  <option value="all">{lang === "ar" ? "كل الفئات" : "All Categories"}</option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Table */}
@@ -175,9 +177,9 @@ export default function FAQAdminPage() {
                       {filtered.map((row, i) => (
                         <tr key={row.id} className="border-b border-[var(--admin-border)] last:border-0 hover:bg-[var(--admin-hover-bg)] transition-colors">
                           <td className="py-3 px-4 text-[13px] text-[var(--admin-text-muted)]">{row.sort_order ?? i + 1}</td>
-                          <td className="py-3 px-4 text-[13px] text-[var(--admin-text)] max-w-xs">
-                            <p className="truncate font-medium">{row.question_en}</p>
-                            <p className="truncate text-[11px] text-[var(--admin-text-muted)] mt-0.5" dir="rtl">{row.question_ar}</p>
+                          <td className="py-3 px-4 text-[13px] text-[var(--admin-text)] max-w-[260px]">
+                            <p className="line-clamp-2 font-medium break-words">{row.question_en}</p>
+                            <p className="line-clamp-1 text-[11px] text-[var(--admin-text-muted)] mt-0.5 break-words" dir="rtl">{row.question_ar}</p>
                           </td>
                           <td className="py-3 px-4 text-[13px] text-[var(--admin-text)]">
                             <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--admin-hover-bg)] text-[var(--admin-text-muted)] ring-1 ring-[var(--admin-border)] capitalize">
@@ -212,15 +214,15 @@ export default function FAQAdminPage() {
         ) : (
           <motion.div key="edit" {...fadeUp()}>
             {/* Edit toolbar */}
-            <div className="flex items-center justify-between mb-6">
-              <button onClick={cancel} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+              <button onClick={cancel} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors shrink-0">
                 <ArrowLeft size={13} className="rtl:rotate-180" /> {lang === "ar" ? "رجوع" : "Back"}
               </button>
-              <div className="flex items-center gap-2">
-                <button onClick={cancel} className="px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button onClick={cancel} className="px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors whitespace-nowrap">
                   <X size={13} className="inline mr-1" /> {lang === "ar" ? "إلغاء" : "Cancel"}
                 </button>
-                <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all">
+                <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all whitespace-nowrap">
                   <Save size={14} />
                   {saving ? (lang === "ar" ? "جارٍ الحفظ…" : "Saving…") : editing ? (lang === "ar" ? "حفظ التغييرات" : "Save Changes") : (lang === "ar" ? "إنشاء سؤال" : "Create FAQ")}
                 </button>
