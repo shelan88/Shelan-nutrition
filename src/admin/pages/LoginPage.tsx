@@ -9,10 +9,11 @@
  * To connect: replace handleSubmit with supabase.auth.signInWithPassword().
  */
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { supabase } from "@/lib/supabase";
 
 // ─── Shared input style ───────────────────────────────────────────────────────
 const inputCls = `
@@ -132,17 +133,53 @@ function LoginForm({ lang }: { lang: "en" | "ar" }) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const isAr = lang === "ar";
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // TODO: replace with supabase.auth.signInWithPassword({ email, password })
-    setTimeout(() => {
+    setError(null);
+
+    const { data: signInData, error: authError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    if (authError || !signInData.session) {
+      setError(
+        isAr
+          ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+          : "Invalid email or password. Please try again."
+      );
       setLoading(false);
-      window.location.href = "/admin";
-    }, 1200);
+      return;
+    }
+
+    // Authorization check — verify this user has an admin/staff profile.
+    // Fail closed: if they are not in admin_profiles, sign them out immediately.
+    const { data: profile, error: profileError } = await supabase
+      .from("admin_profiles")
+      .select("id, role")
+      .eq("user_id", signInData.session.user.id)
+      .in("role", ["admin", "staff"])
+      .maybeSingle();
+
+    if (profileError || !profile) {
+      await supabase.auth.signOut();
+      setError(
+        isAr
+          ? "ليس لديكِ صلاحية الوصول إلى بوابة الإدارة."
+          : "You are not authorised to access the admin portal."
+      );
+      setLoading(false);
+      return;
+    }
+
+    // Authenticated and authorised — navigate to admin dashboard
+    navigate("/admin", { replace: true });
   };
 
   return (
@@ -267,6 +304,13 @@ function LoginForm({ lang }: { lang: "en" | "ar" }) {
             {isAr ? "تذكّريني" : "Remember me"}
           </span>
         </label>
+
+        {/* Error message */}
+        {error && (
+          <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-[13px] text-red-600 text-center">
+            {error}
+          </div>
+        )}
 
         {/* Submit */}
         <motion.button

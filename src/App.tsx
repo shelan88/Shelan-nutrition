@@ -46,6 +46,7 @@ import NotFoundPage from "@/pages/NotFoundPage";
 // ─── Admin portal ──────────────────────────────────────────────────────────────
 import AdminLoginPage from "@/admin/pages/LoginPage";
 import AdminLayout from "@/admin/components/AdminLayout";
+import AuthGuard from "@/admin/components/AuthGuard";
 
 /**
  * PublicLayout — wraps all public-facing pages with the shared site chrome.
@@ -84,7 +85,7 @@ export default function App() {
         <Routes>
           {/* Admin — completely isolated, no public chrome */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
-          <Route path="/admin/*" element={<AdminLayout />} />
+          <Route path="/admin/*" element={<AuthGuard><AdminLayout /></AuthGuard>} />
 
           {/* Public — wrapped in Navbar + Footer + chrome */}
           <Route path="/*" element={<PublicLayout />} />

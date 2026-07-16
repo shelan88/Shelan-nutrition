@@ -9,7 +9,7 @@
  * To connect: replace notification count with Supabase realtime subscription.
  */
 import { useState, useRef, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu, Search, Bell, Sun, Moon, ChevronDown,
@@ -18,6 +18,7 @@ import {
 import { useLanguage } from "@/context/LanguageContext";
 import { useAdmin } from "../context/AdminContext";
 import { NAV_ITEMS, PAGE_META } from "../data/navigation";
+import { supabase } from "@/lib/supabase";
 
 // ─── Breadcrumb builder ───────────────────────────────────────────────────────
 function useBreadcrumbs(lang: "en" | "ar") {
@@ -46,6 +47,13 @@ function useBreadcrumbs(lang: "en" | "ar") {
 function UserMenu({ lang }: { lang: "en" | "ar" }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    setOpen(false);
+    await supabase.auth.signOut();
+    navigate("/admin/login", { replace: true });
+  };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -137,14 +145,14 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
 
             {/* Sign out */}
             <div className="border-t border-[var(--admin-border)] py-1">
-              <Link
-                to="/admin/login"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-3 px-4 py-2 text-[13px] text-red-400 hover:bg-red-50 transition-colors"
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-3 px-4 py-2 text-[13px] text-red-400 hover:bg-red-50 transition-colors"
               >
                 <LogOut size={14} strokeWidth={1.8} />
                 {lang === "ar" ? "تسجيل الخروج" : "Sign out"}
-              </Link>
+              </button>
             </div>
           </motion.div>
         )}
