@@ -163,3 +163,72 @@ body {
 .social-icon-active {
   animation: modernWiggle 3s infinite ease-in-out;
 }
+
+/* ─── Admin Portal Shell ──────────────────────────────────────────────────────
+   Completely isolated design system for the admin portal.
+   These tokens only activate inside elements with class="admin-shell".
+   They do NOT affect the public luxury website in any way.             */
+.admin-shell {
+  --admin-bg: #f7f5fb;
+  --admin-surface: #ffffff;
+  --admin-border: rgba(138, 92, 215, 0.09);
+  --admin-border-strong: rgba(138, 92, 215, 0.16);
+  --admin-text: #1c1033;
+  --admin-text-muted: #7b6997;
+  --admin-text-faint: #b3a6c9;
+  --admin-active-bg: rgba(243, 94, 152, 0.07);
+  --admin-active-border: rgba(243, 94, 152, 0.3);
+  --admin-hover-bg: rgba(141, 95, 211, 0.04);
+  --admin-sidebar-w: 240px;
+  --admin-topbar-h: 56px;
+
+  background-color: var(--admin-bg);
+  color: var(--admin-text);
+  font-family: "Inter", "Almarai", sans-serif !important;
+  min-height: 100vh;
+}
+
+/* Reset public-site heading styles inside admin */
+.admin-shell h1,
+.admin-shell h2,
+.admin-shell h3,
+.admin-shell h4,
+.admin-shell h5,
+.admin-shell h6 {
+  font-family: "Inter", "Almarai", sans-serif !important;
+  color: var(--admin-text);
+}
+
+/* Admin login page — full-screen isolated bg */
+.admin-login {
+  font-family: "Inter", "Almarai", sans-serif !important;
+  min-height: 100vh;
+}
+
+.admin-login h1,
+.admin-login h2,
+.admin-login h3 {
+  font-family: "Inter", "Almarai", sans-serif !important;
+}
+
+/* Smooth range thumb for assessment + admin inputs */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #f35e98;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(243, 94, 152, 0.35);
+  border: 2px solid white;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #f35e98;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(243, 94, 152, 0.35);
+  border: 2px solid white;
+}
