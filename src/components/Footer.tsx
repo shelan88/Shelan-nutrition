@@ -1,8 +1,10 @@
 import { useLanguage } from "@/context/LanguageContext";
 import { footer, siteMeta } from "@/content/content";
+import { useState, useEffect } from "react";
+import { getSetting } from "@/admin/repositories/settings.repository";
 
-// Premium SVG icons for WhatsApp, Instagram, Telegram — rendered in their
-// official native brand colors (fill is hardcoded per-icon, not currentColor).
+// ─── Brand SVG icons (native colors) ─────────────────────────────────────────
+
 const WhatsAppIcon = () => (
   <svg viewBox="0 0 24 24" fill="#25D366" className="w-5 h-5">
     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
@@ -33,37 +35,145 @@ const TelegramIcon = () => (
   </svg>
 );
 
-const socialLinks = [
-  {
-    label: "WhatsApp",
-    href: "#",
-    icon: <WhatsAppIcon />,
-    frameClass: "bg-[#25D366]/10 border-[#25D366]/45 shadow-[0_0_16px_rgba(37,211,102,0.25)]",
-    hoverClass: "hover:bg-[#25D366]/20 hover:border-[#25D366]/80 hover:shadow-[0_0_24px_rgba(37,211,102,0.5)]",
-    delay: "0s",
-  },
-  {
-    label: "Instagram",
-    href: "#",
-    icon: <InstagramIcon />,
+// ─── Social link shape ─────────────────────────────────────────────────────────
+
+type SocialLink = {
+  id: string;
+  platform: string;
+  iconEmoji: string;
+  url: string;
+  visible: boolean;
+  order: number;
+};
+
+// ─── Platform visual styles ────────────────────────────────────────────────────
+
+const PLATFORM_STYLES: Record<string, { frameClass: string; hoverClass: string }> = {
+  instagram: {
     frameClass: "bg-[#dc2743]/10 border-[#cc2366]/45 shadow-[0_0_16px_rgba(220,39,67,0.25)]",
     hoverClass: "hover:bg-[#dc2743]/20 hover:border-[#cc2366]/80 hover:shadow-[0_0_24px_rgba(220,39,67,0.5)]",
-    delay: "0.15s",
   },
-  {
-    label: "Telegram",
-    href: "#",
-    icon: <TelegramIcon />,
+  whatsapp: {
+    frameClass: "bg-[#25D366]/10 border-[#25D366]/45 shadow-[0_0_16px_rgba(37,211,102,0.25)]",
+    hoverClass: "hover:bg-[#25D366]/20 hover:border-[#25D366]/80 hover:shadow-[0_0_24px_rgba(37,211,102,0.5)]",
+  },
+  telegram: {
     frameClass: "bg-[#29B6F6]/10 border-[#29B6F6]/45 shadow-[0_0_16px_rgba(41,182,246,0.25)]",
     hoverClass: "hover:bg-[#29B6F6]/20 hover:border-[#29B6F6]/80 hover:shadow-[0_0_24px_rgba(41,182,246,0.5)]",
-    delay: "0.3s",
   },
+  tiktok: {
+    frameClass: "bg-white/10 border-white/25 shadow-[0_0_16px_rgba(255,255,255,0.1)]",
+    hoverClass: "hover:bg-white/20 hover:border-white/50",
+  },
+  youtube: {
+    frameClass: "bg-[#FF0000]/10 border-[#FF0000]/40 shadow-[0_0_16px_rgba(255,0,0,0.2)]",
+    hoverClass: "hover:bg-[#FF0000]/20 hover:border-[#FF0000]/70",
+  },
+  facebook: {
+    frameClass: "bg-[#1877F2]/10 border-[#1877F2]/40 shadow-[0_0_16px_rgba(24,119,242,0.2)]",
+    hoverClass: "hover:bg-[#1877F2]/20 hover:border-[#1877F2]/70",
+  },
+  linkedin: {
+    frameClass: "bg-[#0A66C2]/10 border-[#0A66C2]/40 shadow-[0_0_16px_rgba(10,102,194,0.2)]",
+    hoverClass: "hover:bg-[#0A66C2]/20 hover:border-[#0A66C2]/70",
+  },
+  snapchat: {
+    frameClass: "bg-[#FFFC00]/10 border-[#FFFC00]/40 shadow-[0_0_16px_rgba(255,252,0,0.2)]",
+    hoverClass: "hover:bg-[#FFFC00]/20 hover:border-[#FFFC00]/70",
+  },
+  pinterest: {
+    frameClass: "bg-[#E60023]/10 border-[#E60023]/40 shadow-[0_0_16px_rgba(230,0,35,0.2)]",
+    hoverClass: "hover:bg-[#E60023]/20 hover:border-[#E60023]/70",
+  },
+};
+
+const DEFAULT_STYLE = {
+  frameClass: "bg-white/10 border-white/20 shadow-[0_0_16px_rgba(255,255,255,0.1)]",
+  hoverClass: "hover:bg-white/20 hover:border-white/40",
+};
+
+function platformKey(platform: string): string {
+  return platform.toLowerCase().replace(/[\s()/_-]/g, "").replace(/[^a-z]/g, "");
+}
+
+function getPlatformStyle(platform: string) {
+  return PLATFORM_STYLES[platformKey(platform)] ?? DEFAULT_STYLE;
+}
+
+function getPlatformIcon(platform: string, iconEmoji: string): React.ReactNode {
+  const key = platformKey(platform);
+  if (key === "instagram") return <InstagramIcon />;
+  if (key === "whatsapp") return <WhatsAppIcon />;
+  if (key === "telegram") return <TelegramIcon />;
+  return <span className="text-xl leading-none">{iconEmoji}</span>;
+}
+
+// ─── Parse both legacy flat-object and new array format ───────────────────────
+
+/**
+ * Parses the site.social setting value into a sorted list of visible links.
+ * Returns null ONLY when the value is absent/null (no setting in DB yet) — caller should fall back to hardcoded defaults.
+ * Returns [] when the setting exists but has no visible entries — caller should show nothing (respects admin intent).
+ */
+function parseSocialLinks(val: unknown): SocialLink[] | null {
+  // Truly missing — caller uses fallback
+  if (val === null || val === undefined) return null;
+
+  if (Array.isArray(val)) {
+    // New array format — filter to visible only, preserve order
+    return (val as SocialLink[])
+      .filter((l) => l.visible !== false)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }
+
+  if (typeof val === "object") {
+    // Legacy flat object: { instagram: "url", tiktok: "url", … }
+    const old = val as Record<string, string>;
+    const mapping = [
+      { key: "instagram", platform: "Instagram", iconEmoji: "📸" },
+      { key: "tiktok", platform: "TikTok", iconEmoji: "🎵" },
+      { key: "youtube", platform: "YouTube", iconEmoji: "▶️" },
+      { key: "facebook", platform: "Facebook", iconEmoji: "📘" },
+      { key: "snapchat", platform: "Snapchat", iconEmoji: "👻" },
+      { key: "whatsapp", platform: "WhatsApp", iconEmoji: "💬" },
+      { key: "telegram", platform: "Telegram", iconEmoji: "✈️" },
+    ];
+    return mapping
+      .filter((m) => old[m.key])
+      .map((m, i) => ({ id: m.key, platform: m.platform, iconEmoji: m.iconEmoji, url: old[m.key], visible: true, order: i }));
+  }
+
+  // Unknown format — treat as intentionally empty
+  return [];
+}
+
+// ─── Hardcoded fallback (shown when DB has no data yet) ───────────────────────
+
+const FALLBACK_LINKS: SocialLink[] = [
+  { id: "whatsapp", platform: "WhatsApp", iconEmoji: "💬", url: "#", visible: true, order: 0 },
+  { id: "instagram", platform: "Instagram", iconEmoji: "📸", url: "#", visible: true, order: 1 },
+  { id: "telegram", platform: "Telegram", iconEmoji: "✈️", url: "#", visible: true, order: 2 },
 ];
+
+// ─── Footer ───────────────────────────────────────────────────────────────────
 
 export default function Footer() {
   const { lang } = useLanguage();
   const t = footer[lang];
   const meta = siteMeta[lang];
+  const [dynamicLinks, setDynamicLinks] = useState<SocialLink[] | null>(null);
+
+  useEffect(() => {
+    getSetting("site.social").then((val) => {
+      // getSetting returns null when the key doesn't exist yet
+      setDynamicLinks(parseSocialLinks(val));
+    });
+  }, []);
+
+  // null  → setting not in DB yet → show hardcoded fallback
+  // []    → setting exists, admin intentionally has no visible links → show nothing
+  // [...] → show the admin-configured links
+  const linksToShow = dynamicLinks ?? FALLBACK_LINKS;
 
   return (
     <footer
@@ -88,25 +198,30 @@ export default function Footer() {
           {t.socialTitle}
         </p>
 
-        {/* Social icons */}
-        <div className="flex items-center gap-5">
-          {socialLinks.map(({ label, href, icon, frameClass, hoverClass, delay }) => (
-            <a
-              key={label}
-              href={href}
-              aria-label={label}
-              style={{ animationDelay: delay }}
-              className={[
-                "social-icon-active",
-                "w-12 h-12 rounded-full flex items-center justify-center",
-                "border backdrop-blur-md transition-all duration-300 hover:scale-110",
-                frameClass,
-                hoverClass,
-              ].join(" ")}
-            >
-              {icon}
-            </a>
-          ))}
+        {/* Social icons — dynamic from DB */}
+        <div className="flex items-center gap-5 flex-wrap justify-center">
+          {linksToShow.map((link, i) => {
+            const { frameClass, hoverClass } = getPlatformStyle(link.platform);
+            return (
+              <a
+                key={link.id}
+                href={link.url || "#"}
+                aria-label={link.platform}
+                target={link.url && link.url !== "#" ? "_blank" : undefined}
+                rel="noopener noreferrer"
+                style={{ animationDelay: `${i * 0.15}s` }}
+                className={[
+                  "social-icon-active",
+                  "w-12 h-12 rounded-full flex items-center justify-center",
+                  "border backdrop-blur-md transition-all duration-300 hover:scale-110",
+                  frameClass,
+                  hoverClass,
+                ].join(" ")}
+              >
+                {getPlatformIcon(link.platform, link.iconEmoji)}
+              </a>
+            );
+          })}
         </div>
       </div>
 
