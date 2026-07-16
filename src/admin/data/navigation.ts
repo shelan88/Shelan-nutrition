@@ -103,6 +103,14 @@ export const NAV_ITEMS: NavItem[] = [
     iconName: "Image",
     group: "content",
   },
+  {
+    id: "assessment-templates",
+    label: "Assessments",
+    labelAr: "نماذج التقييم",
+    href: "/admin/assessment-templates",
+    iconName: "ClipboardList",
+    group: "content",
+  },
 
   // ── Business ───────────────────────────────────────────────────────────────
   {
