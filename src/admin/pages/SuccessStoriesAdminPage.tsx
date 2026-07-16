@@ -148,7 +148,7 @@ export default function SuccessStoriesAdminPage() {
                         />
                       ) : (
                         <div className="w-full h-40 bg-gradient-to-br from-primary-pink/20 to-lavender-purple/20 flex items-center justify-center">
-                          <span className="text-[13px] text-[var(--admin-text-faint)] italic">No image</span>
+                          <span className="text-[13px] text-[var(--admin-text-faint)] italic">{lang === "ar" ? "لا توجد صورة" : "No image"}</span>
                         </div>
                       )}
 
@@ -157,7 +157,7 @@ export default function SuccessStoriesAdminPage() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <p className="text-[14px] font-semibold text-[var(--admin-text)] truncate">
-                              {row.client_name_en || <span className="italic text-[var(--admin-text-faint)]">Unnamed</span>}
+                              {row.client_name_en || <span className="italic text-[var(--admin-text-faint)]">{lang === "ar" ? "بدون اسم" : "Unnamed"}</span>}
                             </p>
                             <p className="text-[11px] text-[var(--admin-text-muted)] truncate mt-0.5" dir="rtl">
                               {row.client_name_ar}
@@ -165,11 +165,11 @@ export default function SuccessStoriesAdminPage() {
                           </div>
                           {row.published ? (
                             <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200 shrink-0">
-                              Published
+                              {lang === "ar" ? "منشور" : "Published"}
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)] ring-1 ring-[var(--admin-border)] shrink-0">
-                              Draft
+                              {lang === "ar" ? "مسودة" : "Draft"}
                             </span>
                           )}
                         </div>
@@ -187,14 +187,14 @@ export default function SuccessStoriesAdminPage() {
                             onClick={() => openEdit(row)}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors"
                           >
-                            <Pencil size={12} /> Edit
+                            <Pencil size={12} /> {lang === "ar" ? "تعديل" : "Edit"}
                           </button>
                           <button
                             onClick={() => handleDelete(row.id)}
                             disabled={deletingId === row.id}
                             className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-red-500 hover:bg-red-50 transition-colors flex items-center gap-1"
                           >
-                            <Trash2 size={12} /> {deletingId === row.id ? "Deleting…" : "Delete"}
+                            <Trash2 size={12} /> {deletingId === row.id ? (lang === "ar" ? "جارٍ الحذف…" : "Deleting…") : (lang === "ar" ? "حذف" : "Delete")}
                           </button>
                         </div>
                       </div>
@@ -225,7 +225,7 @@ export default function SuccessStoriesAdminPage() {
             <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-border)]">
                 <h2 className="text-[13px] font-bold text-[var(--admin-text)]">
-                  {editing ? "Edit Success Story" : "New Success Story"}
+                  {editing ? (lang === "ar" ? "تعديل قصة النجاح" : "Edit Success Story") : (lang === "ar" ? "قصة نجاح جديدة" : "New Success Story")}
                 </h2>
               </div>
 
@@ -329,7 +329,7 @@ export default function SuccessStoriesAdminPage() {
                 </div>
 
                 <div className="border-t border-[var(--admin-border)] pt-6 mt-6">
-                  <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">Settings</p>
+                  <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">{lang === "ar" ? "الإعدادات" : "Settings"}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                     {/* Image URL */}
                     <div>
@@ -363,7 +363,7 @@ export default function SuccessStoriesAdminPage() {
                         className="w-4 h-4 accent-pink-500 rounded cursor-pointer"
                       />
                       <label htmlFor="story-published" className="text-[13px] text-[var(--admin-text)] cursor-pointer select-none">
-                        Published (visible on site)
+                        {lang === "ar" ? "منشور (مرئي على الموقع)" : "Published (visible on site)"}
                       </label>
                     </div>
                   </div>

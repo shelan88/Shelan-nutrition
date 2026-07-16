@@ -132,7 +132,7 @@ export default function FAQAdminPage() {
                     <input
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Search questions…"
+                      placeholder={lang === "ar" ? "ابحث عن سؤال…" : "Search questions…"}
                       className="pl-8 pr-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors w-48"
                     />
                   </div>
@@ -142,7 +142,7 @@ export default function FAQAdminPage() {
                     onChange={(e) => setCategoryFilter(e.target.value as "all" | Category)}
                     className="px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors cursor-pointer"
                   >
-                    <option value="all">All Categories</option>
+                    <option value="all">{lang === "ar" ? "كل الفئات" : "All Categories"}</option>
                     {CATEGORIES.map((c) => (
                       <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
                     ))}
@@ -156,19 +156,19 @@ export default function FAQAdminPage() {
 
               {/* Table */}
               {loading ? (
-                <div className="py-12 text-center text-[13px] text-[var(--admin-text-muted)]">Loading…</div>
+                <div className="py-12 text-center text-[13px] text-[var(--admin-text-muted)]">{lang === "ar" ? "جارٍ التحميل…" : "Loading…"}</div>
               ) : filtered.length === 0 ? (
-                <div className="py-12 text-center text-[13px] text-[var(--admin-text-muted)]">No FAQs found.</div>
+                <div className="py-12 text-center text-[13px] text-[var(--admin-text-muted)]">{lang === "ar" ? "لا توجد أسئلة." : "No FAQs found."}</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-[var(--admin-hover-bg)]">
                       <tr>
                         <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">#</th>
-                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Question</th>
-                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Category</th>
-                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Status</th>
-                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Actions</th>
+                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "السؤال" : "Question"}</th>
+                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "الفئة" : "Category"}</th>
+                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "الحالة" : "Status"}</th>
+                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "إجراءات" : "Actions"}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -186,18 +186,18 @@ export default function FAQAdminPage() {
                           </td>
                           <td className="py-3 px-4 text-[13px]">
                             {row.published ? (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200">Published</span>
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200">{lang === "ar" ? "منشور" : "Published"}</span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)] ring-1 ring-[var(--admin-border)]">Draft</span>
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)] ring-1 ring-[var(--admin-border)]">{lang === "ar" ? "مسودة" : "Draft"}</span>
                             )}
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-2">
                               <button onClick={() => openEdit(row)} className="px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors flex items-center gap-1">
-                                <Pencil size={12} /> Edit
+                                <Pencil size={12} /> {lang === "ar" ? "تعديل" : "Edit"}
                               </button>
                               <button onClick={() => handleDelete(row.id)} disabled={deletingId === row.id} className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-red-500 hover:bg-red-50 transition-colors flex items-center gap-1">
-                                <Trash2 size={12} /> {deletingId === row.id ? "…" : "Delete"}
+                                <Trash2 size={12} /> {deletingId === row.id ? "…" : (lang === "ar" ? "حذف" : "Delete")}
                               </button>
                             </div>
                           </td>
@@ -230,7 +230,7 @@ export default function FAQAdminPage() {
             <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-border)]">
                 <h2 className="text-[13px] font-bold text-[var(--admin-text)]">
-                  {editing ? "Edit FAQ" : "New FAQ"}
+                  {editing ? (lang === "ar" ? "تعديل السؤال" : "Edit FAQ") : (lang === "ar" ? "سؤال جديد" : "New FAQ")}
                 </h2>
               </div>
 
@@ -286,7 +286,7 @@ export default function FAQAdminPage() {
                 </div>
 
                 <div className="border-t border-[var(--admin-border)] pt-6 mt-6">
-                  <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">Settings</p>
+                  <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">{lang === "ar" ? "الإعدادات" : "Settings"}</p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Category */}
                     <div>
@@ -328,7 +328,7 @@ export default function FAQAdminPage() {
                           className="w-4 h-4 accent-pink-500 rounded cursor-pointer"
                         />
                         <label htmlFor="faq-published" className="text-[13px] text-[var(--admin-text)] cursor-pointer select-none">
-                          Published (visible on site)
+                          {lang === "ar" ? "منشور (مرئي على الموقع)" : "Published (visible on site)"}
                         </label>
                       </div>
                     </div>

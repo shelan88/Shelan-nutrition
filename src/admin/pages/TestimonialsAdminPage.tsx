@@ -196,11 +196,11 @@ export default function TestimonialsAdminPage() {
                         <div className="flex items-center gap-1 shrink-0">
                           {row.published ? (
                             <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200">
-                              Published
+                              {lang === "ar" ? "منشور" : "Published"}
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)] ring-1 ring-[var(--admin-border)]">
-                              Draft
+                              {lang === "ar" ? "مسودة" : "Draft"}
                             </span>
                           )}
                         </div>
@@ -225,7 +225,7 @@ export default function TestimonialsAdminPage() {
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors"
                         >
                           <Pencil size={12} />
-                          Edit
+                          {lang === "ar" ? "تعديل" : "Edit"}
                         </button>
                         <button
                           onClick={() => handleDelete(row.id)}
@@ -233,7 +233,7 @@ export default function TestimonialsAdminPage() {
                           className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-red-500 hover:bg-red-50 transition-colors"
                         >
                           <Trash2 size={12} className="inline mr-1" />
-                          {deletingId === row.id ? "Deleting…" : "Delete"}
+                          {deletingId === row.id ? (lang === "ar" ? "جارٍ الحذف…" : "Deleting…") : (lang === "ar" ? "حذف" : "Delete")}
                         </button>
                       </div>
                     </div>
@@ -265,7 +265,7 @@ export default function TestimonialsAdminPage() {
             <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-border)]">
                 <h2 className="text-[13px] font-bold text-[var(--admin-text)]">
-                  {editing ? "Edit Testimonial" : "New Testimonial"}
+                  {editing ? (lang === "ar" ? "تعديل الشهادة" : "Edit Testimonial") : (lang === "ar" ? "شهادة جديدة" : "New Testimonial")}
                 </h2>
               </div>
 
@@ -342,7 +342,7 @@ export default function TestimonialsAdminPage() {
                 </div>
 
                 <div className="border-t border-[var(--admin-border)] pt-6 mt-6">
-                  <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">Settings</p>
+                  <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">{lang === "ar" ? "الإعدادات" : "Settings"}</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Rating */}
                     <div>
@@ -370,7 +370,7 @@ export default function TestimonialsAdminPage() {
                         className="w-4 h-4 accent-pink-500 rounded cursor-pointer"
                       />
                       <label htmlFor="t-published" className="text-[13px] text-[var(--admin-text)] cursor-pointer select-none">
-                        Published (visible on site)
+                        {lang === "ar" ? "منشور (مرئي على الموقع)" : "Published (visible on site)"}
                       </label>
                     </div>
                   </div>

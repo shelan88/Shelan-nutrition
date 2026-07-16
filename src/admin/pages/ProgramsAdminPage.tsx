@@ -142,7 +142,7 @@ export default function ProgramsAdminPage() {
             <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-border)]">
                 <p className="text-[13px] text-[var(--admin-text-muted)]">
-                  {rows.length} program{rows.length !== 1 ? "s" : ""}
+                  {lang === "ar" ? `${rows.length} برنامج` : `${rows.length} program${rows.length !== 1 ? "s" : ""}`}
                 </p>
                 <button onClick={openNew} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all">
                   <Plus size={15} />
@@ -159,11 +159,11 @@ export default function ProgramsAdminPage() {
                   <table className="w-full">
                     <thead className="bg-[var(--admin-hover-bg)]">
                       <tr>
-                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Name</th>
-                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Price</th>
-                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Duration</th>
-                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Status</th>
-                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Actions</th>
+                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "الاسم" : "Name"}</th>
+                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "السعر" : "Price"}</th>
+                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "المدة" : "Duration"}</th>
+                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "الحالة" : "Status"}</th>
+                        <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "إجراءات" : "Actions"}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -181,18 +181,18 @@ export default function ProgramsAdminPage() {
                           </td>
                           <td className="py-3 px-4 text-[13px]">
                             {row.active ? (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200">Active</span>
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200">{lang === "ar" ? "نشط" : "Active"}</span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)] ring-1 ring-[var(--admin-border)]">Inactive</span>
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)] ring-1 ring-[var(--admin-border)]">{lang === "ar" ? "غير نشط" : "Inactive"}</span>
                             )}
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-2">
                               <button onClick={() => openEdit(row)} className="px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors flex items-center gap-1">
-                                <Pencil size={12} /> Edit
+                                <Pencil size={12} /> {lang === "ar" ? "تعديل" : "Edit"}
                               </button>
                               <button onClick={() => handleDelete(row.id)} disabled={deletingId === row.id} className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-red-500 hover:bg-red-50 transition-colors flex items-center gap-1">
-                                <Trash2 size={12} /> {deletingId === row.id ? "…" : "Delete"}
+                                <Trash2 size={12} /> {deletingId === row.id ? "…" : (lang === "ar" ? "حذف" : "Delete")}
                               </button>
                             </div>
                           </td>
@@ -224,7 +224,7 @@ export default function ProgramsAdminPage() {
             <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-border)]">
                 <h2 className="text-[13px] font-bold text-[var(--admin-text)]">
-                  {editing ? "Edit Program" : "New Program"}
+                  {editing ? (lang === "ar" ? "تعديل البرنامج" : "Edit Program") : (lang === "ar" ? "برنامج جديد" : "New Program")}
                 </h2>
               </div>
 
@@ -306,7 +306,7 @@ export default function ProgramsAdminPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Features (EN)</label>
-                    <p className="text-[11px] text-[var(--admin-text-faint)] mb-1.5">One feature per line</p>
+                    <p className="text-[11px] text-[var(--admin-text-faint)] mb-1.5">{lang === "ar" ? "ميزة واحدة في كل سطر" : "One feature per line"}</p>
                     <textarea
                       rows={5}
                       value={featuresEnText}
@@ -317,7 +317,7 @@ export default function ProgramsAdminPage() {
                   </div>
                   <div>
                     <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Features (AR)</label>
-                    <p className="text-[11px] text-[var(--admin-text-faint)] mb-1.5">One feature per line</p>
+                    <p className="text-[11px] text-[var(--admin-text-faint)] mb-1.5">{lang === "ar" ? "ميزة واحدة في كل سطر" : "One feature per line"}</p>
                     <textarea
                       dir="rtl"
                       rows={5}
@@ -330,7 +330,7 @@ export default function ProgramsAdminPage() {
                 </div>
 
                 <div className="border-t border-[var(--admin-border)] pt-6 mt-6">
-                  <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">Settings</p>
+                  <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">{lang === "ar" ? "الإعدادات" : "Settings"}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                     {/* Icon */}
                     <div>
@@ -402,7 +402,7 @@ export default function ProgramsAdminPage() {
                         className="w-4 h-4 accent-pink-500 rounded cursor-pointer"
                       />
                       <label htmlFor="prog-active" className="text-[13px] text-[var(--admin-text)] cursor-pointer select-none">
-                        Active (visible on site)
+                        {lang === "ar" ? "نشط (مرئي على الموقع)" : "Active (visible on site)"}
                       </label>
                     </div>
                   </div>

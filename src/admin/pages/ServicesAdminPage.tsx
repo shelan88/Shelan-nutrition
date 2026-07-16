@@ -299,13 +299,13 @@ export default function ServicesAdminPage() {
 
         <motion.div {...fadeUp(0)} className="space-y-5">
           <h2 className="text-[18px] font-bold text-[var(--admin-text)]">
-            {editing ? "Edit Service" : "New Service"}
+            {editing ? (lang === "ar" ? "تعديل الخدمة" : "Edit Service") : (lang === "ar" ? "خدمة جديدة" : "New Service")}
           </h2>
 
           {/* Bilingual content */}
           <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
             <div className="px-5 py-4 border-b border-[var(--admin-border)]">
-              <span className="text-[13px] font-bold text-[var(--admin-text)]">Service Content (Bilingual)</span>
+              <span className="text-[13px] font-bold text-[var(--admin-text)]">{lang === "ar" ? "محتوى الخدمة (ثنائي اللغة)" : "Service Content (Bilingual)"}</span>
             </div>
             <div className="p-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -413,7 +413,7 @@ export default function ServicesAdminPage() {
           {/* Shared fields */}
           <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
             <div className="px-5 py-4 border-b border-[var(--admin-border)]">
-              <span className="text-[13px] font-bold text-[var(--admin-text)]">Pricing & Display</span>
+              <span className="text-[13px] font-bold text-[var(--admin-text)]">{lang === "ar" ? "السعر والعرض" : "Pricing & Display"}</span>
             </div>
             <div className="p-5 space-y-5">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -455,7 +455,7 @@ export default function ServicesAdminPage() {
                       onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
                       className="w-4 h-4 rounded accent-pink-400"
                     />
-                    <span className="text-[13px] font-medium text-[var(--admin-text)]">Active</span>
+                    <span className="text-[13px] font-medium text-[var(--admin-text)]">{lang === "ar" ? "نشطة" : "Active"}</span>
                   </label>
                 </div>
               </div>
@@ -499,13 +499,13 @@ export default function ServicesAdminPage() {
           {/* Content Details */}
           <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
             <div className="px-5 py-4 border-b border-[var(--admin-border)]">
-              <span className="text-[13px] font-bold text-[var(--admin-text)]">Content Details</span>
+              <span className="text-[13px] font-bold text-[var(--admin-text)]">{lang === "ar" ? "تفاصيل المحتوى" : "Content Details"}</span>
             </div>
             <div className="p-5 space-y-8">
 
               {/* Who Is It For */}
               <div>
-                <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">Who Is It For</p>
+                <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">{lang === "ar" ? "لمن هذه الخدمة" : "Who Is It For"}</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-4">
                     <div>
@@ -572,7 +572,7 @@ export default function ServicesAdminPage() {
 
               <div className="border-t border-[var(--admin-border)] pt-6 mt-6">
                 {/* Benefits */}
-                <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">Benefits</p>
+                <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">{lang === "ar" ? "الفوائد" : "Benefits"}</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-4">
                     <div>
@@ -619,7 +619,7 @@ export default function ServicesAdminPage() {
 
               <div className="border-t border-[var(--admin-border)] pt-6 mt-6">
                 {/* CTA */}
-                <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">Call to Action</p>
+                <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">{lang === "ar" ? "الدعوة للتصرف" : "Call to Action"}</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-4">
                     <div>
@@ -719,21 +719,21 @@ export default function ServicesAdminPage() {
           <table className="w-full">
             <thead className="bg-[var(--admin-hover-bg)]">
               <tr>
-                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Name</th>
-                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Price</th>
-                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Status</th>
-                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Sort</th>
-                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Actions</th>
+                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "الاسم" : "Name"}</th>
+                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "السعر" : "Price"}</th>
+                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "الحالة" : "Status"}</th>
+                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "الترتيب" : "Sort"}</th>
+                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "إجراءات" : "Actions"}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-[13px] text-[var(--admin-text-faint)]">Loading services…</td>
+                  <td colSpan={5} className="py-12 text-center text-[13px] text-[var(--admin-text-faint)]">{lang === "ar" ? "جارٍ التحميل…" : "Loading services…"}</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-[13px] text-[var(--admin-text-faint)]">No services found.</td>
+                  <td colSpan={5} className="py-12 text-center text-[13px] text-[var(--admin-text-faint)]">{lang === "ar" ? "لا توجد خدمات." : "No services found."}</td>
                 </tr>
               ) : (
                 filtered.map((service) => (
@@ -751,12 +751,12 @@ export default function ServicesAdminPage() {
                       {service.active ? (
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          Active
+                          {lang === "ar" ? "نشطة" : "Active"}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)] ring-1 ring-[var(--admin-border)]">
                           <span className="w-1.5 h-1.5 rounded-full bg-[var(--admin-text-faint)]" />
-                          Inactive
+                          {lang === "ar" ? "غير نشطة" : "Inactive"}
                         </span>
                       )}
                     </td>

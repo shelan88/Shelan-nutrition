@@ -27,14 +27,14 @@ function formatDate(iso: string): string {
 
 type FilterTab = "all" | "image" | "document" | "video";
 
-const FILTER_TABS: { key: FilterTab; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "image", label: "Images" },
-  { key: "document", label: "Documents" },
-  { key: "video", label: "Videos" },
+const FILTER_TABS: { key: FilterTab; label: string; labelAr: string }[] = [
+  { key: "all", label: "All", labelAr: "الكل" },
+  { key: "image", label: "Images", labelAr: "صور" },
+  { key: "document", label: "Documents", labelAr: "مستندات" },
+  { key: "video", label: "Videos", labelAr: "فيديو" },
 ];
 
-function MediaCard({ item, onDelete }: { item: MediaLibraryRow; onDelete: (id: string, url: string) => void }) {
+function MediaCard({ item, onDelete, lang }: { item: MediaLibraryRow; onDelete: (id: string, url: string) => void; lang: string }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -87,7 +87,7 @@ function MediaCard({ item, onDelete }: { item: MediaLibraryRow; onDelete: (id: s
             onClick={handleCopy}
             className="flex-1 px-2 py-1 rounded-lg border border-[var(--admin-border)] text-[11px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors text-center"
           >
-            {copied ? "Copied! ✓" : "Copy URL"}
+            {copied ? (lang === "ar" ? "تم النسخ! ✓" : "Copied! ✓") : (lang === "ar" ? "نسخ الرابط" : "Copy URL")}
           </button>
           <button
             onClick={handleDelete}
@@ -158,15 +158,15 @@ export default function MediaLibraryPage() {
           {uploading ? (
             <div className="flex flex-col items-center gap-3">
               <div className="w-10 h-10 border-2 border-primary-pink/20 border-t-primary-pink rounded-full animate-spin" />
-              <p className="text-[13px] font-medium text-[var(--admin-text-muted)]">Uploading…</p>
+              <p className="text-[13px] font-medium text-[var(--admin-text-muted)]">{lang === "ar" ? "جارٍ الرفع…" : "Uploading…"}</p>
             </div>
           ) : (
             <>
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-pink/10 to-lavender-purple/10 flex items-center justify-center">
                 <Plus size={22} className="text-primary-pink" />
               </div>
-              <p className="text-[14px] font-semibold text-[var(--admin-text)]">Drop files here or click to browse</p>
-              <p className="text-[12px] text-[var(--admin-text-faint)]">Images, PDFs, Videos — up to 50 MB each</p>
+              <p className="text-[14px] font-semibold text-[var(--admin-text)]">{lang === "ar" ? "أفلت الملفات هنا أو اضغط للتصفح" : "Drop files here or click to browse"}</p>
+              <p className="text-[12px] text-[var(--admin-text-faint)]">{lang === "ar" ? "صور، ملفات PDF، فيديو — حتى 50 MB لكل ملف" : "Images, PDFs, Videos — up to 50 MB each"}</p>
             </>
           )}
         </div>
@@ -192,7 +192,7 @@ export default function MediaLibraryPage() {
                 : "border border-[var(--admin-border)] text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)]"
             }`}
           >
-            {t.label}
+            {lang === "ar" ? t.labelAr : t.label}
           </button>
         ))}
       </motion.div>
@@ -206,16 +206,16 @@ export default function MediaLibraryPage() {
         ) : items.length === 0 ? (
           <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] py-20 flex flex-col items-center gap-4 text-center">
             <span className="text-5xl">🖼️</span>
-            <p className="text-[14px] font-semibold text-[var(--admin-text)]">No files yet</p>
+            <p className="text-[14px] font-semibold text-[var(--admin-text)]">{lang === "ar" ? "لا توجد ملفات بعد" : "No files yet"}</p>
             <p className="text-[12px] text-[var(--admin-text-faint)] max-w-xs">
-              Upload your first file using the drop zone above.
+              {lang === "ar" ? "ارفع أول ملف باستخدام منطقة الإفلات أعلاه." : "Upload your first file using the drop zone above."}
             </p>
             <button
               onClick={() => fileInputRef.current?.click()}
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all mt-2"
             >
               <Plus size={14} />
-              Upload Files
+              {lang === "ar" ? "رفع ملفات" : "Upload Files"}
             </button>
           </div>
         ) : (
@@ -229,7 +229,7 @@ export default function MediaLibraryPage() {
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.2, delay: i * 0.03 }}
                 >
-                  <MediaCard item={item} onDelete={handleDelete} />
+                  <MediaCard item={item} onDelete={handleDelete} lang={lang} />
                 </motion.div>
               ))}
             </AnimatePresence>

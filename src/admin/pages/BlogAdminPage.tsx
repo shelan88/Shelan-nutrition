@@ -231,13 +231,13 @@ export default function BlogAdminPage() {
 
         <motion.div {...fadeUp(0)}>
           <h2 className="text-[18px] font-bold text-[var(--admin-text)] mb-6">
-            {editing ? "Edit Post" : "New Post"}
+            {editing ? (lang === "ar" ? "تعديل المقال" : "Edit Post") : (lang === "ar" ? "مقال جديد" : "New Post")}
           </h2>
 
           {/* Bilingual grid */}
           <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden mb-5">
             <div className="px-5 py-4 border-b border-[var(--admin-border)]">
-              <span className="text-[13px] font-bold text-[var(--admin-text)]">Content (Bilingual)</span>
+              <span className="text-[13px] font-bold text-[var(--admin-text)]">{lang === "ar" ? "المحتوى (ثنائي اللغة)" : "Content (Bilingual)"}</span>
             </div>
             <div className="p-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -344,7 +344,7 @@ export default function BlogAdminPage() {
           {/* Shared fields */}
           <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden mb-5">
             <div className="px-5 py-4 border-b border-[var(--admin-border)]">
-              <span className="text-[13px] font-bold text-[var(--admin-text)]">Meta & Publishing</span>
+              <span className="text-[13px] font-bold text-[var(--admin-text)]">{lang === "ar" ? "الميتا والنشر" : "Meta & Publishing"}</span>
             </div>
             <div className="p-5 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -436,7 +436,7 @@ export default function BlogAdminPage() {
                     onChange={(e) => setForm((f) => ({ ...f, featured: e.target.checked }))}
                     className="w-4 h-4 rounded accent-pink-400"
                   />
-                  <span className="text-[13px] font-medium text-[var(--admin-text)]">Featured post</span>
+                  <span className="text-[13px] font-medium text-[var(--admin-text)]">{lang === "ar" ? "مقال مميز" : "Featured post"}</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -445,7 +445,7 @@ export default function BlogAdminPage() {
                     onChange={(e) => setForm((f) => ({ ...f, published: e.target.checked }))}
                     className="w-4 h-4 rounded accent-pink-400"
                   />
-                  <span className="text-[13px] font-medium text-[var(--admin-text)]">Published</span>
+                  <span className="text-[13px] font-medium text-[var(--admin-text)]">{lang === "ar" ? "منشور" : "Published"}</span>
                 </label>
               </div>
             </div>
@@ -478,7 +478,7 @@ export default function BlogAdminPage() {
           </div>
           <button onClick={openNew} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all">
             <Plus size={14} />
-            New Post
+            {lang === "ar" ? "مقال جديد" : "New Post"}
           </button>
         </div>
 
@@ -487,21 +487,21 @@ export default function BlogAdminPage() {
           <table className="w-full">
             <thead className="bg-[var(--admin-hover-bg)]">
               <tr>
-                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Title</th>
-                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Category</th>
-                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Status</th>
-                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Date</th>
-                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">Actions</th>
+                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "العنوان" : "Title"}</th>
+                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "الفئة" : "Category"}</th>
+                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "الحالة" : "Status"}</th>
+                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "التاريخ" : "Date"}</th>
+                <th className="text-start px-4 py-2.5 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider whitespace-nowrap">{lang === "ar" ? "إجراءات" : "Actions"}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-[13px] text-[var(--admin-text-faint)]">Loading posts…</td>
+                  <td colSpan={5} className="py-12 text-center text-[13px] text-[var(--admin-text-faint)]">{lang === "ar" ? "جارٍ التحميل…" : "Loading posts…"}</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-[13px] text-[var(--admin-text-faint)]">No posts found.</td>
+                  <td colSpan={5} className="py-12 text-center text-[13px] text-[var(--admin-text-faint)]">{lang === "ar" ? "لا توجد مقالات." : "No posts found."}</td>
                 </tr>
               ) : (
                 filtered.map((post) => (
@@ -515,12 +515,12 @@ export default function BlogAdminPage() {
                       {post.published ? (
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          Published
+                          {lang === "ar" ? "منشور" : "Published"}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)] ring-1 ring-[var(--admin-border)]">
                           <span className="w-1.5 h-1.5 rounded-full bg-[var(--admin-text-faint)]" />
-                          Draft
+                          {lang === "ar" ? "مسودة" : "Draft"}
                         </span>
                       )}
                     </td>
