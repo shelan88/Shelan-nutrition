@@ -211,9 +211,9 @@ export default function Navbar() {
             animate="visible"
             exit="exit"
             variants={curtainVariants}
-            className="fixed inset-x-0 top-0 z-[999] w-full min-h-screen bg-[rgba(15,23,42,0.97)] backdrop-blur-[12px] shadow-2xl shadow-black/40"
+            className="fixed inset-x-0 top-0 z-[999] w-full h-dvh overflow-y-auto bg-[rgba(15,23,42,0.97)] backdrop-blur-[12px] shadow-2xl shadow-black/40"
           >
-            {/* Close button */}
+            {/* Close button — stays fixed while content scrolls */}
             <button
               onClick={() => setOpen(false)}
               aria-label="Close menu"
@@ -222,7 +222,7 @@ export default function Navbar() {
               <X size={26} />
             </button>
 
-            <nav className="min-h-screen flex flex-col items-center justify-center gap-6 sm:gap-7 text-center px-6 pt-28 pb-12">
+            <nav className="min-h-full flex flex-col items-center justify-center gap-6 sm:gap-7 text-center px-6 pt-28 pb-12">
               {items.map((item) =>
                 item.cta ? (
                   /* CTA button */
