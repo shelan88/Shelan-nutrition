@@ -10,7 +10,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Globe, Briefcase, ClipboardList, BookOpen,
   Star, Image, Calendar, Users, CreditCard, MessageSquare,
-  BarChart3, TrendingUp, Settings2,
+  BarChart3, TrendingUp, Settings2, Share2, Trophy, HelpCircle, Target,
 } from "lucide-react";
 import type { NavItem } from "../data/navigation";
 
@@ -30,6 +30,10 @@ const ICON_MAP: Record<string, React.ElementType> = {
   BarChart3,
   TrendingUp,
   Settings2,
+  Share2,
+  Trophy,
+  HelpCircle,
+  Target,
 };
 
 interface NavigationItemProps {

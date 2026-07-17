@@ -48,6 +48,14 @@ export const NAV_ITEMS: NavItem[] = [
     group: "content",
   },
   {
+    id: "social-media",
+    label: "Social Media",
+    labelAr: "التواصل الاجتماعي",
+    href: "/admin/social-media",
+    iconName: "Share2",
+    group: "content",
+  },
+  {
     id: "services",
     label: "Services",
     labelAr: "الخدمات",

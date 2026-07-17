@@ -168,6 +168,47 @@ export const ThreadsIcon = ({ size = 24, className = "" }: IconProps) => (
   </svg>
 );
 
+// ── Discord ───────────────────────────────────────────────────────────────────
+export const DiscordIcon = ({ size = 24, className = "" }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <rect width="24" height="24" rx="6" fill="#5865F2" />
+    <path
+      d="M17.36 7.3a13.4 13.4 0 00-3.3-.97.05.05 0 00-.05.03c-.14.25-.3.58-.41.84a12.4 12.4 0 00-3.2 0 8.4 8.4 0 00-.41-.84.05.05 0 00-.05-.03 13.4 13.4 0 00-3.3.97.05.05 0 00-.02.02C4.82 10.1 4.2 12.84 4.49 15.55c0 .01.01.03.02.03a13.4 13.4 0 003.4 1.46.05.05 0 00.05-.02c.26-.36.5-.74.7-1.14a.05.05 0 00-.03-.07 8.8 8.8 0 01-1.07-.43.05.05 0 010-.08l.21-.17a.05.05 0 01.05-.01c2.26 1.04 4.7 1.04 6.94 0a.05.05 0 01.05.01l.21.17a.05.05 0 010 .08 8.9 8.9 0 01-1.07.43.05.05 0 00-.03.07c.2.4.44.78.7 1.14a.05.05 0 00.05.02 13.4 13.4 0 003.4-1.46.05.05 0 00.02-.03c.35-3.17-.59-5.9-2.5-8.23a.04.04 0 00-.02-.02zM9.52 13.87c-.69 0-1.26-.63-1.26-1.41s.56-1.41 1.26-1.41c.7 0 1.27.64 1.26 1.41 0 .78-.56 1.41-1.26 1.41zm4.97 0c-.7 0-1.26-.63-1.26-1.41s.56-1.41 1.26-1.41c.7 0 1.27.64 1.26 1.41 0 .78-.55 1.41-1.26 1.41z"
+      fill="white"
+    />
+  </svg>
+);
+
+// ── Reddit ────────────────────────────────────────────────────────────────────
+export const RedditIcon = ({ size = 24, className = "" }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <circle cx="12" cy="12" r="12" fill="#FF4500" />
+    <path
+      d="M19.5 12a1.5 1.5 0 00-2.53-1.08c-.95-.62-2.23-1-3.63-1.07l.67-2.97 2.05.46a1.04 1.04 0 102.04-.12 1.04 1.04 0 00-1.96.45l-2.27-.51a.22.22 0 00-.25.15l-.75 3.32c-1.44.05-2.75.45-3.72 1.08a1.5 1.5 0 101.63 2.42c.05.2.08.4.08.61 0 1.93 2.25 3.5 5.04 3.5s5.04-1.57 5.04-3.5c0-.21-.03-.42-.08-.61A1.5 1.5 0 0019.5 12zm-9.45 2c0-.58.47-1.04 1.04-1.04.58 0 1.04.46 1.04 1.04 0 .57-.46 1.04-1.04 1.04A1.04 1.04 0 0110.05 14zm5.77 2.76c-.71.72-2.07.77-2.82.77s-2.11-.05-2.82-.77a.25.25 0 01.35-.35c.48.48 1.5.65 2.47.65.97 0 2-.17 2.47-.65a.25.25 0 01.35.35zm-.18-1.72A1.04 1.04 0 0116.68 14c0-.58.46-1.04 1.04-1.04.57 0 1.04.46 1.04 1.04a1.04 1.04 0 01-1.04 1.04z"
+      fill="white"
+    />
+  </svg>
+);
+
+// ── Spotify ───────────────────────────────────────────────────────────────────
+export const SpotifyIcon = ({ size = 24, className = "" }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <circle cx="12" cy="12" r="12" fill="#1DB954" />
+    <path
+      d="M16.9 14.6c-.2 0-.35-.06-.48-.17-1.4-.89-3.16-1.35-5.12-1.35-.9 0-1.83.1-2.76.3-.18.04-.35.06-.5.06a.72.72 0 01-.72-.73c0-.43.28-.73.65-.81a14.2 14.2 0 013.33-.38c2.28 0 4.32.55 5.96 1.6.28.17.46.42.46.75 0 .4-.32.73-.72.73z"
+      fill="white"
+    />
+    <path
+      d="M18.1 11.8c-.25 0-.43-.08-.6-.2-1.7-1.05-4.24-1.67-6.65-1.67-1.08 0-2.13.14-3.05.38a.95.95 0 01-.32.05.88.88 0 01-.87-.9c0-.5.3-.87.72-.98a15.7 15.7 0 013.52-.4c2.76 0 5.56.66 7.6 1.9.34.2.56.5.56.93 0 .5-.4.9-.9.9z"
+      fill="white"
+    />
+    <path
+      d="M7.8 16.7a.62.62 0 01-.62-.62c0-.27.17-.5.44-.6 1.07-.3 2.1-.44 3.1-.44 1.63 0 3.1.38 4.3 1.04.22.12.37.35.37.62 0 .34-.28.62-.62.62-.14 0-.28-.04-.4-.12-1.03-.58-2.29-.9-3.65-.9-.92 0-1.87.14-2.87.42-.08.02-.15.03-.2.03z"
+      fill="white"
+    />
+  </svg>
+);
+
 // ── Email ─────────────────────────────────────────────────────────────────────
 export const EmailIcon = ({ size = 24, className = "" }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
@@ -253,6 +294,21 @@ const PLATFORM_MAP: Record<string, PlatformEntry> = {
     frameClass: "bg-white/20 border-white/40 shadow-[0_0_16px_rgba(255,255,255,0.12)]",
     hoverClass: "hover:bg-white/35 hover:border-white/65",
   },
+  discord: {
+    Icon: DiscordIcon,
+    frameClass: "bg-[#5865F2]/10 border-[#5865F2]/40 shadow-[0_0_16px_rgba(88,101,242,0.2)]",
+    hoverClass: "hover:bg-[#5865F2]/20 hover:border-[#5865F2]/70 hover:shadow-[0_0_24px_rgba(88,101,242,0.4)]",
+  },
+  reddit: {
+    Icon: RedditIcon,
+    frameClass: "bg-[#FF4500]/10 border-[#FF4500]/40 shadow-[0_0_16px_rgba(255,69,0,0.2)]",
+    hoverClass: "hover:bg-[#FF4500]/20 hover:border-[#FF4500]/70 hover:shadow-[0_0_24px_rgba(255,69,0,0.4)]",
+  },
+  spotify: {
+    Icon: SpotifyIcon,
+    frameClass: "bg-[#1DB954]/10 border-[#1DB954]/40 shadow-[0_0_16px_rgba(29,185,84,0.2)]",
+    hoverClass: "hover:bg-[#1DB954]/20 hover:border-[#1DB954]/70 hover:shadow-[0_0_24px_rgba(29,185,84,0.4)]",
+  },
   email: {
     Icon: EmailIcon,
     frameClass: "bg-white/10 border-white/25 shadow-[0_0_16px_rgba(255,255,255,0.1)]",
@@ -275,7 +331,6 @@ const DEFAULT_ENTRY: PlatformEntry = {
 export function platformKey(platform: string): string {
   const s = platform.toLowerCase().replace(/\s*\(.*?\)\s*/g, "").replace(/[\s/_-]/g, "").replace(/[^a-z]/g, "");
   if (s === "twitter" || s === "xtwitter" || s === "x") return "xtwitter";
-  if (s === "xtwitter") return "xtwitter";
   return s;
 }
 
@@ -325,6 +380,9 @@ export const PRESET_PLATFORM_NAMES = [
   "Snapchat",
   "Pinterest",
   "Threads",
+  "Discord",
+  "Reddit",
+  "Spotify",
   "Email",
   "Website",
 ] as const;

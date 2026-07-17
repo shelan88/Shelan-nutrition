@@ -1,15 +1,14 @@
 /**
  * WebsiteSettingsPage — Tab-based settings editor for website_settings key-value table.
- * Tabs: Hero · About · Contact · Social Media · Navigation
+ * Tabs: Hero · About · Contact · Navigation
  */
 import { useState, useEffect, useCallback } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import PageHeader from "../components/PageHeader";
 import { motion, AnimatePresence } from "framer-motion";
-import { Save, Plus, Trash2, ChevronUp, ChevronDown, Eye, EyeOff } from "lucide-react";
+import { Save, ChevronUp, ChevronDown, Eye, EyeOff } from "lucide-react";
 import { getSetting, setSetting } from "@/admin/repositories/settings.repository";
 import FileUploadField from "../components/FileUploadField";
-import { getSocialIcon, PRESET_PLATFORM_NAMES } from "@/components/SocialIcons";
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 14 },
@@ -17,7 +16,7 @@ const fadeUp = (delay = 0) => ({
   transition: { duration: 0.42, delay, ease: [0.22, 1, 0.36, 1] as const },
 });
 
-type Tab = "hero" | "about" | "contact" | "social" | "nav";
+type Tab = "hero" | "about" | "contact" | "nav";
 
 // ─── Field helpers ─────────────────────────────────────────────────────────────
 
@@ -71,35 +70,6 @@ const defaultContact = {
   hours_en: "", hours_ar: "",
   map_url: "",
 };
-
-// ─── Social Media Links ────────────────────────────────────────────────────────
-
-type SocialLink = {
-  id: string;
-  platform: string;
-  iconEmoji: string;       // kept for backward-compat with old DB data
-  customIconUrl?: string;  // for custom platforms only
-  url: string;
-  visible: boolean;
-  order: number;
-};
-
-function migrateLegacySocial(val: unknown): SocialLink[] {
-  if (!val || typeof val !== "object" || Array.isArray(val)) return [];
-  const old = val as Record<string, string>;
-  const mapping = [
-    { key: "instagram", platform: "Instagram" },
-    { key: "tiktok",    platform: "TikTok" },
-    { key: "youtube",   platform: "YouTube" },
-    { key: "facebook",  platform: "Facebook" },
-    { key: "snapchat",  platform: "Snapchat" },
-    { key: "whatsapp",  platform: "WhatsApp" },
-    { key: "telegram",  platform: "Telegram" },
-  ];
-  return mapping
-    .filter(m => old[m.key])
-    .map((m, i) => ({ id: m.key, platform: m.platform, iconEmoji: "", url: old[m.key], visible: true, order: i }));
-}
 
 // ─── Public Navigation Items ───────────────────────────────────────────────────
 
@@ -157,51 +127,31 @@ export default function WebsiteSettingsPage() {
   const [hero,    setHero]    = useState({ ...defaultHero });
   const [about,   setAbout]   = useState({ ...defaultAbout });
   const [contact, setContact] = useState({ ...defaultContact });
-  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
-  const [navItems,    setNavItems]    = useState<NavItem[]>([...DEFAULT_NAV_ITEMS]);
-
-  // Social CRUD helpers
-  const [showPresetPicker, setShowPresetPicker] = useState(false);
-  const [newCustomPlatform, setNewCustomPlatform] = useState("");
-  const [newCustomIconUrl,  setNewCustomIconUrl]  = useState("");
+  const [navItems, setNavItems] = useState<NavItem[]>([...DEFAULT_NAV_ITEMS]);
 
   const [saving, setSaving] = useState(false);
   const [saved,  setSaved]  = useState(false);
 
   const keyMap: Record<Tab, string> = {
-    hero: "site.hero", about: "site.about", contact: "site.contact",
-    social: "site.social", nav: "site.nav",
+    hero: "site.hero", about: "site.about", contact: "site.contact", nav: "site.nav",
   };
 
   const setterMap: Record<Tab, (v: any) => void> = {
-    hero: setHero, about: setAbout, contact: setContact,
-    social: () => {}, nav: () => {},
+    hero: setHero, about: setAbout, contact: setContact, nav: () => {},
   };
 
   const defaultMap: Record<Tab, object> = {
-    hero: defaultHero, about: defaultAbout, contact: defaultContact,
-    social: {}, nav: {},
+    hero: defaultHero, about: defaultAbout, contact: defaultContact, nav: {},
   };
 
   const getterMap: Record<Tab, object> = {
-    hero, about, contact, social: {}, nav: {},
+    hero, about, contact, nav: {},
   };
 
   // Load on tab switch
   useEffect(() => {
     (async () => {
       const val = await getSetting(keyMap[tab]);
-
-      if (tab === "social") {
-        if (Array.isArray(val)) {
-          setSocialLinks(val as SocialLink[]);
-        } else if (val && typeof val === "object") {
-          setSocialLinks(migrateLegacySocial(val));
-        } else {
-          setSocialLinks([]);
-        }
-        return;
-      }
 
       if (tab === "nav") {
         if (val && typeof val === "object" && !Array.isArray(val) && Array.isArray((val as any).items)) {
@@ -224,22 +174,18 @@ export default function WebsiteSettingsPage() {
   const handleSave = useCallback(async () => {
     setSaving(true);
     const key = keyMap[tab];
-    const value =
-      tab === "social" ? socialLinks :
-      tab === "nav"    ? { items: navItems } :
-      getterMap[tab];
+    const value = tab === "nav" ? { items: navItems } : getterMap[tab];
     const ok = await setSetting(key, value as any);
     setSaving(false);
     if (ok) { setSaved(true); setTimeout(() => setSaved(false), 2000); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, hero, about, contact, socialLinks, navItems]);
+  }, [tab, hero, about, contact, navItems]);
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: "hero",    label: lang === "ar" ? "الرئيسية"              : "Hero" },
-    { key: "about",   label: lang === "ar" ? "من أنا"               : "About" },
-    { key: "contact", label: lang === "ar" ? "التواصل"              : "Contact" },
-    { key: "social",  label: lang === "ar" ? "التواصل الاجتماعي"    : "Social Media" },
-    { key: "nav",     label: lang === "ar" ? "قائمة التنقل"         : "Navigation" },
+    { key: "hero",    label: lang === "ar" ? "الرئيسية"     : "Hero" },
+    { key: "about",   label: lang === "ar" ? "من أنا"      : "About" },
+    { key: "contact", label: lang === "ar" ? "التواصل"     : "Contact" },
+    { key: "nav",     label: lang === "ar" ? "قائمة التنقل" : "Navigation" },
   ];
 
   return (
@@ -364,195 +310,6 @@ export default function WebsiteSettingsPage() {
                   <Field label="Business Hours (EN)"><Input value={contact.hours_en} onChange={e => setContact(p => ({ ...p, hours_en: e.target.value }))} placeholder="Sun–Thu, 9 AM – 6 PM" /></Field>
                   <Field label="Business Hours (AR)"><Input dir="rtl" value={contact.hours_ar} onChange={e => setContact(p => ({ ...p, hours_ar: e.target.value }))} placeholder="الأحد – الخميس، ٩ ص – ٦ م" /></Field>
                 </div>
-              </div>
-              <SaveBar lang={lang} saved={saved} saving={saving} onSave={handleSave} />
-            </div>
-          )}
-
-          {/* ── SOCIAL TAB ───────────────────────────────────────────────────── */}
-          {tab === "social" && (
-            <div>
-              <div className="px-5 py-5 space-y-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <p className="text-[13px] font-bold text-[var(--admin-text)]">
-                      {lang === "ar" ? "روابط التواصل الاجتماعي" : "Social Media Links"}
-                    </p>
-                    <p className="text-[11px] text-[var(--admin-text-faint)] mt-0.5">
-                      {lang === "ar" ? "اختر المنصة — تظهر الأيقونة الرسمية تلقائيًا." : "Select a platform — the official icon appears automatically."}
-                    </p>
-                  </div>
-                  {/* Add Platform button */}
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setShowPresetPicker(v => !v)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[12px] font-semibold shadow-sm hover:shadow-md transition-all whitespace-nowrap"
-                    >
-                      <Plus size={13} />
-                      {lang === "ar" ? "إضافة منصة" : "Add Platform"}
-                    </button>
-
-                    {/* Platform picker dropdown */}
-                    {showPresetPicker && (
-                      <div className="absolute end-0 top-full mt-2 z-20 bg-[var(--admin-surface)] border border-[var(--admin-border)] rounded-xl shadow-xl shadow-black/10 w-72 overflow-hidden">
-                        <p className="px-4 pt-3 pb-2 text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider">
-                          {lang === "ar" ? "اختر منصة" : "Pick a platform"}
-                        </p>
-
-                        {/* Preset grid */}
-                        <div className="px-3 pb-3 grid grid-cols-2 gap-1.5 max-h-56 overflow-y-auto">
-                          {PRESET_PLATFORM_NAMES.map(name => (
-                            <button
-                              key={name}
-                              type="button"
-                              onClick={() => {
-                                setSocialLinks(prev => [...prev, {
-                                  id: crypto.randomUUID(),
-                                  platform: name,
-                                  iconEmoji: "",
-                                  url: "",
-                                  visible: true,
-                                  order: prev.length,
-                                }]);
-                                setShowPresetPicker(false);
-                              }}
-                              className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors text-start"
-                            >
-                              {getSocialIcon(name, { size: 18 })}
-                              <span className="truncate">{name}</span>
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* Custom platform */}
-                        <div className="border-t border-[var(--admin-border)] px-3 py-3 space-y-2">
-                          <p className="text-[11px] font-semibold text-[var(--admin-text-faint)] uppercase tracking-wider">
-                            {lang === "ar" ? "منصة مخصصة" : "Custom platform"}
-                          </p>
-                          <input
-                            value={newCustomPlatform}
-                            onChange={e => setNewCustomPlatform(e.target.value)}
-                            className="w-full px-2 py-1.5 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[13px] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40"
-                            placeholder={lang === "ar" ? "اسم المنصة" : "Platform name"}
-                          />
-                          <input
-                            value={newCustomIconUrl}
-                            onChange={e => setNewCustomIconUrl(e.target.value)}
-                            className="w-full px-2 py-1.5 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[13px] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40"
-                            placeholder={lang === "ar" ? "رابط الأيقونة (اختياري)" : "Icon URL (optional)"}
-                            dir="ltr"
-                          />
-                          <button
-                            type="button"
-                            disabled={!newCustomPlatform.trim()}
-                            onClick={() => {
-                              if (!newCustomPlatform.trim()) return;
-                              setSocialLinks(prev => [...prev, {
-                                id: crypto.randomUUID(),
-                                platform: newCustomPlatform.trim(),
-                                iconEmoji: "",
-                                customIconUrl: newCustomIconUrl.trim() || undefined,
-                                url: "",
-                                visible: true,
-                                order: prev.length,
-                              }]);
-                              setNewCustomPlatform("");
-                              setNewCustomIconUrl("");
-                              setShowPresetPicker(false);
-                            }}
-                            className="w-full py-1.5 rounded-lg bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[12px] font-semibold disabled:opacity-40 transition-all"
-                          >
-                            {lang === "ar" ? "إضافة" : "Add"}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Platform rows */}
-                {socialLinks.length === 0 ? (
-                  <div className="py-10 text-center text-[13px] text-[var(--admin-text-faint)] border border-dashed border-[var(--admin-border)] rounded-xl">
-                    {lang === "ar" ? "لا توجد منصات بعد. أضف واحدة أعلاه." : "No platforms yet. Add one above."}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {[...socialLinks].sort((a, b) => a.order - b.order).map((link, idx, arr) => (
-                      <div key={link.id} className="flex items-center gap-3 p-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-hover-bg)]/40">
-
-                        {/* Brand icon */}
-                        <div className="w-9 h-9 rounded-full bg-[var(--admin-surface)] border border-[var(--admin-border)] flex items-center justify-center shrink-0 overflow-hidden">
-                          {getSocialIcon(link.platform, { customIconUrl: link.customIconUrl, iconEmoji: link.iconEmoji, size: 22 })}
-                        </div>
-
-                        {/* Platform name + URL */}
-                        <div className="flex-1 min-w-0 space-y-1.5">
-                          <p className="text-[12px] font-semibold text-[var(--admin-text-muted)] truncate">{link.platform}</p>
-                          <input
-                            value={link.url}
-                            onChange={e => setSocialLinks(prev => prev.map(l => l.id === link.id ? { ...l, url: e.target.value } : l))}
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[12px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
-                            placeholder="https://…"
-                            dir="ltr"
-                          />
-                        </div>
-
-                        {/* Controls */}
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            title={link.visible ? (lang === "ar" ? "إخفاء" : "Hide") : (lang === "ar" ? "إظهار" : "Show")}
-                            onClick={() => setSocialLinks(prev => prev.map(l => l.id === link.id ? { ...l, visible: !l.visible } : l))}
-                            className={`w-7 h-7 flex items-center justify-center rounded-lg border transition-colors ${link.visible ? "border-emerald-200 text-emerald-600 bg-emerald-50" : "border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)]"}`}
-                          >
-                            {link.visible ? <Eye size={12} /> : <EyeOff size={12} />}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={idx === 0}
-                            onClick={() => setSocialLinks(prev => {
-                              const sorted = [...prev].sort((a, b) => a.order - b.order).map((l, i) => ({ ...l, order: i }));
-                              const a2 = sorted[idx], b2 = sorted[idx - 1];
-                              sorted[idx] = { ...a2, order: b2.order };
-                              sorted[idx - 1] = { ...b2, order: a2.order };
-                              return sorted;
-                            })}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] disabled:opacity-30 transition-colors"
-                          >
-                            <ChevronUp size={12} />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={idx === arr.length - 1}
-                            onClick={() => setSocialLinks(prev => {
-                              const sorted = [...prev].sort((a, b) => a.order - b.order).map((l, i) => ({ ...l, order: i }));
-                              const a2 = sorted[idx], b2 = sorted[idx + 1];
-                              sorted[idx] = { ...a2, order: b2.order };
-                              sorted[idx + 1] = { ...b2, order: a2.order };
-                              return sorted;
-                            })}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] disabled:opacity-30 transition-colors"
-                          >
-                            <ChevronDown size={12} />
-                          </button>
-                          <button
-                            type="button"
-                            title={lang === "ar" ? "حذف" : "Delete"}
-                            onClick={() => {
-                              if (window.confirm(lang === "ar" ? `حذف ${link.platform}؟` : `Delete ${link.platform}?`)) {
-                                setSocialLinks(prev => prev.filter(l => l.id !== link.id));
-                              }
-                            }}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
               <SaveBar lang={lang} saved={saved} saving={saving} onSave={handleSave} />
             </div>

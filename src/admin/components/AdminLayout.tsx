@@ -33,6 +33,7 @@ import FAQAdminPage from "../pages/FAQAdminPage";
 import ProgramsAdminPage from "../pages/ProgramsAdminPage";
 import SuccessStoriesAdminPage from "../pages/SuccessStoriesAdminPage";
 import WebsiteSettingsPage from "../pages/WebsiteSettingsPage";
+import SocialMediaAdminPage from "../pages/SocialMediaAdminPage";
 import MediaLibraryPage from "../pages/MediaLibraryPage";
 import PlaceholderPage from "../pages/PlaceholderPage";
 
@@ -55,6 +56,7 @@ export default function AdminLayout() {
               {/* Content — CMS-powered pages */}
               <Route path="website-builder"       element={<WebsiteSettingsPage />} />
               <Route path="website-settings"      element={<WebsiteSettingsPage />} />
+              <Route path="social-media"          element={<SocialMediaAdminPage />} />
               <Route path="services"              element={<ServicesAdminPage />} />
               <Route path="blog"                  element={<BlogAdminPage />} />
               <Route path="testimonials"          element={<TestimonialsAdminPage />} />
