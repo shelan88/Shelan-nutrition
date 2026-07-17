@@ -38,6 +38,7 @@ import MediaLibraryPage from "../pages/MediaLibraryPage";
 import PlaceholderPage from "../pages/PlaceholderPage";
 import MessagesAdminPage from "../pages/MessagesAdminPage";
 import BookingsAdminPage from "../pages/BookingsAdminPage";
+import SEOPage from "../pages/SEOPage";
 
 export default function AdminLayout() {
   return (
@@ -78,7 +79,7 @@ export default function AdminLayout() {
 
               {/* Insights */}
               <Route path="analytics"             element={<PlaceholderPage pageId="analytics" />} />
-              <Route path="seo"                   element={<PlaceholderPage pageId="seo" />} />
+              <Route path="seo"                   element={<SEOPage />} />
 
               {/* System */}
               <Route path="settings"              element={<PlaceholderPage pageId="settings" />} />
