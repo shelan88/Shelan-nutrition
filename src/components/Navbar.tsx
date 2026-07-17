@@ -9,7 +9,7 @@
  */
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Globe, X, UserCircle2, LayoutDashboard } from "lucide-react";
+import { Globe, X, UserCircle2, LayoutDashboard, LogOut } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useLanguage } from "@/context/LanguageContext";
 import { pagesNav, authModal } from "@/content/content";
@@ -74,9 +74,10 @@ async function checkAdminProfile(session: Session | null): Promise<boolean> {
 
 export default function Navbar() {
   const { lang, toggleLang } = useLanguage();
-  const [open,      setOpen]      = useState(false);
-  const [authOpen,  setAuthOpen]  = useState(false);
-  const [isAdmin,   setIsAdmin]   = useState(false);
+  const [open,       setOpen]       = useState(false);
+  const [authOpen,   setAuthOpen]   = useState(false);
+  const [isAdmin,    setIsAdmin]    = useState(false);
+  const [hasSession, setHasSession] = useState(false);
   const [dbNavItems, setDbNavItems] = useState<DBNavItem[] | null>(null);
   const location = useLocation();
 
@@ -101,22 +102,29 @@ export default function Navbar() {
     });
   }, []);
 
-  // Check if current user is an admin (for dashboard link)
+  // Track session + admin status
   useEffect(() => {
     let cancelled = false;
 
     supabase.auth.getSession().then(({ data }) => {
       if (cancelled) return;
+      setHasSession(!!data.session);
       checkAdminProfile(data.session).then(result => { if (!cancelled) setIsAdmin(result); });
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (cancelled) return;
+      setHasSession(!!session);
       checkAdminProfile(session).then(result => { if (!cancelled) setIsAdmin(result); });
     });
 
     return () => { cancelled = true; subscription.unsubscribe(); };
   }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setOpen(false);
+  };
 
   // Compute display nav — DB items (filtered + sorted) or static fallback
   const items = dbNavItems
@@ -147,23 +155,44 @@ export default function Navbar() {
         {/* Header actions */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Auth button — desktop */}
-          <button
-            onClick={() => setAuthOpen(true)}
-            className="hidden sm:flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-full border border-white/15 text-ivory hover:bg-white/15 transition-colors"
-            aria-label={authT.trigger}
-          >
-            <UserCircle2 size={16} />
-            {authT.trigger}
-          </button>
+          {hasSession ? (
+            <button
+              onClick={handleSignOut}
+              className="hidden sm:flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-full border border-white/15 text-ivory hover:bg-white/15 transition-colors"
+              aria-label={lang === "ar" ? "تسجيل الخروج" : "Sign Out"}
+            >
+              <LogOut size={16} />
+              {lang === "ar" ? "خروج" : "Sign Out"}
+            </button>
+          ) : (
+            <button
+              onClick={() => setAuthOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-full border border-white/15 text-ivory hover:bg-white/15 transition-colors"
+              aria-label={authT.trigger}
+            >
+              <UserCircle2 size={16} />
+              {authT.trigger}
+            </button>
+          )}
 
           {/* Auth button — mobile */}
-          <button
-            onClick={() => setAuthOpen(true)}
-            className="sm:hidden flex items-center justify-center w-11 h-11 rounded-full border border-white/15 text-ivory hover:bg-white/10 transition-colors"
-            aria-label={authT.trigger}
-          >
-            <UserCircle2 size={20} />
-          </button>
+          {hasSession ? (
+            <button
+              onClick={handleSignOut}
+              className="sm:hidden flex items-center justify-center w-11 h-11 rounded-full border border-white/15 text-ivory hover:bg-white/10 transition-colors"
+              aria-label={lang === "ar" ? "تسجيل الخروج" : "Sign Out"}
+            >
+              <LogOut size={20} />
+            </button>
+          ) : (
+            <button
+              onClick={() => setAuthOpen(true)}
+              className="sm:hidden flex items-center justify-center w-11 h-11 rounded-full border border-white/15 text-ivory hover:bg-white/10 transition-colors"
+              aria-label={authT.trigger}
+            >
+              <UserCircle2 size={20} />
+            </button>
+          )}
 
           {/* Language toggle */}
           <button
@@ -252,15 +281,27 @@ export default function Navbar() {
               )}
 
               {/* Auth button */}
-              <motion.button
-                type="button"
-                variants={linkVariants}
-                onClick={() => { setOpen(false); window.setTimeout(() => setAuthOpen(true), 320); }}
-                className="flex items-center gap-2 font-heading text-base sm:text-lg font-bold text-light-pink hover:text-white transition-colors mt-2"
-              >
-                <UserCircle2 size={22} />
-                {authT.trigger}
-              </motion.button>
+              {hasSession ? (
+                <motion.button
+                  type="button"
+                  variants={linkVariants}
+                  onClick={handleSignOut}
+                  className="flex items-center gap-2 font-heading text-base sm:text-lg font-bold text-light-pink hover:text-white transition-colors mt-2"
+                >
+                  <LogOut size={22} />
+                  {lang === "ar" ? "تسجيل الخروج" : "Sign Out"}
+                </motion.button>
+              ) : (
+                <motion.button
+                  type="button"
+                  variants={linkVariants}
+                  onClick={() => { setOpen(false); window.setTimeout(() => setAuthOpen(true), 320); }}
+                  className="flex items-center gap-2 font-heading text-base sm:text-lg font-bold text-light-pink hover:text-white transition-colors mt-2"
+                >
+                  <UserCircle2 size={22} />
+                  {authT.trigger}
+                </motion.button>
+              )}
 
               {/* Admin Dashboard — ONLY visible to authenticated admin/staff users */}
               {isAdmin && (

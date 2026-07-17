@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Sparkles } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
@@ -12,18 +12,29 @@ export default function Booking() {
   const t = booking[lang];
   const p = pricingSection[lang];
   const plans = pricingPlans[lang];
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   const [checkoutPlan,  setCheckoutPlan]  = useState<CheckoutPlan | null>(null);
   // Plan the visitor clicked before we knew they weren't logged in.
   const [pendingPlan,   setPendingPlan]   = useState<CheckoutPlan | null>(null);
 
+  // Handle the loading race: if the user clicked "Book Now" before the session
+  // resolved and it turns out they ARE authenticated, open the booking modal now.
+  useEffect(() => {
+    if (!loading && user && pendingPlan) {
+      setCheckoutPlan(pendingPlan);
+      setPendingPlan(null);
+    }
+  }, [loading, user, pendingPlan]);
+
   const handlePlanClick = (plan: CheckoutPlan) => {
-    if (user) {
-      // Already authenticated — open the booking modal immediately.
+    if (!loading && user) {
+      // Confirmed authenticated — open the booking modal immediately.
       setCheckoutPlan(plan);
     } else {
-      // Not authenticated — store the intent and show the auth gate.
+      // Guest (or still loading) — store the intent and show the auth gate.
+      // The effect above will promote it to a booking modal if loading resolves
+      // with a valid session.
       setPendingPlan(plan);
     }
   };
