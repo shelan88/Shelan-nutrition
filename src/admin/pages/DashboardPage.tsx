@@ -14,7 +14,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import {
-  Calendar, Users, FileText, CreditCard,
+  Calendar, Users, FileText,
   TrendingUp, TrendingDown, ArrowUpRight,
   Clock, AlertCircle,
   Plus, BookOpen, Upload, Star, Briefcase, BarChart3,
@@ -356,14 +356,13 @@ export default function DashboardPage() {
       isAr,
     },
     {
-      label:    isAr ? "الإيرادات الشهرية" : "Monthly Revenue",
-      rawValue: 4200,
-      prefix:   "$",
-      change:   isAr ? "+٢٣٪ مقارنة بالشهر الماضي" : "+23% vs last month",
-      positive: true,
-      icon: CreditCard,
+      label:    isAr ? "رسائل غير مقروءة" : "Unread Messages",
+      rawValue: store.unreadMessages,
+      change:   isAr ? "في انتظار الرد" : "awaiting reply",
+      positive: store.unreadMessages === 0,
+      icon: MessageSquare,
       gradient: "bg-gradient-to-br from-deep-purple to-soft-purple",
-      href:  "/admin/payments",
+      href:  "/admin/messages",
       delay: 0.24,
       isAr,
     },

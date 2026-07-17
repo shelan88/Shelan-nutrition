@@ -36,6 +36,8 @@ import WebsiteSettingsPage from "../pages/WebsiteSettingsPage";
 import SocialMediaAdminPage from "../pages/SocialMediaAdminPage";
 import MediaLibraryPage from "../pages/MediaLibraryPage";
 import PlaceholderPage from "../pages/PlaceholderPage";
+import MessagesAdminPage from "../pages/MessagesAdminPage";
+import BookingsAdminPage from "../pages/BookingsAdminPage";
 
 export default function AdminLayout() {
   return (
@@ -69,10 +71,10 @@ export default function AdminLayout() {
               <Route path="assessment-templates"  element={<PlaceholderPage pageId="assessment-templates" />} />
 
               {/* Business */}
-              <Route path="bookings"              element={<PlaceholderPage pageId="bookings" />} />
+              <Route path="bookings"              element={<BookingsAdminPage />} />
               <Route path="clients"               element={<ClientsPage />} />
               <Route path="payments"              element={<PlaceholderPage pageId="payments" />} />
-              <Route path="messages"              element={<PlaceholderPage pageId="messages" />} />
+              <Route path="messages"              element={<MessagesAdminPage />} />
 
               {/* Insights */}
               <Route path="analytics"             element={<PlaceholderPage pageId="analytics" />} />

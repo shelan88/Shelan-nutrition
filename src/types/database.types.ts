@@ -109,6 +109,7 @@ export interface MessageRow {
   content: string;
   status: "unread" | "read" | "replied" | null;
   source: "website" | "assessment" | "admin" | null;
+  archived: boolean;
   created_at: string;
 }
 
@@ -237,15 +238,15 @@ export interface FAQRow {
 
 export interface SuccessStoryRow {
   id: string;
-  client_name_en: string;
+  title_en: string | null;
+  title_ar: string | null;
+  client_name_en: string | null;
   client_name_ar: string | null;
   story_en: string | null;
   story_ar: string | null;
-  before_description_en: string | null;
-  before_description_ar: string | null;
-  result_description_en: string | null;
-  result_description_ar: string | null;
-  image_url: string | null;
+  before_image_url: string | null;
+  after_image_url: string | null;
+  publish_date: string | null;
   published: boolean;
   sort_order: number | null;
   created_at: string;

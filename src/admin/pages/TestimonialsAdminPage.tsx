@@ -350,9 +350,9 @@ export default function TestimonialsAdminPage() {
                       <StarSelector value={form.rating ?? 5} onChange={(v) => set("rating", v)} />
                     </div>
 
-                    {/* Avatar URL */}
+                    {/* Client Photo */}
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Avatar URL</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Client Photo</label>
                       <FileUploadField
                         value={form.avatar_url ?? ""}
                         onChange={(url) => set("avatar_url", url)}

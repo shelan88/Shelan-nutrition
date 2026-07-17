@@ -12,10 +12,11 @@ export type { MessageRow as Message };
 
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
-export async function getMessages(limit = 50): Promise<MessageRow[]> {
+export async function getMessages(limit = 50, archivedOnly = false): Promise<MessageRow[]> {
   const { data, error } = await supabase
     .from("messages")
     .select("*")
+    .eq("archived", archivedOnly)
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) { console.error("[messages] getMessages:", error.message); return []; }
@@ -63,5 +64,41 @@ export async function markMessageReplied(id: string): Promise<boolean> {
     .update({ status: "replied" })
     .eq("id", id);
   if (error) { console.error("[messages] markMessageReplied:", error.message); return false; }
+  return true;
+}
+
+export async function markMessageUnread(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("messages")
+    .update({ status: "unread" })
+    .eq("id", id);
+  if (error) { console.error("[messages] markMessageUnread:", error.message); return false; }
+  return true;
+}
+
+export async function archiveMessage(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("messages")
+    .update({ archived: true })
+    .eq("id", id);
+  if (error) { console.error("[messages] archiveMessage:", error.message); return false; }
+  return true;
+}
+
+export async function unarchiveMessage(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("messages")
+    .update({ archived: false })
+    .eq("id", id);
+  if (error) { console.error("[messages] unarchiveMessage:", error.message); return false; }
+  return true;
+}
+
+export async function deleteMessage(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("messages")
+    .delete()
+    .eq("id", id);
+  if (error) { console.error("[messages] deleteMessage:", error.message); return false; }
   return true;
 }

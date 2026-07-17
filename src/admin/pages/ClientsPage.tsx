@@ -229,7 +229,17 @@ export default function ClientsPage() {
   return (
     <>
       {/* Drawer */}
-      <ClientDrawer client={selectedClient} isAr={isAr} onClose={() => setSelectedClient(null)} />
+      <ClientDrawer
+        client={selectedClient}
+        isAr={isAr}
+        onClose={() => setSelectedClient(null)}
+        onDelete={(id) => setClients((prev) => prev.filter((c) => c.id !== id))}
+        onRefresh={() => {
+          getAllClients()
+            .then((data) => setClients(data))
+            .catch((err) => console.error("[ClientsPage] refresh:", err));
+        }}
+      />
 
       <div>
         {/* ── Page Header ─────────────────────────────────────────────── */}

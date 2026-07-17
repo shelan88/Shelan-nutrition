@@ -5,7 +5,7 @@
  *   Header · Personal Info · Assessment Summary · Risk Indicators ·
  *   Diagnosis · Timeline · Consultations · Nutrition Plan · Files · Notes
  */
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, User, MapPin, Phone, Mail, Calendar, FileText,
@@ -13,9 +13,10 @@ import {
   Flame, Wheat, Droplets, Paperclip,
   Image as ImageIcon, FlaskConical,
   ShieldCheck, Stethoscope, Lock, Printer, Download,
-  Edit2, Archive, Trash2,
+  Edit2, Archive, Trash2, Save,
 } from "lucide-react";
-import type { Client, TimelineType, FileType, RiskIndicatorLevel } from "../data/clients";
+import type { Client, TimelineType, FileType, RiskIndicatorLevel, ClientStatus } from "../data/clients";
+import { updateClient, deleteClient, archiveClient } from "@/admin/repositories/clients.repository";
 
 // ─── Risk helpers ──────────────────────────────────────────────────────────────
 
@@ -97,11 +98,41 @@ interface ClientDrawerProps {
   client: Client | null;
   isAr: boolean;
   onClose: () => void;
+  onDelete?: (id: string) => void;
+  onRefresh?: () => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function ClientDrawer({ client, isAr, onClose }: ClientDrawerProps) {
+export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefresh }: ClientDrawerProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [actioning, setActioning] = useState<string | null>(null);
+
+  async function handleArchive() {
+    if (!client) return;
+    setActioning("archive");
+    const ok = await archiveClient(client.id);
+    setActioning(null);
+    if (ok) {
+      onRefresh?.();
+      onClose();
+    }
+  }
+
+  async function handleDelete() {
+    if (!client) return;
+    if (!window.confirm(isAr ? "هل تريدين حذف هذه العميلة نهائياً؟" : "Permanently delete this client?")) return;
+    setActioning("delete");
+    const ok = await deleteClient(client.id);
+    setActioning(null);
+    if (ok) {
+      onDelete?.(client.id);
+      onClose();
+    }
+  }
+
+  function handlePrint() {
+    window.print();
+  }
 
   // Reset scroll position on each new client
   useEffect(() => {
@@ -165,23 +196,62 @@ export default function ClientDrawer({ client, isAr, onClose }: ClientDrawerProp
 
             {/* ── Action bar ────────────────────────────────────────────── */}
             <div className="shrink-0 flex items-center gap-2 px-6 py-3 border-b border-[var(--admin-border)] bg-[var(--admin-hover-bg)] overflow-x-auto no-scrollbar">
-              {[
-                { label: isAr ? "تعديل"   : "Edit",           icon: Edit2,    cls: "text-[var(--admin-text-muted)] border-[var(--admin-border)] hover:border-[var(--admin-border-strong)] hover:bg-[var(--admin-surface)]" },
-                { label: isAr ? "أرشفة"   : "Archive",        icon: Archive,  cls: "text-[var(--admin-text-muted)] border-[var(--admin-border)] hover:border-[var(--admin-border-strong)] hover:bg-[var(--admin-surface)]" },
-                { label: isAr ? "طباعة"   : "Print",          icon: Printer,  cls: "text-[var(--admin-text-muted)] border-[var(--admin-border)] hover:border-[var(--admin-border-strong)] hover:bg-[var(--admin-surface)]" },
-                { label: isAr ? "تصدير"   : "Export PDF",     icon: Download, cls: "text-[var(--admin-text-muted)] border-[var(--admin-border)] hover:border-[var(--admin-border-strong)] hover:bg-[var(--admin-surface)]" },
-              ].map(({ label, icon: Icon, cls }) => (
-                <button
-                  key={label}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[12px] font-semibold transition-all whitespace-nowrap shrink-0 ${cls}`}
-                >
-                  <Icon size={12} strokeWidth={2} />
-                  {label}
-                </button>
-              ))}
-              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-red-500 border border-red-200 hover:bg-red-50 transition-all whitespace-nowrap shrink-0 ms-auto">
+              {/* Edit — placeholder, opens edit mode if needed */}
+              <button
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-semibold text-[var(--admin-text-muted)] hover:border-[var(--admin-border-strong)] hover:bg-[var(--admin-surface)] transition-all whitespace-nowrap shrink-0 opacity-50 cursor-not-allowed"
+                title={isAr ? "التعديل المباشر سيتوفر قريباً" : "Direct editing coming soon"}
+                disabled
+              >
+                <Edit2 size={12} strokeWidth={2} />
+                {isAr ? "تعديل" : "Edit"}
+              </button>
+
+              {/* Archive */}
+              <button
+                disabled={actioning === "archive"}
+                onClick={handleArchive}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-semibold text-[var(--admin-text-muted)] hover:border-[var(--admin-border-strong)] hover:bg-[var(--admin-surface)] transition-all whitespace-nowrap shrink-0 disabled:opacity-50"
+              >
+                <Archive size={12} strokeWidth={2} />
+                {actioning === "archive" ? "…" : (isAr ? "أرشفة" : "Archive")}
+              </button>
+
+              {/* Print */}
+              <button
+                onClick={handlePrint}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-semibold text-[var(--admin-text-muted)] hover:border-[var(--admin-border-strong)] hover:bg-[var(--admin-surface)] transition-all whitespace-nowrap shrink-0"
+              >
+                <Printer size={12} strokeWidth={2} />
+                {isAr ? "طباعة" : "Print"}
+              </button>
+
+              {/* Export — download current data as CSV text */}
+              <button
+                onClick={() => {
+                  if (!client) return;
+                  const csv = [
+                    ["Name", "Email", "Phone", "Status", "Risk", "Plan", "Joined"].join(","),
+                    [client.fullName, client.email, client.phone, client.status, client.riskLevel, client.currentPlan, client.joinedDate].map((v) => `"${v ?? ""}"`).join(","),
+                  ].join("\n");
+                  const a = document.createElement("a");
+                  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+                  a.download = `${client.fullName.replace(/\s+/g, "_")}_profile.csv`;
+                  a.click();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-semibold text-[var(--admin-text-muted)] hover:border-[var(--admin-border-strong)] hover:bg-[var(--admin-surface)] transition-all whitespace-nowrap shrink-0"
+              >
+                <Download size={12} strokeWidth={2} />
+                {isAr ? "تصدير" : "Export"}
+              </button>
+
+              {/* Delete */}
+              <button
+                disabled={actioning === "delete"}
+                onClick={handleDelete}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-red-500 border border-red-200 hover:bg-red-50 transition-all whitespace-nowrap shrink-0 ms-auto disabled:opacity-50"
+              >
                 <Trash2 size={12} strokeWidth={2} />
-                {isAr ? "حذف" : "Delete"}
+                {actioning === "delete" ? "…" : (isAr ? "حذف" : "Delete")}
               </button>
             </div>
 

@@ -289,6 +289,18 @@ export async function updateClient(
   return getClient(id);
 }
 
+export async function deleteClient(id: string): Promise<boolean> {
+  const { error } = await supabase.from("clients").delete().eq("id", id);
+  if (error) { console.error("[clients] deleteClient:", error.message); return false; }
+  return true;
+}
+
+export async function archiveClient(id: string): Promise<boolean> {
+  const { error } = await supabase.from("clients").update({ status: "Inactive" }).eq("id", id);
+  if (error) { console.error("[clients] archiveClient:", error.message); return false; }
+  return true;
+}
+
 export async function appendTimelineEvent(
   clientId: string,
   event: Omit<TimelineEvent, "id">,
