@@ -252,12 +252,6 @@ export default function ClientsPage() {
             { label: isAr ? "الإدارة"   : "Admin",   href: "/admin" },
             { label: isAr ? "العملاء"   : "Clients"               },
           ]}
-          actions={
-            <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-br from-primary-pink to-soft-purple text-white text-[13px] font-semibold shadow-md shadow-primary-pink/20 hover:shadow-lg hover:shadow-primary-pink/30 hover:-translate-y-0.5 transition-all">
-              <UserPlus size={14} strokeWidth={2} />
-              {isAr ? "إضافة عميل" : "Add Client"}
-            </button>
-          }
         />
 
         {/* ── Stat cards ────────────────────────────────────────────── */}
