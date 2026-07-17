@@ -32,6 +32,16 @@ export async function getAllAppointments(): Promise<AppointmentRow[]> {
   return data ?? [];
 }
 
+export async function getAppointmentById(id: string): Promise<AppointmentRow | null> {
+  const { data, error } = await supabase
+    .from("appointments")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) { console.error("[appointments] getAppointmentById:", error.message); return null; }
+  return data;
+}
+
 // ─── Write ────────────────────────────────────────────────────────────────────
 
 /** Appointment fields required for creation — assessment columns are optional. */

@@ -9,8 +9,9 @@ import { motion } from "framer-motion";
 import {
   Calendar, CheckCircle2, Clock, XCircle,
   Search, X, RefreshCw, ChevronDown,
-  CalendarCheck, TrendingUp,
+  CalendarCheck, TrendingUp, Eye,
 } from "lucide-react";
+import AssessmentResponseDrawer from "@/admin/components/AssessmentResponseDrawer";
 import { useLanguage } from "@/context/LanguageContext";
 import PageHeader from "../components/PageHeader";
 import {
@@ -72,11 +73,12 @@ export default function BookingsAdminPage() {
   const { lang } = useLanguage();
   const isAr = lang === "ar";
 
-  const [appts,     setAppts]     = useState<AppointmentRow[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [search,    setSearch]    = useState("");
-  const [filter,    setFilter]    = useState<Status | "">("");
-  const [updatingId,setUpdatingId]= useState<string | null>(null);
+  const [appts,           setAppts]           = useState<AppointmentRow[]>([]);
+  const [loading,         setLoading]         = useState(true);
+  const [search,          setSearch]          = useState("");
+  const [filter,          setFilter]          = useState<Status | "">("");
+  const [updatingId,      setUpdatingId]      = useState<string | null>(null);
+  const [viewingAssessment, setViewingAssessment] = useState<AppointmentRow | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -118,8 +120,15 @@ export default function BookingsAdminPage() {
   }
 
   const colLabels = isAr
-    ? ["العميل", "التاريخ", "الوقت", "النوع", "الحالة", "الإجراءات"]
-    : ["Client", "Date", "Time", "Type", "Status", "Actions"];
+    ? ["العميل", "التاريخ", "الوقت", "النوع", "الحالة", "التقييم", "الإجراءات"]
+    : ["Client", "Date", "Time", "Type", "Status", "Assessment", "Actions"];
+
+  // Assessment badge config
+  const ASSESSMENT_BADGE: Record<string, { cls: string; labelEn: string; labelAr: string }> = {
+    awaiting_assessment: { cls: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",  labelEn: "Awaiting",   labelAr: "في الانتظار" },
+    assessment_submitted:{ cls: "bg-violet-50 text-violet-700 ring-1 ring-violet-200", labelEn: "Submitted", labelAr: "تم الإرسال" },
+    none:                { cls: "bg-gray-50 text-gray-400 ring-1 ring-gray-200",      labelEn: "None",       labelAr: "لا يوجد"    },
+  };
 
   return (
     <div>
@@ -322,6 +331,30 @@ export default function BookingsAdminPage() {
                         </span>
                       </td>
 
+                      {/* Assessment badge */}
+                      <td className="px-4 py-3.5">
+                        {(() => {
+                          const aStatus = (appt.assessment_status ?? "none") as string;
+                          const ab = ASSESSMENT_BADGE[aStatus] ?? ASSESSMENT_BADGE.none;
+                          return (
+                            <div className="flex items-center gap-1.5">
+                              <span className={`inline-flex text-[11px] font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap ${ab.cls}`}>
+                                {isAr ? ab.labelAr : ab.labelEn}
+                              </span>
+                              {(aStatus === "awaiting_assessment" || aStatus === "assessment_submitted") && (
+                                <button
+                                  onClick={() => setViewingAssessment(appt)}
+                                  title={isAr ? "عرض تفاصيل الاستبيان" : "View assessment details"}
+                                  className="w-6 h-6 rounded-lg flex items-center justify-center text-[var(--admin-text-faint)] hover:text-violet-600 hover:bg-violet-50 transition-all"
+                                >
+                                  <Eye size={13} />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </td>
+
                       {/* Actions */}
                       <td className="px-4 py-3.5">
                         <div className="relative">
@@ -351,6 +384,13 @@ export default function BookingsAdminPage() {
             </tbody>
           </table>
         </div>
+
+      {/* Assessment detail drawer */}
+      <AssessmentResponseDrawer
+        appt={viewingAssessment}
+        isAr={isAr}
+        onClose={() => setViewingAssessment(null)}
+      />
 
         {/* Footer */}
         <div className="flex items-center justify-between px-5 py-3 border-t border-[var(--admin-border)] bg-[var(--admin-hover-bg)]">

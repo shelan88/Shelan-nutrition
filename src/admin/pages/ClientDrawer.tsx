@@ -5,8 +5,13 @@
  *   Header · Personal Info · Assessment Summary · Risk Indicators ·
  *   Diagnosis · Timeline · Consultations · Nutrition Plan · Files · Notes
  */
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  getResponsesByClientEmail,
+  getResponse,
+} from "@/admin/repositories/assessment-responses.repository";
+import type { AssessmentResponseRow, ResponseWithAnswers } from "@/admin/repositories/assessment-responses.repository";
 import {
   X, User, MapPin, Phone, Mail, Calendar, FileText,
   AlertTriangle, CheckCircle2, Clock, ChevronRight,
@@ -103,9 +108,144 @@ interface ClientDrawerProps {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
+// ─── Assessments tab ──────────────────────────────────────────────────────────
+function AssessmentsTab({ client, isAr }: { client: { id: string; email: string }; isAr: boolean }) {
+  const [responses, setResponses] = useState<AssessmentResponseRow[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [expandedId,setExpandedId]= useState<string | null>(null);
+  const [fullResp,  setFullResp]  = useState<ResponseWithAnswers | null>(null);
+  const [loadingExp,setLoadingExp]= useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    getResponsesByClientEmail(client.email).then((data) => {
+      setResponses(data);
+      setLoading(false);
+    });
+  }, [client.email]);
+
+  const handleExpand = useCallback(async (id: string) => {
+    if (expandedId === id) { setExpandedId(null); setFullResp(null); return; }
+    setExpandedId(id);
+    setLoadingExp(true);
+    const full = await getResponse(id);
+    setFullResp(full);
+    setLoadingExp(false);
+  }, [expandedId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="w-6 h-6 rounded-full border-2 border-primary-pink/30 border-t-primary-pink animate-spin" />
+      </div>
+    );
+  }
+
+  if (responses.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-14 text-center">
+        <div className="w-12 h-12 rounded-xl bg-[var(--admin-hover-bg)] flex items-center justify-center mb-1">
+          <FileText size={22} className="text-[var(--admin-text-faint)]" strokeWidth={1.5} />
+        </div>
+        <p className="text-[13px] font-semibold text-[var(--admin-text)]">
+          {isAr ? "لا توجد استبيانات" : "No assessments yet"}
+        </p>
+        <p className="text-[12px] text-[var(--admin-text-faint)]">
+          {isAr
+            ? "ستظهر الاستبيانات المقدمة هنا بعد الحجز."
+            : "Submitted questionnaires will appear here after booking."}
+        </p>
+      </div>
+    );
+  }
+
+  const STATUS_BADGE: Record<string, { cls: string; labelEn: string; labelAr: string }> = {
+    submitted:   { cls: "bg-violet-50 text-violet-700 ring-1 ring-violet-200", labelEn: "Submitted",   labelAr: "تم الإرسال"  },
+    pending:     { cls: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",    labelEn: "Pending",     labelAr: "في الانتظار" },
+    in_progress: { cls: "bg-blue-50 text-blue-600 ring-1 ring-blue-200",       labelEn: "In Progress", labelAr: "جارٍ"        },
+  };
+
+  return (
+    <div className="space-y-3">
+      {responses.map((resp) => {
+        const isExpanded = expandedId === resp.id;
+        const badge = STATUS_BADGE[resp.status] ?? STATUS_BADGE.pending;
+        const date = resp.submitted_at
+          ? new Date(resp.submitted_at).toLocaleDateString(isAr ? "ar-SA" : "en-US", { day: "numeric", month: "short", year: "numeric" })
+          : new Date(resp.created_at).toLocaleDateString(isAr ? "ar-SA" : "en-US", { day: "numeric", month: "short", year: "numeric" });
+
+        return (
+          <div key={resp.id} className="bg-[var(--admin-hover-bg)] rounded-xl border border-[var(--admin-border)] overflow-hidden">
+            {/* Header row */}
+            <button
+              onClick={() => resp.status === "submitted" && handleExpand(resp.id)}
+              className={`w-full flex items-center justify-between px-4 py-3.5 text-start transition-colors ${resp.status === "submitted" ? "hover:bg-[var(--admin-surface)] cursor-pointer" : "cursor-default"}`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-pink/15 to-lavender-purple/15 flex items-center justify-center shrink-0">
+                  <FileText size={14} className="text-primary-pink" strokeWidth={2} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[12.5px] font-semibold text-[var(--admin-text)] truncate">
+                    {isAr ? "استبيان" : "Questionnaire"} · {date}
+                  </p>
+                  <span className={`inline-flex text-[10.5px] font-bold px-2 py-0.5 rounded-full mt-0.5 ${badge.cls}`}>
+                    {isAr ? badge.labelAr : badge.labelEn}
+                  </span>
+                </div>
+              </div>
+              {resp.status === "submitted" && (
+                <ChevronRight
+                  size={14}
+                  className={`text-[var(--admin-text-faint)] shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                />
+              )}
+            </button>
+
+            {/* Expanded answers */}
+            {isExpanded && (
+              <div className="border-t border-[var(--admin-border)] bg-[var(--admin-surface)] px-4 py-4">
+                {loadingExp ? (
+                  <div className="flex items-center justify-center py-6">
+                    <div className="w-5 h-5 rounded-full border-2 border-primary-pink/30 border-t-primary-pink animate-spin" />
+                  </div>
+                ) : fullResp && fullResp.answers.length > 0 ? (
+                  <div className="space-y-3">
+                    {fullResp.answers.map((ans, i) => {
+                      const q = ans.question;
+                      const qLabel = isAr && q.label_ar ? q.label_ar : q.label_en;
+                      const ansText = Array.isArray(ans.answer_json)
+                        ? (ans.answer_json as string[]).join(", ")
+                        : ans.answer_text;
+                      return (
+                        <div key={ans.id}>
+                          <p className="text-[10.5px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider mb-0.5">
+                            Q{i + 1}. {qLabel}
+                          </p>
+                          <p className="text-[12.5px] text-[var(--admin-text)]">{ansText ?? "—"}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-[12px] text-[var(--admin-text-faint)] italic">
+                    {isAr ? "لا توجد إجابات مسجلة." : "No answers recorded."}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Main component ────────────────────────────────────────────────────────────
 export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefresh }: ClientDrawerProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [actioning, setActioning] = useState<string | null>(null);
+  const [tab, setTab] = useState<"profile" | "assessments">("profile");
 
   async function handleArchive() {
     if (!client) return;
@@ -255,9 +395,37 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
               </button>
             </div>
 
+            {/* ── Tab bar ───────────────────────────────────────────────── */}
+            <div className="shrink-0 flex border-b border-[var(--admin-border)] px-6 bg-[var(--admin-surface)]">
+              {(["profile", "assessments"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={`py-3 px-1 me-5 text-[12px] font-bold border-b-2 transition-colors ${
+                    tab === t
+                      ? "border-primary-pink text-primary-pink"
+                      : "border-transparent text-[var(--admin-text-faint)] hover:text-[var(--admin-text)]"
+                  }`}
+                >
+                  {t === "profile"
+                    ? (isAr ? "الملف الشخصي" : "Profile")
+                    : (isAr ? "الاستبيانات" : "Assessments")}
+                </button>
+              ))}
+            </div>
+
             {/* ── Scrollable body ───────────────────────────────────────── */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto">
-              <div className="px-6 py-6 space-y-0">
+
+              {/* Assessments tab */}
+              {tab === "assessments" && client && (
+                <div className="px-6 py-6">
+                  <AssessmentsTab client={{ id: client.id, email: client.email }} isAr={isAr} />
+                </div>
+              )}
+
+              {/* Profile tab */}
+              {tab === "profile" && <div className="px-6 py-6 space-y-0">
 
                 {/* 1. Personal Information */}
                 <SectionHead icon={User} title={isAr ? "المعلومات الشخصية" : "Personal Information"} />
@@ -506,7 +674,7 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
 
                 {/* Bottom padding */}
                 <div className="h-6" />
-              </div>
+              </div>}
             </div>
           </motion.div>
         </>

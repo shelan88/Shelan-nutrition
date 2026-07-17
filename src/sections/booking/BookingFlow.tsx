@@ -7,7 +7,10 @@
  * Props-only for data and strings. CMS-ready.
  */
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { createAppointment } from "@/admin/repositories/appointments.repository";
+import { getTemplateForService } from "@/admin/repositories/assessment-templates.repository";
+import { createResponse } from "@/admin/repositories/assessment-responses.repository";
 import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Calendar, Star, RefreshCw, ChevronLeft, ChevronRight, CheckCircle2, Lock } from "lucide-react";
@@ -400,6 +403,7 @@ export default function BookingFlow({ data, strings, preselectedServiceId }: Pro
   const [confirming, setConfirming] = useState(false);
 
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const selectedService = useMemo(
     () => data.services.find((s) => s.id === serviceId),
@@ -421,19 +425,37 @@ export default function BookingFlow({ data, strings, preselectedServiceId }: Pro
 
   const handleConfirm = async () => {
     setConfirming(true);
-    await createAppointment({
-      client_name:  `${personalInfo.firstName} ${personalInfo.lastName}`.trim() || personalInfo.email,
-      client_email: personalInfo.email || user?.email || null,
-      user_id:      user?.id ?? null,
-      date,
-      time,
-      type:      selectedService?.name ?? "Consultation",
-      status:    "scheduled",
-      notes:     personalInfo.notes || null,
-      client_id: null,
-    });
-    setConfirming(false);
-    setConfirmed(true);
+    try {
+      // Check if this service has an assessment template assigned
+      const template = serviceId ? await getTemplateForService(serviceId) : null;
+      const hasTemplate = !!(template?.active);
+
+      const appt = await createAppointment({
+        client_name:  `${personalInfo.firstName} ${personalInfo.lastName}`.trim() || personalInfo.email,
+        client_email: personalInfo.email || user?.email || null,
+        user_id:      user?.id ?? null,
+        date,
+        time,
+        type:      selectedService?.name ?? "Consultation",
+        status:    "scheduled",
+        notes:     personalInfo.notes || null,
+        client_id: null,
+        ...(hasTemplate && {
+          assessment_template_id: template!.id,
+          assessment_status: "awaiting_assessment",
+        }),
+      });
+
+      if (appt && hasTemplate) {
+        // Pre-create the blank response row so the questionnaire page can find it
+        await createResponse(template!.id, appt.id, user?.id ?? null, null);
+        navigate(`/assessment/respond/${appt.id}`);
+      } else {
+        setConfirmed(true);
+      }
+    } finally {
+      setConfirming(false);
+    }
   };
 
   const str = strings as Record<string, string>;

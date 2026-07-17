@@ -41,6 +41,7 @@ import BlogDetailPage from "@/pages/BlogDetailPage";
 import ContactPage from "@/pages/ContactPage";
 import BookingPage from "@/pages/BookingPage";
 import AssessmentPage from "@/pages/AssessmentPage";
+import AssessmentResponsePage from "@/pages/AssessmentResponsePage";
 import NotFoundPage from "@/pages/NotFoundPage";
 
 // ─── Admin portal ──────────────────────────────────────────────────────────────
@@ -68,6 +69,7 @@ function PublicLayout() {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/booking" element={<BookingPage />} />
           <Route path="/assessment" element={<AssessmentPage />} />
+          <Route path="/assessment/respond/:appointmentId" element={<AssessmentResponsePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

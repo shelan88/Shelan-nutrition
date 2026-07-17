@@ -111,3 +111,24 @@ export async function submitResponse(responseId: string, appointmentId: string |
 export async function markResponseInProgress(responseId: string): Promise<void> {
   await supabase.from("assessment_responses").update({ status: "in_progress" }).eq("id", responseId).eq("status", "pending");
 }
+
+/**
+ * Get all assessment responses for a client by their email address.
+ * Used by the admin ClientDrawer which knows the client's email but not their
+ * Supabase user_id. Joins via appointments.client_email.
+ */
+export async function getResponsesByClientEmail(email: string): Promise<AssessmentResponseRow[]> {
+  if (!email) return [];
+  const { data: appts } = await supabase
+    .from("appointments")
+    .select("id")
+    .eq("client_email", email);
+  if (!appts?.length) return [];
+  const { data, error } = await supabase
+    .from("assessment_responses")
+    .select("*")
+    .in("appointment_id", appts.map((a) => a.id))
+    .order("created_at", { ascending: false });
+  if (error) { console.error("[assessment-responses] getResponsesByClientEmail:", error.message); return []; }
+  return data ?? [];
+}
