@@ -34,8 +34,18 @@ export async function getAllAppointments(): Promise<AppointmentRow[]> {
 
 // ─── Write ────────────────────────────────────────────────────────────────────
 
+/** Appointment fields required for creation — assessment columns are optional. */
+export type AppointmentInsert = Omit<
+  AppointmentRow,
+  "id" | "created_at" | "assessment_template_id" | "assessment_response_id" | "assessment_status"
+> & {
+  assessment_template_id?: string | null;
+  assessment_response_id?: string | null;
+  assessment_status?: "none" | "awaiting_assessment" | "assessment_submitted" | null;
+};
+
 export async function createAppointment(
-  appt: Omit<AppointmentRow, "id" | "created_at">,
+  appt: AppointmentInsert,
 ): Promise<AppointmentRow | null> {
   const { data, error } = await supabase
     .from("appointments")

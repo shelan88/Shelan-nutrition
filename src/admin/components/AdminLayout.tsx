@@ -39,6 +39,7 @@ import PlaceholderPage from "../pages/PlaceholderPage";
 import MessagesAdminPage from "../pages/MessagesAdminPage";
 import BookingsAdminPage from "../pages/BookingsAdminPage";
 import SEOPage from "../pages/SEOPage";
+import AssessmentTemplatesPage from "../pages/AssessmentTemplatesPage";
 
 export default function AdminLayout() {
   return (
@@ -68,8 +69,8 @@ export default function AdminLayout() {
               <Route path="programs"              element={<ProgramsAdminPage />} />
               <Route path="success-stories"       element={<SuccessStoriesAdminPage />} />
 
-              {/* Content — still placeholder */}
-              <Route path="assessment-templates"  element={<PlaceholderPage pageId="assessment-templates" />} />
+              {/* Assessment Templates — live */}
+              <Route path="assessment-templates"  element={<AssessmentTemplatesPage />} />
 
               {/* Business */}
               <Route path="bookings"              element={<BookingsAdminPage />} />

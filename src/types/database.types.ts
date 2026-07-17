@@ -102,6 +102,10 @@ export interface AppointmentRow {
   status: "scheduled" | "confirmed" | "completed" | "cancelled" | null;
   notes: string | null;
   created_at: string;
+  // Assessment columns (added by assessment migration)
+  assessment_template_id: string | null;
+  assessment_response_id: string | null;
+  assessment_status: "none" | "awaiting_assessment" | "assessment_submitted" | null;
 }
 
 export interface MessageRow {
@@ -256,6 +260,85 @@ export interface SuccessStoryRow {
   updated_at: string;
 }
 
+// ── Assessment system tables (added by assessment migration) ──────────────────
+
+export interface AssessmentTemplateRow {
+  id: string;
+  name_en: string;
+  name_ar: string | null;
+  description_en: string | null;
+  description_ar: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type QuestionType =
+  | "short_text"
+  | "paragraph"
+  | "yes_no"
+  | "single_choice"
+  | "multiple_choice"
+  | "dropdown"
+  | "number"
+  | "date"
+  | "file_upload"
+  | "image_upload";
+
+export interface TemplateQuestionRow {
+  id: string;
+  template_id: string;
+  type: QuestionType;
+  label_en: string;
+  label_ar: string | null;
+  placeholder_en: string | null;
+  placeholder_ar: string | null;
+  help_en: string | null;
+  help_ar: string | null;
+  required: boolean;
+  sort_order: number;
+  conditional_question_id: string | null;
+  conditional_value: string | null;
+  created_at: string;
+}
+
+export interface QuestionOptionRow {
+  id: string;
+  question_id: string;
+  label_en: string;
+  label_ar: string | null;
+  value: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface ServiceTemplateAssignmentRow {
+  id: string;
+  service_id: string;
+  template_id: string;
+  created_at: string;
+}
+
+export interface AssessmentResponseRow {
+  id: string;
+  appointment_id: string | null;
+  template_id: string;
+  client_id: string | null;
+  user_id: string | null;
+  status: "pending" | "in_progress" | "submitted";
+  submitted_at: string | null;
+  created_at: string;
+}
+
+export interface ResponseAnswerRow {
+  id: string;
+  response_id: string;
+  question_id: string;
+  answer_text: string | null;
+  answer_json: Json | null;
+  created_at: string;
+}
+
 // ─── Database type map ─────────────────────────────────────────────────────────
 
 export interface Database {
@@ -266,7 +349,7 @@ export interface Database {
       timeline_events: { Row: TimelineEventRow;  Insert: Omit<TimelineEventRow,  "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<TimelineEventRow>; };
       nutrition_plans: { Row: NutritionPlanRow;  Insert: Omit<NutritionPlanRow,  "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<NutritionPlanRow>; };
       uploaded_files:  { Row: UploadedFileRow;   Insert: Omit<UploadedFileRow,   "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<UploadedFileRow>; };
-      appointments:    { Row: AppointmentRow;    Insert: Omit<AppointmentRow,    "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<AppointmentRow>; };
+      appointments:    { Row: AppointmentRow;    Insert: Omit<AppointmentRow,    "id"|"created_at"|"assessment_template_id"|"assessment_response_id"|"assessment_status"> & { id?:string; created_at?:string; assessment_template_id?:string|null; assessment_response_id?:string|null; assessment_status?:"none"|"awaiting_assessment"|"assessment_submitted"|null; }; Update: Partial<AppointmentRow>; };
       messages:        { Row: MessageRow;        Insert: Omit<MessageRow,        "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<MessageRow>; };
       blog_posts:      { Row: BlogPostRow;       Insert: Omit<BlogPostRow,       "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<BlogPostRow>; };
       services:        { Row: ServiceRow;        Insert: Omit<ServiceRow,        "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<ServiceRow>; };
@@ -274,9 +357,15 @@ export interface Database {
       media_library:   { Row: MediaLibraryRow;   Insert: Omit<MediaLibraryRow,   "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<MediaLibraryRow>; };
       website_settings:{ Row: WebsiteSettingRow; Insert: Omit<WebsiteSettingRow, "id"|"updated_at"> & { id?:string; updated_at?:string; }; Update: Partial<WebsiteSettingRow>; };
       admin_profiles:  { Row: AdminProfileRow;   Insert: Omit<AdminProfileRow,   "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<AdminProfileRow>; };
-      programs:        { Row: ProgramRow;        Insert: Omit<ProgramRow,        "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<ProgramRow>; };
-      success_stories: { Row: SuccessStoryRow;   Insert: Omit<SuccessStoryRow,   "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<SuccessStoryRow>; };
-      faqs:            { Row: FAQRow;            Insert: Omit<FAQRow,            "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<FAQRow>; };
+      programs:                    { Row: ProgramRow;                   Insert: Omit<ProgramRow,                   "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<ProgramRow>; };
+      success_stories:             { Row: SuccessStoryRow;              Insert: Omit<SuccessStoryRow,              "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<SuccessStoryRow>; };
+      faqs:                        { Row: FAQRow;                       Insert: Omit<FAQRow,                       "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<FAQRow>; };
+      assessment_templates:        { Row: AssessmentTemplateRow;        Insert: Omit<AssessmentTemplateRow,        "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<AssessmentTemplateRow>; };
+      template_questions:          { Row: TemplateQuestionRow;          Insert: Omit<TemplateQuestionRow,          "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<TemplateQuestionRow>; };
+      question_options:            { Row: QuestionOptionRow;            Insert: Omit<QuestionOptionRow,            "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<QuestionOptionRow>; };
+      service_template_assignments:{ Row: ServiceTemplateAssignmentRow; Insert: Omit<ServiceTemplateAssignmentRow, "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<ServiceTemplateAssignmentRow>; };
+      assessment_responses:        { Row: AssessmentResponseRow;        Insert: Omit<AssessmentResponseRow,        "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<AssessmentResponseRow>; };
+      response_answers:            { Row: ResponseAnswerRow;            Insert: Omit<ResponseAnswerRow,            "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<ResponseAnswerRow>; };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
