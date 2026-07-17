@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Quote, X } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { successStoriesSection, successStories as staticStories } from "@/content/content";
+import { successStoriesSection } from "@/content/content";
 import { getPublishedStories } from "@/admin/repositories/success_stories.repository";
 import type { SuccessStoryRow } from "@/types/database.types";
 
@@ -44,27 +44,17 @@ export default function SuccessStories() {
   const { lang } = useLanguage();
   const t = successStoriesSection[lang];
 
-  const [stories, setStories] = useState<StoryItem[]>(() =>
-    staticStories[lang].map((s) => ({ title: s.title, content: s.content }))
-  );
+  const [stories, setStories] = useState<StoryItem[]>([]);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const [fromDb, setFromDb] = useState(false);
 
   useEffect(() => {
     getPublishedStories()
       .then((rows) => {
-        if (rows.length > 0) {
-          setStories(rows.map((r) => mapDbRow(r, lang)));
-          setFromDb(true);
-        } else {
-          setStories(staticStories[lang].map((s) => ({ title: s.title, content: s.content })));
-          setFromDb(false);
-        }
+        setStories(rows.map((r) => mapDbRow(r, lang)));
       })
       .catch(() => {
-        setStories(staticStories[lang].map((s) => ({ title: s.title, content: s.content })));
-        setFromDb(false);
+        setStories([]);
       });
   }, [lang]);
 
@@ -131,14 +121,7 @@ export default function SuccessStories() {
           <p className="text-body leading-relaxed">{t.subtitle}</p>
         </div>
 
-        {stories.length === 0 ? (
-          /* No published stories yet — hide section grid gracefully */
-          fromDb && (
-            <p className="text-center text-body italic py-8">
-              {lang === "ar" ? "لا توجد قصص نجاح منشورة بعد." : "No success stories published yet."}
-            </p>
-          )
-        ) : (
+        {stories.length === 0 ? null : (
           <>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 auto-rows-[200px]">
               {stories.slice(0, INITIAL_COUNT).map((item, i) => (

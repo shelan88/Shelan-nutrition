@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Quote, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
-import { testimonialsSection, testimonials as staticTestimonials } from "@/content/content";
+import { testimonialsSection } from "@/content/content";
 import { getPublishedTestimonials } from "@/admin/repositories/testimonials.repository";
 import type { TestimonialRow } from "@/types/database.types";
 
@@ -47,21 +47,15 @@ export default function Testimonials() {
   const trackRef = useRef<HTMLDivElement>(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
-  const [quotes, setQuotes] = useState<QuoteItem[]>(() =>
-    staticTestimonials[lang].map((c) => ({ content: c }))
-  );
+  const [quotes, setQuotes] = useState<QuoteItem[]>([]);
 
   useEffect(() => {
     getPublishedTestimonials()
       .then((rows) => {
-        if (rows.length > 0) {
-          setQuotes(rows.map((r) => mapDbRow(r, lang)));
-        } else {
-          setQuotes(staticTestimonials[lang].map((c) => ({ content: c })));
-        }
+        setQuotes(rows.map((r) => mapDbRow(r, lang)));
       })
       .catch(() => {
-        setQuotes(staticTestimonials[lang].map((c) => ({ content: c })));
+        setQuotes([]);
       });
   }, [lang]);
 
