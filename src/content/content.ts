@@ -436,6 +436,11 @@ export const authModal = {
     resetButton: "Send Reset Link",
     resetSent: "Reset link sent! Check your inbox.",
     backToLogin: "Back to Login",
+    confirmTitle: "Check Your Email",
+    confirmBody: "Your account has been created successfully. Please check your email and click the confirmation link before signing in.",
+    resendButton: "Resend Confirmation Email",
+    resendSent: "Confirmation email resent!",
+    backToSignIn: "Back to Sign In",
   },
   ar: {
     trigger: "تسجيل الدخول / حساب جديد",
@@ -453,6 +458,11 @@ export const authModal = {
     resetButton: "إعادة تعيين كلمة السر",
     resetSent: "تم إرسال رابط إعادة التعيين! تحققي من بريدكِ.",
     backToLogin: "العودة لتسجيل الدخول",
+    confirmTitle: "تحقق من بريدك الإلكتروني",
+    confirmBody: "تم إنشاء حسابك بنجاح. يرجى التحقق من بريدك الإلكتروني والنقر على رابط التأكيد قبل تسجيل الدخول.",
+    resendButton: "إعادة إرسال بريد التأكيد",
+    resendSent: "تم إعادة إرسال بريد التأكيد!",
+    backToSignIn: "العودة لتسجيل الدخول",
   },
 };
 

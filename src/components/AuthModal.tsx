@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Mail, Lock, User, ArrowLeft, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
+import { X, Mail, Lock, User, ArrowLeft, ArrowRight, CheckCircle2, AlertCircle, MailCheck } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { authModal } from "@/content/content";
 import { supabase } from "@/lib/supabase";
@@ -15,7 +15,7 @@ interface AuthModalProps {
   initialView?: "login" | "signup";
 }
 
-type View = "login" | "signup" | "forgot";
+type View = "login" | "signup" | "forgot" | "confirm";
 
 const inputClass =
   "w-full rounded-xl border border-gray-300 bg-white ps-11 pe-4 py-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/60 transition-all";
@@ -44,6 +44,11 @@ export default function AuthModal({ onClose, onSuccess, initialView = "login" }:
   // ── Forgot password ─────────────────────────────────────────────────────────
   const [resetEmail,   setResetEmail]   = useState("");
   const [resetLoading, setResetLoading] = useState(false);
+
+  // ── Confirm email screen ────────────────────────────────────────────────────
+  const [confirmEmail,   setConfirmEmail]   = useState("");
+  const [resendLoading,  setResendLoading]  = useState(false);
+  const [resendSent,     setResendSent]     = useState(false);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,10 +87,26 @@ export default function AuthModal({ onClose, onSuccess, initialView = "login" }:
       setSignupError(error.message);
       return;
     }
-    if (data.user) {
+    if (data.user && !data.session) {
+      // Email confirmation is required — keep the modal open and show the
+      // "check your email" screen instead of closing or calling onSuccess.
+      setConfirmEmail(signupEmail.trim());
+      setResendSent(false);
+      setView("confirm");
+      return;
+    }
+    if (data.user && data.session) {
+      // Email confirmation is disabled — user is immediately active.
       onSuccess?.(data.user);
       onClose();
     }
+  };
+
+  const handleResendConfirmation = async () => {
+    setResendLoading(true);
+    await supabase.auth.resend({ type: "signup", email: confirmEmail });
+    setResendLoading(false);
+    setResendSent(true);
   };
 
   const handleResetSubmit = async (e: React.FormEvent) => {
@@ -127,7 +148,52 @@ export default function AuthModal({ onClose, onSuccess, initialView = "login" }:
 
         <div className="overflow-hidden">
           <AnimatePresence mode="wait" initial={false}>
-            {view === "forgot" ? (
+            {view === "confirm" ? (
+              <motion.div
+                key="confirm"
+                initial={{ opacity: 0, x: lang === "ar" ? -40 : 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: lang === "ar" ? -40 : 40 }}
+                transition={{ duration: 0.35, ease: "easeInOut" }}
+                className="px-8 py-10 text-center"
+              >
+                <div className="w-16 h-16 rounded-full bg-primary-pink/10 flex items-center justify-center mx-auto mb-5">
+                  <MailCheck className="text-primary-pink" size={32} />
+                </div>
+                <h3 className="font-heading text-2xl font-bold text-gray-900 mb-3">
+                  {t.confirmTitle}
+                </h3>
+                <p className="text-sm text-gray-500 leading-relaxed mb-2">
+                  {t.confirmBody}
+                </p>
+                <p className="text-xs text-gray-400 mb-8 break-all">{confirmEmail}</p>
+
+                {resendSent ? (
+                  <div className="flex items-center justify-center gap-2 text-sm text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 mb-5">
+                    <CheckCircle2 size={15} className="shrink-0" />
+                    <span>{t.resendSent}</span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResendConfirmation}
+                    disabled={resendLoading}
+                    className="w-full py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white font-semibold hover:from-primary-pink hover:to-lavender-purple transition-colors shadow-lg shadow-deep-purple/25 disabled:opacity-60 mb-3"
+                  >
+                    {resendLoading ? "…" : t.resendButton}
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setView("login")}
+                  className="flex items-center justify-center gap-1.5 w-full text-sm font-medium text-primary-pink hover:text-deep-purple transition-colors mt-1"
+                >
+                  <BackIcon size={16} />
+                  {t.backToSignIn}
+                </button>
+              </motion.div>
+            ) : view === "forgot" ? (
               <motion.div
                 key="forgot"
                 initial={{ opacity: 0, x: lang === "ar" ? -40 : 40 }}
