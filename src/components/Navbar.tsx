@@ -1,21 +1,34 @@
 /**
  * Navbar — Fixed header with full-screen overlay menu.
  *
- * Multi-page routing:
- *   - Logo → React Router <Link to="/">
- *   - All nav items use <Link> for page navigation
- *   - Homepage sections (hero buttons, CTA) continue to use in-page scroll anchors
- *   - Overlay closes on navigation via useEffect on location
+ * Navigation items are loaded from Supabase (site.nav key) and fall back to
+ * the static pagesNav from content.ts when no DB data exists.
  *
- * Design is unchanged from the approved homepage.
+ * The "Admin Dashboard" link is shown in the overlay menu ONLY for authenticated
+ * admin/staff users (verified against admin_profiles table).
  */
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Globe, X, UserCircle2 } from "lucide-react";
+import { Globe, X, UserCircle2, LayoutDashboard } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useLanguage } from "@/context/LanguageContext";
 import { pagesNav, authModal } from "@/content/content";
 import AuthModal from "@/components/AuthModal";
+import { getSetting } from "@/admin/repositories/settings.repository";
+import { supabase } from "@/lib/supabase";
+import type { Session } from "@supabase/supabase-js";
+
+// ── Nav item shape coming from DB (site.nav) ──────────────────────────────────
+
+type DBNavItem = {
+  id: string;
+  label_en: string;
+  label_ar: string;
+  href: string;
+  visible: boolean;
+  order: number;
+  cta?: boolean;
+};
 
 // ── Framer variants (unchanged) ───────────────────────────────────────────────
 
@@ -39,32 +52,83 @@ const curtainVariants = {
 };
 
 const linkVariants = {
-  hidden: { opacity: 0, y: 24 },
+  hidden:  { opacity: 0, y: 24 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" as const } },
-  exit: { opacity: 0, y: 12 },
+  exit:    { opacity: 0, y: 12 },
 };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+async function checkAdminProfile(session: Session | null): Promise<boolean> {
+  if (!session) return false;
+  const { data } = await supabase
+    .from("admin_profiles")
+    .select("id")
+    .eq("user_id", session.user.id)
+    .in("role", ["admin", "staff"])
+    .maybeSingle();
+  return !!data;
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Navbar() {
   const { lang, toggleLang } = useLanguage();
-  const [open, setOpen] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
+  const [open,      setOpen]      = useState(false);
+  const [authOpen,  setAuthOpen]  = useState(false);
+  const [isAdmin,   setIsAdmin]   = useState(false);
+  const [dbNavItems, setDbNavItems] = useState<DBNavItem[] | null>(null);
   const location = useLocation();
 
-  const items = pagesNav[lang];
   const authT = authModal[lang];
 
   // Close menu on route change
-  useEffect(() => {
-    setOpen(false);
-  }, [location.pathname]);
+  useEffect(() => { setOpen(false); }, [location.pathname]);
 
   // Lock body scroll when menu is open
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [open]);
+
+  // Load navigation from DB
+  useEffect(() => {
+    getSetting("site.nav").then((val) => {
+      if (val && typeof val === "object" && !Array.isArray(val) && Array.isArray((val as any).items)) {
+        setDbNavItems((val as any).items as DBNavItem[]);
+      }
+      // null → use static fallback; no update needed
+    });
+  }, []);
+
+  // Check if current user is an admin (for dashboard link)
+  useEffect(() => {
+    let cancelled = false;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      checkAdminProfile(data.session).then(result => { if (!cancelled) setIsAdmin(result); });
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (cancelled) return;
+      checkAdminProfile(session).then(result => { if (!cancelled) setIsAdmin(result); });
+    });
+
+    return () => { cancelled = true; subscription.unsubscribe(); };
+  }, []);
+
+  // Compute display nav — DB items (filtered + sorted) or static fallback
+  const items = dbNavItems
+    ? dbNavItems
+        .filter(i => i.visible)
+        .sort((a, b) => a.order - b.order)
+        .map(i => ({
+          label: lang === "en" ? i.label_en : i.label_ar,
+          href:  i.href,
+          cta:   i.cta ?? false,
+        }))
+    : pagesNav[lang];
 
   return (
     <header className="fixed top-0 inset-x-0 z-[1000] backdrop-blur-md bg-gradient-to-b from-deep-purple/95 to-soft-purple/90 border-b border-white/10">
@@ -161,7 +225,7 @@ export default function Navbar() {
             <nav className="min-h-screen flex flex-col items-center justify-center gap-6 sm:gap-7 text-center px-6 pt-28 pb-12">
               {items.map((item) =>
                 item.cta ? (
-                  /* "Book Now" — pink gradient CTA button */
+                  /* CTA button */
                   <motion.div key={item.href} variants={linkVariants}>
                     <Link
                       to={item.href}
@@ -187,19 +251,29 @@ export default function Navbar() {
                 )
               )}
 
-              {/* Auth link at bottom */}
+              {/* Auth button */}
               <motion.button
                 type="button"
                 variants={linkVariants}
-                onClick={() => {
-                  setOpen(false);
-                  window.setTimeout(() => setAuthOpen(true), 320);
-                }}
+                onClick={() => { setOpen(false); window.setTimeout(() => setAuthOpen(true), 320); }}
                 className="flex items-center gap-2 font-heading text-base sm:text-lg font-bold text-light-pink hover:text-white transition-colors mt-2"
               >
                 <UserCircle2 size={22} />
                 {authT.trigger}
               </motion.button>
+
+              {/* Admin Dashboard — ONLY visible to authenticated admin/staff users */}
+              {isAdmin && (
+                <motion.div variants={linkVariants}>
+                  <Link
+                    to="/admin"
+                    className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/25 text-sm font-semibold text-ivory/70 hover:text-white hover:border-white/50 hover:bg-white/10 transition-colors"
+                  >
+                    <LayoutDashboard size={15} />
+                    {lang === "ar" ? "لوحة الإدارة" : "Admin Dashboard"}
+                  </Link>
+                </motion.div>
+              )}
             </nav>
           </motion.div>
         )}
