@@ -6,6 +6,8 @@ import { booking, pricingSection, pricingPlans } from "@/content/content";
 import CheckoutModal, { type CheckoutPlan } from "@/components/CheckoutModal";
 import AuthRequiredDialog from "@/components/AuthRequiredDialog";
 import { useAuth } from "@/hooks/useAuth";
+import { getActiveServices } from "@/admin/repositories/services.repository";
+import type { Service } from "@/admin/repositories/services.repository";
 
 export default function Booking() {
   const { lang } = useLanguage();
@@ -18,6 +20,18 @@ export default function Booking() {
   // Plan the visitor clicked before we knew they weren't logged in.
   const [pendingPlan,   setPendingPlan]   = useState<CheckoutPlan | null>(null);
 
+  // Fetch active services on mount so we can resolve serviceId by plan name.
+  const [services, setServices] = useState<Service[]>([]);
+  useEffect(() => {
+    getActiveServices().then(setServices).catch(() => {});
+  }, []);
+
+  /** Find a Supabase service ID by matching plan name against service.name_en (case-insensitive). */
+  const resolveServiceId = (planName: string): string | undefined => {
+    const normalised = planName.trim().toLowerCase();
+    return services.find((s) => s.name_en.trim().toLowerCase() === normalised)?.id;
+  };
+
   // Handle the loading race: if the user clicked "Book Now" before the session
   // resolved and it turns out they ARE authenticated, open the booking modal now.
   useEffect(() => {
@@ -27,7 +41,8 @@ export default function Booking() {
     }
   }, [loading, user, pendingPlan]);
 
-  const handlePlanClick = (plan: CheckoutPlan) => {
+  const handlePlanClick = (rawPlan: Omit<CheckoutPlan, "serviceId">) => {
+    const plan: CheckoutPlan = { ...rawPlan, serviceId: resolveServiceId(rawPlan.name) };
     if (!loading && user) {
       // Confirmed authenticated — open the booking modal immediately.
       setCheckoutPlan(plan);

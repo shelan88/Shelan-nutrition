@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, ShieldCheck, X, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAuth } from "@/hooks/useAuth";
 import { checkoutModal } from "@/content/content";
 import { createAppointment } from "@/admin/repositories/appointments.repository";
+import { getTemplateForService } from "@/admin/repositories/assessment-templates.repository";
+import { createResponse } from "@/admin/repositories/assessment-responses.repository";
 
 const inputClass =
   "w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/60 transition-all";
@@ -13,6 +17,8 @@ export interface CheckoutPlan {
   name: string;
   price: string;
   period: string;
+  /** Supabase service UUID — used to look up assessment templates */
+  serviceId?: string;
 }
 
 interface CheckoutModalProps {
@@ -186,6 +192,8 @@ function DateTimePicker({
 export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
   const { lang } = useLanguage();
   const t = checkoutModal[lang];
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Step 0 = date/time, Step 1 = payment
   const [step, setStep]   = useState<0 | 1>(0);
@@ -197,26 +205,52 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
   const [cvc, setCvc]               = useState("");
   const [name, setName]             = useState("");
   const [status, setStatus]         = useState<"idle" | "processing" | "success">("idle");
+  const [error, setError]           = useState<string | null>(null);
 
   const canProceed = !!date && !!time;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (status !== "idle") return;
     setStatus("processing");
+    setError(null);
 
-    // Save booking to Supabase (fire-and-forget alongside the payment simulation)
-    createAppointment({
-      client_name: name.trim() || "Customer",
-      date,
-      time,
-      type:      plan.name,
-      status:    "scheduled",
-      notes:     null,
-      client_id: null,
-    });
+    try {
+      // Check for an assessment template before creating the appointment
+      const template = plan.serviceId
+        ? await getTemplateForService(plan.serviceId)
+        : null;
+      const hasTemplate = !!(template?.active);
 
-    window.setTimeout(() => setStatus("success"), 1400);
+      const appt = await createAppointment({
+        client_name:  name.trim() || user?.email || "Customer",
+        client_email: user?.email ?? null,
+        user_id:      user?.id ?? null,
+        date,
+        time,
+        type:         plan.name,
+        status:       hasTemplate ? "awaiting_assessment" : "scheduled",
+        notes:        null,
+        client_id:    null,
+        ...(hasTemplate && {
+          assessment_template_id: template!.id,
+          assessment_status:      "awaiting_assessment",
+        }),
+      });
+
+      if (appt && hasTemplate) {
+        // Pre-create the blank response row then redirect to the questionnaire
+        await createResponse(template!.id, appt.id, user?.id ?? null, null);
+        onClose();
+        navigate(`/assessment/respond/${appt.id}`);
+      } else {
+        setStatus("success");
+      }
+    } catch (err) {
+      console.error("[CheckoutModal] booking error:", err);
+      setError("Something went wrong. Please try again.");
+      setStatus("idle");
+    }
   };
 
   const stepLabel = step === 0 ? "Step 1 of 2 — Pick a Date & Time" : "Step 2 of 2 — Payment Details";
@@ -427,6 +461,10 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
                     </>
                   )}
                 </button>
+
+                {error && (
+                  <p className="text-xs text-red-500 text-center -mt-1">{error}</p>
+                )}
 
                 <p className="flex items-center justify-center gap-1.5 text-xs text-gray-500 pt-1">
                   <ShieldCheck size={14} />
