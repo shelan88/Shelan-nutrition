@@ -6,6 +6,7 @@
  */
 
 import { supabase } from "@/lib/supabase";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 import type {
   Client, RiskLevel, TimelineEvent, TimelineType,
   ClientStatus, Gender, FileType, NutritionPlan,
@@ -177,6 +178,53 @@ export async function findClientByPhone(phone: string): Promise<Client | null> {
 }
 
 // ─── Write operations ──────────────────────────────────────────────────────────
+
+/**
+ * Creates a minimal client record from a Supabase auth user immediately after
+ * sign-up or sign-in, so the user appears in the admin Clients list even before
+ * they complete the full assessment wizard.
+ *
+ * Idempotent: does nothing if a client with that email already exists.
+ */
+export async function upsertClientFromAuth(user: SupabaseUser): Promise<void> {
+  if (!user.email) return;
+
+  // Don't create a duplicate if one already exists (from a prior assessment).
+  const existing = await findClientByEmail(user.email);
+  if (existing) return;
+
+  const rawName =
+    (user.user_metadata?.full_name as string | undefined) ||
+    (user.user_metadata?.name as string | undefined) ||
+    user.email.split("@")[0];
+
+  const fullName = rawName.trim() || user.email.split("@")[0];
+
+  const initials = fullName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w: string) => w[0].toUpperCase())
+    .join("") || "?";
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { error } = await supabase.from("clients").insert({
+    full_name:       fullName,
+    email:           user.email,
+    initials,
+    avatar_color:    "bg-gradient-to-br from-primary-pink to-soft-pink",
+    status:          "Waiting",
+    risk_level:      "Low",
+    join_date:       today,
+    risk_indicators: [],
+    consultations:   [],
+  });
+
+  if (error) {
+    console.error("[clients] upsertClientFromAuth:", error.message);
+  }
+}
 
 export async function createClient(result: AssessmentResult): Promise<Client | null> {
   const today = new Date().toISOString().slice(0, 10);

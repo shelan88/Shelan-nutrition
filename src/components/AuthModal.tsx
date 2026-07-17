@@ -6,6 +6,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { authModal } from "@/content/content";
 import { supabase } from "@/lib/supabase";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
+import { upsertClientFromAuth } from "@/admin/repositories/clients.repository";
 
 interface AuthModalProps {
   onClose: () => void;
@@ -64,6 +65,9 @@ export default function AuthModal({ onClose, onSuccess, initialView = "login" }:
       return;
     }
     if (data.user) {
+      // Ensure a client record exists for this user (handles accounts created
+      // before this feature was added, or users who never completed assessment).
+      upsertClientFromAuth(data.user).catch(() => {/* non-blocking */});
       onSuccess?.(data.user);
       onClose();
     }
@@ -97,6 +101,9 @@ export default function AuthModal({ onClose, onSuccess, initialView = "login" }:
     }
     if (data.user && data.session) {
       // Email confirmation is disabled — user is immediately active.
+      // Create a client record so the user appears in the admin Clients list
+      // even before they complete the health assessment.
+      upsertClientFromAuth(data.user).catch(() => {/* non-blocking */});
       onSuccess?.(data.user);
       onClose();
     }
