@@ -8,6 +8,7 @@
  */
 import { useState, useMemo } from "react";
 import { createAppointment } from "@/admin/repositories/appointments.repository";
+import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Calendar, Star, RefreshCw, ChevronLeft, ChevronRight, CheckCircle2, Lock } from "lucide-react";
 import type { CMSBookingData, CMSBookingService } from "@/types/cms.types";
@@ -398,6 +399,8 @@ export default function BookingFlow({ data, strings, preselectedServiceId }: Pro
   const [confirmed,  setConfirmed]  = useState(false);
   const [confirming, setConfirming] = useState(false);
 
+  const { user } = useAuth();
+
   const selectedService = useMemo(
     () => data.services.find((s) => s.id === serviceId),
     [data.services, serviceId]
@@ -419,12 +422,14 @@ export default function BookingFlow({ data, strings, preselectedServiceId }: Pro
   const handleConfirm = async () => {
     setConfirming(true);
     await createAppointment({
-      client_name: `${personalInfo.firstName} ${personalInfo.lastName}`.trim() || personalInfo.email,
+      client_name:  `${personalInfo.firstName} ${personalInfo.lastName}`.trim() || personalInfo.email,
+      client_email: personalInfo.email || user?.email || null,
+      user_id:      user?.id ?? null,
       date,
       time,
-      type:   selectedService?.name ?? "Consultation",
-      status: "scheduled",
-      notes:  personalInfo.notes || null,
+      type:      selectedService?.name ?? "Consultation",
+      status:    "scheduled",
+      notes:     personalInfo.notes || null,
       client_id: null,
     });
     setConfirming(false);

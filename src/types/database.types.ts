@@ -92,7 +92,10 @@ export interface UploadedFileRow {
 export interface AppointmentRow {
   id: string;
   client_id: string | null;
+  /** auth.users UUID — set when the booking is made by an authenticated user. */
+  user_id: string | null;
   client_name: string | null;
+  client_email: string | null;
   date: string;
   time: string | null;
   type: string | null;

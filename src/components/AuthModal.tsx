@@ -1,12 +1,18 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Mail, Lock, User, ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
+import { X, Mail, Lock, User, ArrowLeft, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { authModal } from "@/content/content";
+import { supabase } from "@/lib/supabase";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface AuthModalProps {
   onClose: () => void;
+  /** If provided, called with the authenticated user after successful login/signup. */
+  onSuccess?: (user: SupabaseUser) => void;
+  /** Which tab to start on. Defaults to "login". */
+  initialView?: "login" | "signup";
 }
 
 type View = "login" | "signup" | "forgot";
@@ -14,15 +20,79 @@ type View = "login" | "signup" | "forgot";
 const inputClass =
   "w-full rounded-xl border border-gray-300 bg-white ps-11 pe-4 py-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/60 transition-all";
 
-export default function AuthModal({ onClose }: AuthModalProps) {
+export default function AuthModal({ onClose, onSuccess, initialView = "login" }: AuthModalProps) {
   const { lang } = useLanguage();
   const t = authModal[lang];
-  const [view, setView] = useState<View>("login");
+  const [view,      setView]      = useState<View>(initialView);
   const [resetSent, setResetSent] = useState(false);
   const BackIcon = lang === "ar" ? ArrowRight : ArrowLeft;
 
-  const handleResetSubmit = (e: React.FormEvent) => {
+  // ── Login form state ────────────────────────────────────────────────────────
+  const [loginEmail,    setLoginEmail]    = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError,    setLoginError]    = useState("");
+  const [loginLoading,  setLoginLoading]  = useState(false);
+
+  // ── Signup form state ───────────────────────────────────────────────────────
+  const [signupName,     setSignupName]     = useState("");
+  const [signupEmail,    setSignupEmail]    = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupConfirm,  setSignupConfirm]  = useState("");
+  const [signupError,    setSignupError]    = useState("");
+  const [signupLoading,  setSignupLoading]  = useState(false);
+
+  // ── Forgot password ─────────────────────────────────────────────────────────
+  const [resetEmail,   setResetEmail]   = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError("");
+    setLoginLoading(true);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: loginEmail.trim(),
+      password: loginPassword,
+    });
+    setLoginLoading(false);
+    if (error) {
+      setLoginError(error.message);
+      return;
+    }
+    if (data.user) {
+      onSuccess?.(data.user);
+      onClose();
+    }
+  };
+
+  const handleSignupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignupError("");
+    if (signupPassword !== signupConfirm) {
+      setSignupError(lang === "ar" ? "كلمتا المرور غير متطابقتين." : "Passwords do not match.");
+      return;
+    }
+    setSignupLoading(true);
+    const { data, error } = await supabase.auth.signUp({
+      email: signupEmail.trim(),
+      password: signupPassword,
+      options: { data: { full_name: signupName.trim() } },
+    });
+    setSignupLoading(false);
+    if (error) {
+      setSignupError(error.message);
+      return;
+    }
+    if (data.user) {
+      onSuccess?.(data.user);
+      onClose();
+    }
+  };
+
+  const handleResetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    await supabase.auth.resetPasswordForEmail(resetEmail.trim());
+    setResetLoading(false);
     setResetSent(true);
   };
 
@@ -67,10 +137,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                 className="px-8 py-10"
               >
                 <button
-                  onClick={() => {
-                    setView("login");
-                    setResetSent(false);
-                  }}
+                  onClick={() => { setView("login"); setResetSent(false); }}
                   className="flex items-center gap-1.5 text-sm font-medium text-primary-pink hover:text-deep-purple transition-colors mb-6"
                 >
                   <BackIcon size={16} />
@@ -84,22 +151,26 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                   </div>
                 ) : (
                   <>
-                    <h3 className="font-heading text-2xl font-bold text-gray-900 mb-2">
-                      {t.forgotTitle}
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-7 leading-relaxed">
-                      {t.forgotSubtitle}
-                    </p>
+                    <h3 className="font-heading text-2xl font-bold text-gray-900 mb-2">{t.forgotTitle}</h3>
+                    <p className="text-sm text-gray-500 mb-7 leading-relaxed">{t.forgotSubtitle}</p>
                     <form onSubmit={handleResetSubmit} className="space-y-4">
                       <div className="relative">
                         <Mail className="absolute top-1/2 -translate-y-1/2 start-4 text-gray-400" size={18} />
-                        <input required type="email" placeholder={t.email} className={inputClass} />
+                        <input
+                          required
+                          type="email"
+                          placeholder={t.email}
+                          value={resetEmail}
+                          onChange={(e) => setResetEmail(e.target.value)}
+                          className={inputClass}
+                        />
                       </div>
                       <button
                         type="submit"
-                        className="w-full py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white font-semibold hover:from-primary-pink hover:to-lavender-purple transition-colors shadow-lg shadow-deep-purple/25"
+                        disabled={resetLoading}
+                        className="w-full py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white font-semibold hover:from-primary-pink hover:to-lavender-purple transition-colors shadow-lg shadow-deep-purple/25 disabled:opacity-60"
                       >
-                        {t.resetButton}
+                        {resetLoading ? "…" : t.resetButton}
                       </button>
                     </form>
                   </>
@@ -114,6 +185,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                 transition={{ duration: 0.35, ease: "easeInOut" }}
                 className="px-8 pt-10 pb-9"
               >
+                {/* Tab switcher */}
                 <div className="flex rounded-full bg-gray-100 p-1 mb-8">
                   <button
                     type="button"
@@ -147,16 +219,36 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.2 }}
-                      onSubmit={(e) => e.preventDefault()}
+                      onSubmit={handleLoginSubmit}
                       className="space-y-4"
                     >
+                      {loginError && (
+                        <div className="flex items-start gap-2 text-red-600 text-sm bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                          <AlertCircle size={15} className="mt-0.5 shrink-0" />
+                          <span>{loginError}</span>
+                        </div>
+                      )}
                       <div className="relative">
                         <Mail className="absolute top-1/2 -translate-y-1/2 start-4 text-gray-400" size={18} />
-                        <input required type="email" placeholder={t.email} className={inputClass} />
+                        <input
+                          required
+                          type="email"
+                          placeholder={t.email}
+                          value={loginEmail}
+                          onChange={(e) => setLoginEmail(e.target.value)}
+                          className={inputClass}
+                        />
                       </div>
                       <div className="relative">
                         <Lock className="absolute top-1/2 -translate-y-1/2 start-4 text-gray-400" size={18} />
-                        <input required type="password" placeholder={t.password} className={inputClass} />
+                        <input
+                          required
+                          type="password"
+                          placeholder={t.password}
+                          value={loginPassword}
+                          onChange={(e) => setLoginPassword(e.target.value)}
+                          className={inputClass}
+                        />
                       </div>
                       <button
                         type="button"
@@ -167,9 +259,10 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                       </button>
                       <button
                         type="submit"
-                        className="w-full py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white font-semibold hover:from-primary-pink hover:to-lavender-purple transition-colors shadow-lg shadow-deep-purple/25"
+                        disabled={loginLoading}
+                        className="w-full py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white font-semibold hover:from-primary-pink hover:to-lavender-purple transition-colors shadow-lg shadow-deep-purple/25 disabled:opacity-60"
                       >
-                        {t.loginButton}
+                        {loginLoading ? "…" : t.loginButton}
                       </button>
                     </motion.form>
                   ) : (
@@ -179,30 +272,65 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.2 }}
-                      onSubmit={(e) => e.preventDefault()}
+                      onSubmit={handleSignupSubmit}
                       className="space-y-4"
                     >
+                      {signupError && (
+                        <div className="flex items-start gap-2 text-red-600 text-sm bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                          <AlertCircle size={15} className="mt-0.5 shrink-0" />
+                          <span>{signupError}</span>
+                        </div>
+                      )}
                       <div className="relative">
                         <User className="absolute top-1/2 -translate-y-1/2 start-4 text-gray-400" size={18} />
-                        <input required type="text" placeholder={t.name} className={inputClass} />
+                        <input
+                          required
+                          type="text"
+                          placeholder={t.name}
+                          value={signupName}
+                          onChange={(e) => setSignupName(e.target.value)}
+                          className={inputClass}
+                        />
                       </div>
                       <div className="relative">
                         <Mail className="absolute top-1/2 -translate-y-1/2 start-4 text-gray-400" size={18} />
-                        <input required type="email" placeholder={t.email} className={inputClass} />
+                        <input
+                          required
+                          type="email"
+                          placeholder={t.email}
+                          value={signupEmail}
+                          onChange={(e) => setSignupEmail(e.target.value)}
+                          className={inputClass}
+                        />
                       </div>
                       <div className="relative">
                         <Lock className="absolute top-1/2 -translate-y-1/2 start-4 text-gray-400" size={18} />
-                        <input required type="password" placeholder={t.password} className={inputClass} />
+                        <input
+                          required
+                          type="password"
+                          placeholder={t.password}
+                          value={signupPassword}
+                          onChange={(e) => setSignupPassword(e.target.value)}
+                          className={inputClass}
+                        />
                       </div>
                       <div className="relative">
                         <Lock className="absolute top-1/2 -translate-y-1/2 start-4 text-gray-400" size={18} />
-                        <input required type="password" placeholder={t.confirmPassword} className={inputClass} />
+                        <input
+                          required
+                          type="password"
+                          placeholder={t.confirmPassword}
+                          value={signupConfirm}
+                          onChange={(e) => setSignupConfirm(e.target.value)}
+                          className={inputClass}
+                        />
                       </div>
                       <button
                         type="submit"
-                        className="w-full py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white font-semibold hover:from-primary-pink hover:to-lavender-purple transition-colors shadow-lg shadow-deep-purple/25"
+                        disabled={signupLoading}
+                        className="w-full py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white font-semibold hover:from-primary-pink hover:to-lavender-purple transition-colors shadow-lg shadow-deep-purple/25 disabled:opacity-60"
                       >
-                        {t.signupButton}
+                        {signupLoading ? "…" : t.signupButton}
                       </button>
                     </motion.form>
                   )}
@@ -213,6 +341,6 @@ export default function AuthModal({ onClose }: AuthModalProps) {
         </div>
       </motion.div>
     </motion.div>,
-    document.body
+    document.body,
   );
 }

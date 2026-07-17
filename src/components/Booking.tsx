@@ -4,13 +4,29 @@ import { Check, Sparkles } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { booking, pricingSection, pricingPlans } from "@/content/content";
 import CheckoutModal, { type CheckoutPlan } from "@/components/CheckoutModal";
+import AuthRequiredDialog from "@/components/AuthRequiredDialog";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Booking() {
   const { lang } = useLanguage();
   const t = booking[lang];
   const p = pricingSection[lang];
   const plans = pricingPlans[lang];
-  const [checkoutPlan, setCheckoutPlan] = useState<CheckoutPlan | null>(null);
+  const { user } = useAuth();
+
+  const [checkoutPlan,  setCheckoutPlan]  = useState<CheckoutPlan | null>(null);
+  // Plan the visitor clicked before we knew they weren't logged in.
+  const [pendingPlan,   setPendingPlan]   = useState<CheckoutPlan | null>(null);
+
+  const handlePlanClick = (plan: CheckoutPlan) => {
+    if (user) {
+      // Already authenticated — open the booking modal immediately.
+      setCheckoutPlan(plan);
+    } else {
+      // Not authenticated — store the intent and show the auth gate.
+      setPendingPlan(plan);
+    }
+  };
 
   return (
     <section id="booking" className="section-dark py-24 bg-gradient-to-br from-primary-pink via-soft-pink to-soft-purple">
@@ -93,9 +109,7 @@ export default function Booking() {
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setCheckoutPlan({ name: plan.name, price: plan.price, period: plan.period })
-                  }
+                  onClick={() => handlePlanClick({ name: plan.name, price: plan.price, period: plan.period })}
                   className={`w-full py-3.5 rounded-full font-semibold transition-colors shadow-lg ${
                     isFeatured
                       ? "bg-gradient-to-r from-primary-pink to-soft-pink text-white hover:from-primary-pink hover:to-lavender-purple shadow-deep-purple/20"
@@ -121,7 +135,20 @@ export default function Booking() {
       </div>
 
       <AnimatePresence>
-        {checkoutPlan && (
+        {/* Auth gate — visitor clicked a plan but isn't logged in */}
+        {pendingPlan && !user && (
+          <AuthRequiredDialog
+            onClose={() => setPendingPlan(null)}
+            onAuthenticated={() => {
+              // user state updates via useAuth; open the modal immediately.
+              setCheckoutPlan(pendingPlan);
+              setPendingPlan(null);
+            }}
+          />
+        )}
+
+        {/* Booking modal — only reachable after authentication */}
+        {checkoutPlan && user && (
           <CheckoutModal plan={checkoutPlan} onClose={() => setCheckoutPlan(null)} />
         )}
       </AnimatePresence>
