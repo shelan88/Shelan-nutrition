@@ -7,7 +7,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/hooks/useAuth";
 import { checkoutModal } from "@/content/content";
 import { createAppointment } from "@/admin/repositories/appointments.repository";
-import { getTemplateForService } from "@/admin/repositories/assessment-templates.repository";
+import { getTemplateForService, getFirstAssignedActiveTemplate } from "@/admin/repositories/assessment-templates.repository";
 import { createResponse } from "@/admin/repositories/assessment-responses.repository";
 
 const inputClass =
@@ -216,12 +216,15 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
     setError(null);
 
     try {
-      // Check for an assessment template before creating the appointment
+      // Check for an assessment template before creating the appointment.
+      // Try by resolved serviceId first; fall back to any assigned active template.
       const template = plan.serviceId
         ? await getTemplateForService(plan.serviceId)
-        : null;
+        : await getFirstAssignedActiveTemplate();
       const hasTemplate = !!(template?.active);
 
+      // status must always be a valid booking status value ("scheduled", "confirmed",
+      // "completed", "cancelled"). "awaiting_assessment" belongs on assessment_status only.
       const appt = await createAppointment({
         client_name:  name.trim() || user?.email || "Customer",
         client_email: user?.email ?? null,
@@ -229,7 +232,7 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
         date,
         time,
         type:         plan.name,
-        status:       hasTemplate ? "awaiting_assessment" : "scheduled",
+        status:       "scheduled",
         notes:        null,
         client_id:    null,
         ...(hasTemplate && {

@@ -220,6 +220,23 @@ export async function getTemplateForService(serviceId: string): Promise<Template
   return getTemplateWithDetails(data.template_id);
 }
 
+/**
+ * Returns the first active template that has at least one service assignment.
+ * Used as a fallback when no specific serviceId can be resolved (e.g. pricing-page
+ * plan names don't match admin service names).
+ */
+export async function getFirstAssignedActiveTemplate(): Promise<TemplateWithDetails | null> {
+  const { data, error } = await supabase
+    .from("service_template_assignments")
+    .select("template_id")
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  const template = await getTemplateWithDetails(data.template_id);
+  if (!template?.active) return null;
+  return template;
+}
+
 export async function setServiceAssignments(templateId: string, serviceIds: string[]): Promise<void> {
   await supabase.from("service_template_assignments").delete().eq("template_id", templateId);
   for (const serviceId of serviceIds) {
