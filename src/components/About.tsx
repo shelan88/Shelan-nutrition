@@ -1,10 +1,42 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/context/LanguageContext";
 import { about } from "@/content/content";
+import { getSetting } from "@/admin/repositories/settings.repository";
+
+interface AboutSetting {
+  name_en?: string;
+  name_ar?: string;
+  title_en?: string;
+  title_ar?: string;
+  bio_en?: string;
+  bio_ar?: string;
+  portrait_url?: string;
+}
 
 export default function About() {
   const { lang } = useLanguage();
   const t = about[lang];
+
+  const [dbAbout, setDbAbout] = useState<AboutSetting | null>(null);
+
+  useEffect(() => {
+    getSetting("site.about")
+      .then((val) => {
+        if (val && typeof val === "object" && !Array.isArray(val)) {
+          setDbAbout(val as AboutSetting);
+        }
+      })
+      .catch(() => {/* silently fall back to content.ts */});
+  }, []);
+
+  // Resolve values: prefer DB, fall back to content.ts
+  const title = (lang === "ar" ? dbAbout?.title_ar : dbAbout?.title_en) || t.title;
+  const bioRaw = lang === "ar" ? dbAbout?.bio_ar : dbAbout?.bio_en;
+  const bioParas: string[] = bioRaw
+    ? bioRaw.split(/\n\n+/).filter(Boolean)
+    : t.bio;
+  const portraitSrc = dbAbout?.portrait_url || "/portrait.jpg";
 
   return (
     <section id="about" className="section-dark py-24 bg-gradient-to-b from-soft-pink via-primary-pink to-soft-purple">
@@ -19,7 +51,7 @@ export default function About() {
           <div className="relative max-w-md">
             <div className="absolute -inset-3 rounded-[2.25rem] bg-gradient-to-br from-primary-pink/30 via-light-pink/20 to-lavender-purple/30 -z-10" />
             <img
-              src="/portrait.jpg"
+              src={portraitSrc}
               alt={t.imageAlt}
               draggable="false"
               onContextMenu={(e) => e.preventDefault()}
@@ -39,10 +71,10 @@ export default function About() {
             {t.kicker}
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-bold text-heading mb-6">
-            {t.title}
+            {title}
           </h2>
           <div className="space-y-4 mb-8">
-            {t.bio.map((p: string, i: number) => (
+            {bioParas.map((p: string, i: number) => (
               <p key={i} className="text-body leading-relaxed">
                 {p}
               </p>

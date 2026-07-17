@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import Hero from "@/components/Hero";
 import About from "@/components/About";
 import Services from "@/components/Services";
+import Programs from "@/components/Programs";
 import Stats from "@/components/Stats";
 import InfoHub from "@/components/InfoHub";
 import Journey from "@/components/Journey";
@@ -30,6 +31,7 @@ export default function HomePage() {
       <Hero />
       <About />
       <Services />
+      <Programs />
       <Stats />
       <InfoHub />
       <Journey />

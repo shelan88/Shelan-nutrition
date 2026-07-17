@@ -1,13 +1,39 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { faq } from "@/content/content";
+import { getPublishedFAQs } from "@/admin/repositories/faqs.repository";
+import type { FAQRow } from "@/types/database.types";
+
+interface FaqItem {
+  question: string;
+  answer: string;
+}
 
 export default function FAQ() {
   const { lang } = useLanguage();
   const t = faq[lang];
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [items, setItems] = useState<FaqItem[]>(t.items);
+
+  useEffect(() => {
+    setOpenIndex(null);
+    getPublishedFAQs()
+      .then((rows: FAQRow[]) => {
+        if (rows.length > 0) {
+          setItems(
+            rows.map((r) => ({
+              question: (lang === "ar" ? r.question_ar : r.question_en) || r.question_en,
+              answer:   (lang === "ar" ? r.answer_ar   : r.answer_en)   || r.answer_en,
+            }))
+          );
+        } else {
+          setItems(faq[lang].items);
+        }
+      })
+      .catch(() => setItems(faq[lang].items));
+  }, [lang]);
 
   const toggle = (i: number) => setOpenIndex(openIndex === i ? null : i);
 
@@ -30,7 +56,7 @@ export default function FAQ() {
         </motion.div>
 
         <div className="space-y-3">
-          {t.items.map((item: { question: string; answer: string }, i: number) => {
+          {items.map((item, i) => {
             const isOpen = openIndex === i;
             return (
               <motion.div
@@ -50,7 +76,6 @@ export default function FAQ() {
                   className="w-full flex items-center justify-between gap-4 text-start px-6 py-5 group"
                   aria-expanded={isOpen}
                 >
-                  {/* Active accent bar */}
                   <span className="flex items-center gap-3 flex-1 min-w-0">
                     <motion.span
                       animate={{ opacity: isOpen ? 1 : 0, scaleY: isOpen ? 1 : 0 }}
