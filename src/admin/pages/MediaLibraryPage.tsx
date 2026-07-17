@@ -210,13 +210,6 @@ export default function MediaLibraryPage() {
             <p className="text-[12px] text-[var(--admin-text-faint)] max-w-xs">
               {lang === "ar" ? "ارفع أول ملف باستخدام منطقة الإفلات أعلاه." : "Upload your first file using the drop zone above."}
             </p>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all mt-2"
-            >
-              <Plus size={14} />
-              {lang === "ar" ? "رفع ملفات" : "Upload Files"}
-            </button>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">

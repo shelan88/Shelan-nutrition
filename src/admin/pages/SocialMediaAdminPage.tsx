@@ -14,7 +14,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Save, Plus, Trash2, ChevronUp, ChevronDown,
-  Eye, EyeOff, Share2, ExternalLink, X,
+  Eye, EyeOff, Share2, ExternalLink, X, Copy, Check,
 } from "lucide-react";
 import PageHeader from "../components/PageHeader";
 import { getSetting, setSetting } from "@/admin/repositories/settings.repository";
@@ -202,6 +202,15 @@ export default function SocialMediaAdminPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving]         = useState(false);
   const [saved, setSaved]           = useState(false);
+  const [copiedId, setCopiedId]     = useState<string | null>(null);
+
+  const copyUrl = (id: string, url: string) => {
+    if (!url) return;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 1800);
+    });
+  };
 
   // Load from DB
   useEffect(() => {
@@ -296,30 +305,18 @@ export default function SocialMediaAdminPage() {
             {...fadeUp(0.05)}
             className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] overflow-hidden"
           >
-            {/* Table header */}
-            <div className="hidden sm:grid sm:grid-cols-[auto_1fr_auto] gap-3 px-4 py-2.5 border-b border-[var(--admin-border)] bg-[var(--admin-hover-bg)]/40">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--admin-text-faint)]">
-                {lang === "ar" ? "المنصة" : "Platform"}
-              </span>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--admin-text-faint)]">
-                {lang === "ar" ? "الرابط" : "URL"}
-              </span>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--admin-text-faint)]">
-                {lang === "ar" ? "إجراءات" : "Actions"}
-              </span>
-            </div>
-
-            {/* Rows */}
             <div className="divide-y divide-[var(--admin-border)]">
               {sorted.map((link, idx) => {
                 const { frameClass } = getPlatformEntry(link.platform);
+                const isCopied = copiedId === link.id;
                 return (
                   <div
                     key={link.id}
-                    className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--admin-hover-bg)]/30 ${!link.visible ? "opacity-50" : ""}`}
+                    className={`px-4 py-3.5 space-y-2.5 transition-colors hover:bg-[var(--admin-hover-bg)]/30 ${!link.visible ? "opacity-50" : ""}`}
                   >
-                    {/* Icon + platform name */}
-                    <div className="flex items-center gap-2.5 w-36 shrink-0">
+                    {/* ── Row 1: icon + name + controls ────────────────────── */}
+                    <div className="flex items-center gap-2.5">
+                      {/* Brand icon */}
                       <div className={`w-9 h-9 rounded-full flex items-center justify-center border ${frameClass} shrink-0`}>
                         {getSocialIcon(link.platform, {
                           customIconUrl: link.customIconUrl,
@@ -327,85 +324,97 @@ export default function SocialMediaAdminPage() {
                           size: 20,
                         })}
                       </div>
-                      <span className="text-[13px] font-semibold text-[var(--admin-text)] truncate">
+
+                      {/* Platform name */}
+                      <span className="flex-1 text-[13px] font-semibold text-[var(--admin-text)] truncate min-w-0">
                         {link.platform}
                       </span>
-                    </div>
 
-                    {/* URL input */}
-                    <div className="flex-1 min-w-0">
-                      <div className="relative">
-                        <input
-                          type="url"
-                          value={link.url}
-                          onChange={e => setLinks(prev => prev.map(l => l.id === link.id ? { ...l, url: e.target.value } : l))}
-                          placeholder={`https://...`}
-                          className="w-full px-3 py-2 pe-9 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[12px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
-                          dir="ltr"
-                        />
-                        {link.url && (
-                          <a
-                            href={link.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="absolute end-2.5 top-1/2 -translate-y-1/2 text-[var(--admin-text-faint)] hover:text-[var(--admin-text-muted)] transition-colors"
-                            tabIndex={-1}
-                          >
-                            <ExternalLink size={13} />
-                          </a>
-                        )}
+                      {/* Controls: visibility · up · down · delete */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          title={link.visible ? (lang === "ar" ? "إخفاء" : "Hide") : (lang === "ar" ? "إظهار" : "Show")}
+                          onClick={() => setLinks(prev => prev.map(l => l.id === link.id ? { ...l, visible: !l.visible } : l))}
+                          className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors
+                            ${link.visible
+                              ? "border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800 dark:text-emerald-400"
+                              : "border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)]"
+                            }`}
+                        >
+                          {link.visible ? <Eye size={13} /> : <EyeOff size={13} />}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={idx === 0}
+                          onClick={() => move(idx, -1)}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] disabled:opacity-30 transition-colors"
+                        >
+                          <ChevronUp size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={idx === sorted.length - 1}
+                          onClick={() => move(idx, 1)}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] disabled:opacity-30 transition-colors"
+                        >
+                          <ChevronDown size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          title={lang === "ar" ? "حذف" : "Delete"}
+                          onClick={() => {
+                            if (window.confirm(lang === "ar" ? `حذف ${link.platform}؟` : `Delete ${link.platform}?`)) {
+                              setLinks(prev => prev.filter(l => l.id !== link.id));
+                            }
+                          }}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-red-50 hover:text-red-500 hover:border-red-200 dark:hover:bg-red-950/20 dark:hover:border-red-800 transition-colors"
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       </div>
                     </div>
 
-                    {/* Action buttons */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      {/* Visibility */}
+                    {/* ── Row 2: full-width URL + copy + open ──────────────── */}
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="url"
+                        value={link.url}
+                        onChange={e => setLinks(prev => prev.map(l => l.id === link.id ? { ...l, url: e.target.value } : l))}
+                        placeholder="https://..."
+                        className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[12px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors overflow-x-auto"
+                        dir="ltr"
+                        style={{ textOverflow: "clip" }}
+                      />
+                      {/* Copy URL */}
                       <button
                         type="button"
-                        title={link.visible ? (lang === "ar" ? "إخفاء" : "Hide") : (lang === "ar" ? "إظهار" : "Show")}
-                        onClick={() => setLinks(prev => prev.map(l => l.id === link.id ? { ...l, visible: !l.visible } : l))}
-                        className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors
-                          ${link.visible
-                            ? "border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800 dark:text-emerald-400"
-                            : "border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)]"
+                        title={lang === "ar" ? "نسخ الرابط" : "Copy URL"}
+                        disabled={!link.url}
+                        onClick={() => copyUrl(link.id, link.url)}
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors shrink-0
+                          ${isCopied
+                            ? "border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800"
+                            : "border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] disabled:opacity-30"
                           }`}
                       >
-                        {link.visible ? <Eye size={13} /> : <EyeOff size={13} />}
+                        {isCopied ? <Check size={13} /> : <Copy size={13} />}
                       </button>
-
-                      {/* Move up */}
-                      <button
-                        type="button"
-                        disabled={idx === 0}
-                        onClick={() => move(idx, -1)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] disabled:opacity-30 transition-colors"
+                      {/* Open link */}
+                      <a
+                        href={link.url || "#"}
+                        target={link.url ? "_blank" : undefined}
+                        rel="noopener noreferrer"
+                        title={lang === "ar" ? "فتح الرابط" : "Open link"}
+                        tabIndex={link.url ? 0 : -1}
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--admin-border)] transition-colors shrink-0
+                          ${link.url
+                            ? "text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] hover:text-[var(--admin-text-muted)]"
+                            : "opacity-30 pointer-events-none"
+                          }`}
                       >
-                        <ChevronUp size={13} />
-                      </button>
-
-                      {/* Move down */}
-                      <button
-                        type="button"
-                        disabled={idx === sorted.length - 1}
-                        onClick={() => move(idx, 1)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] disabled:opacity-30 transition-colors"
-                      >
-                        <ChevronDown size={13} />
-                      </button>
-
-                      {/* Delete */}
-                      <button
-                        type="button"
-                        title={lang === "ar" ? "حذف" : "Delete"}
-                        onClick={() => {
-                          if (window.confirm(lang === "ar" ? `حذف ${link.platform}؟` : `Delete ${link.platform}?`)) {
-                            setLinks(prev => prev.filter(l => l.id !== link.id));
-                          }
-                        }}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-red-50 hover:text-red-500 hover:border-red-200 dark:hover:bg-red-950/20 dark:hover:border-red-800 transition-colors"
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                        <ExternalLink size={13} />
+                      </a>
                     </div>
                   </div>
                 );
