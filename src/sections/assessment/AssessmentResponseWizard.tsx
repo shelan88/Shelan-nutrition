@@ -423,6 +423,28 @@ export default function AssessmentResponseWizard({
     }
   }, [visibleQuestions.length, currentIdx]);
 
+  // Clear answers for conditional questions whose trigger condition is no longer met.
+  // This prevents ghost answers from persisting in localStorage when a client changes
+  // a trigger answer (hiding the conditional question) and then resumes offline.
+  useEffect(() => {
+    const visibleIds = new Set(visibleQuestions.map((q) => q.id));
+    const hiddenConditionalIds = allQuestions
+      .filter((q) => q.conditional_question_id !== null && q.conditional_question_id !== undefined && !visibleIds.has(q.id))
+      .map((q) => q.id);
+
+    if (hiddenConditionalIds.length === 0) return;
+
+    setAnswers((prev) => {
+      const hasGhost = hiddenConditionalIds.some((id) => id in prev);
+      if (!hasGhost) return prev; // nothing to remove — skip re-render
+      const next = { ...prev };
+      for (const id of hiddenConditionalIds) {
+        delete next[id];
+      }
+      return next;
+    });
+  }, [visibleQuestions, allQuestions]);
+
   function currentValue(): string | string[] {
     if (!currentQuestion) return "";
     const v = answers[currentQuestion.id];
