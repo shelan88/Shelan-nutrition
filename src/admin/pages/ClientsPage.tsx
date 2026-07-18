@@ -6,10 +6,11 @@
  */
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import {
   Users, UserPlus, AlertTriangle, Activity,
   Search, SlidersHorizontal, ChevronDown, X,
-  ArrowUpRight, TrendingUp, Eye,
+  ArrowUpRight, TrendingUp, Eye, ExternalLink,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import PageHeader from "../components/PageHeader";
@@ -499,13 +500,23 @@ export default function ClientsPage() {
 
                       {/* Actions */}
                       <td className="px-4 py-3.5">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setSelectedClient(client); }}
-                          className="flex items-center gap-1 text-[12px] font-semibold text-primary-pink opacity-0 group-hover:opacity-100 hover:text-soft-purple transition-all whitespace-nowrap"
-                        >
-                          <Eye size={12} strokeWidth={2} />
-                          {isAr ? "عرض" : "View"}
-                        </button>
+                        <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-all">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setSelectedClient(client); }}
+                            className="flex items-center gap-1 text-[12px] font-semibold text-[var(--admin-text-muted)] hover:text-[var(--admin-text)] transition-colors whitespace-nowrap"
+                          >
+                            <Eye size={12} strokeWidth={2} />
+                            {isAr ? "عرض سريع" : "Quick view"}
+                          </button>
+                          <Link
+                            to={`/admin/clients/${client.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-1 text-[12px] font-semibold text-primary-pink hover:text-soft-purple transition-colors whitespace-nowrap"
+                          >
+                            <ExternalLink size={12} strokeWidth={2} />
+                            {isAr ? "الملف الكامل" : "Full profile"}
+                          </Link>
+                        </div>
                       </td>
                     </motion.tr>
                   ))

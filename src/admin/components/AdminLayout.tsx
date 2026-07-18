@@ -41,6 +41,7 @@ import BookingsAdminPage from "../pages/BookingsAdminPage";
 import SEOPage from "../pages/SEOPage";
 import AssessmentTemplatesPage from "../pages/AssessmentTemplatesPage";
 import QuestionLibraryPage from "../pages/QuestionLibraryPage";
+import ClientProfilePage from "../pages/ClientProfilePage";
 
 export default function AdminLayout() {
   return (
@@ -77,6 +78,7 @@ export default function AdminLayout() {
               {/* Business */}
               <Route path="bookings"              element={<BookingsAdminPage />} />
               <Route path="clients"               element={<ClientsPage />} />
+              <Route path="clients/:id"          element={<ClientProfilePage />} />
               <Route path="payments"              element={<PlaceholderPage pageId="payments" />} />
               <Route path="messages"              element={<MessagesAdminPage />} />
 
