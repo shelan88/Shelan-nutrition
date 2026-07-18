@@ -22,9 +22,10 @@ import QuestionLibraryDrawer from "../components/QuestionLibraryDrawer";
 import type { LibraryQuestion } from "../components/QuestionLibraryDrawer";
 import {
   saveQuestionToLibrary,
+  getMyLibraryFolders,
   LIBRARY_CATEGORIES,
 } from "@/admin/repositories/question-library.repository";
-import type { LibraryCategory } from "@/admin/repositories/question-library.repository";
+import type { LibraryCategory, MyLibraryFolder } from "@/admin/repositories/question-library.repository";
 import { useLanguage } from "@/context/LanguageContext";
 import PageHeader from "../components/PageHeader";
 import { supabase } from "@/lib/supabase";
@@ -695,6 +696,8 @@ function QuestionBuilder({
   const [showLibrary, setShowLibrary] = useState(false);
   const [saveToLibraryQ, setSaveToLibraryQ] = useState<QuestionWithOptions | null>(null);
   const [saveToLibCat, setSaveToLibCat] = useState<LibraryCategory>("basic_info");
+  const [saveToLibFolder, setSaveToLibFolder] = useState<string>("");
+  const [saveToLibFolders, setSaveToLibFolders] = useState<MyLibraryFolder[]>([]);
   const [savingToLib, setSavingToLib] = useState(false);
 
   // ── Drag-to-reorder ────────────────────────────────────────────────────
@@ -790,26 +793,36 @@ function QuestionBuilder({
 
   // ── Save to Library ────────────────────────────────────────────────────
 
+  async function openSaveToLibrary(q: QuestionWithOptions) {
+    setSaveToLibraryQ(q);
+    setSaveToLibFolder("");
+    const folders = await getMyLibraryFolders();
+    setSaveToLibFolders(folders);
+  }
+
   async function handleConfirmSaveToLibrary() {
     if (!saveToLibraryQ) return;
     setSavingToLib(true);
-    await saveQuestionToLibrary({
-      category: saveToLibCat,
-      type: saveToLibraryQ.type,
-      label_en: saveToLibraryQ.label_en,
-      label_ar: saveToLibraryQ.label_ar ?? "",
-      placeholder_en: saveToLibraryQ.placeholder_en ?? "",
-      placeholder_ar: saveToLibraryQ.placeholder_ar ?? "",
-      help_en: saveToLibraryQ.help_en ?? "",
-      help_ar: saveToLibraryQ.help_ar ?? "",
-      required: saveToLibraryQ.required,
-      validation_note: "",
-      options: saveToLibraryQ.options.map((o) => ({
-        label_en: o.label_en,
-        label_ar: o.label_ar ?? "",
-        value: o.value,
-      })),
-    });
+    await saveQuestionToLibrary(
+      {
+        category: saveToLibCat,
+        type: saveToLibraryQ.type,
+        label_en: saveToLibraryQ.label_en,
+        label_ar: saveToLibraryQ.label_ar ?? "",
+        placeholder_en: saveToLibraryQ.placeholder_en ?? "",
+        placeholder_ar: saveToLibraryQ.placeholder_ar ?? "",
+        help_en: saveToLibraryQ.help_en ?? "",
+        help_ar: saveToLibraryQ.help_ar ?? "",
+        required: saveToLibraryQ.required,
+        validation_note: "",
+        options: saveToLibraryQ.options.map((o) => ({
+          label_en: o.label_en,
+          label_ar: o.label_ar ?? "",
+          value: o.value,
+        })),
+      },
+      saveToLibFolder || undefined,
+    );
     setSavingToLib(false);
     setSaveToLibraryQ(null);
   }
@@ -860,7 +873,7 @@ function QuestionBuilder({
             onDragStart={() => handleDragStart(idx)}
             onDragEnter={() => handleDragEnter(idx)}
             onDragEnd={handleDragEnd}
-            onSaveToLibrary={() => { setSaveToLibraryQ(q); setSaveToLibCat("basic_info"); }}
+            onSaveToLibrary={() => { openSaveToLibrary(q); setSaveToLibCat("basic_info"); }}
           />
         ))}
 
@@ -937,12 +950,30 @@ function QuestionBuilder({
               <select
                 value={saveToLibCat}
                 onChange={(e) => setSaveToLibCat(e.target.value as LibraryCategory)}
-                className="w-full px-3 py-2 mb-5 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
+                className="w-full px-3 py-2 mb-3 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
               >
                 {LIBRARY_CATEGORIES.map((c) => (
                   <option key={c.value} value={c.value}>{isAr ? c.labelAr : c.labelEn}</option>
                 ))}
               </select>
+              {saveToLibFolders.length > 0 && (
+                <>
+                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
+                    {isAr ? "المجلد (اختياري)" : "Folder (optional)"}
+                  </label>
+                  <select
+                    value={saveToLibFolder}
+                    onChange={(e) => setSaveToLibFolder(e.target.value)}
+                    className="w-full px-3 py-2 mb-5 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
+                  >
+                    <option value="">{isAr ? "بدون مجلد" : "No folder"}</option>
+                    {saveToLibFolders.map((f) => (
+                      <option key={f.id} value={f.id}>{isAr ? f.nameAr : f.name}</option>
+                    ))}
+                  </select>
+                </>
+              )}
+              {saveToLibFolders.length === 0 && <div className="mb-5" />}
               <div className="flex gap-2">
                 <button
                   onClick={() => setSaveToLibraryQ(null)}
