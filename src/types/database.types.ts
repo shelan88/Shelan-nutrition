@@ -413,6 +413,12 @@ export interface AssessmentResponseRow {
   status: "pending" | "in_progress" | "submitted";
   submitted_at: string | null;
   created_at: string;
+  // Scoring columns — added by critical-fix migration (assessment unification)
+  score: number | null;
+  risk_level: string | null;
+  risk_percentage: number | null;
+  diagnosis_category: string | null;
+  diagnosis_category_ar: string | null;
 }
 
 export interface ResponseAnswerRow {

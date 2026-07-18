@@ -6,6 +6,7 @@ import { Lock, ShieldCheck, X, CheckCircle2, ChevronLeft, ChevronRight } from "l
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/hooks/useAuth";
 import { checkoutModal } from "@/content/content";
+import { supabase } from "@/lib/supabase";
 import { createAppointment } from "@/admin/repositories/appointments.repository";
 import { getTemplateForService, getFirstAssignedActiveTemplate } from "@/admin/repositories/assessment-templates.repository";
 import { createResponse } from "@/admin/repositories/assessment-responses.repository";
@@ -216,39 +217,72 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
     setError(null);
 
     try {
-      // Check for an assessment template before creating the appointment.
-      // Try by resolved serviceId first; fall back to any assigned active template.
+      // ── 1. Resolve client_id from the authenticated user's profile ────────
+      // This links the appointment (and assessment response) to the client row
+      // so that the portal AssessmentsPage can display the response by client_id
+      // rather than relying on appointment_id or user_id alone.
+      let resolvedClientId: string | null = null;
+      if (user?.id) {
+        const { data: clientRow } = await supabase
+          .from("clients")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        resolvedClientId = clientRow?.id ?? null;
+      }
+
+      // ── 2. Look up assessment template ────────────────────────────────────
+      // Try the service-specific template first; fall back to any active template.
       const template = plan.serviceId
         ? await getTemplateForService(plan.serviceId)
         : await getFirstAssignedActiveTemplate();
       const hasTemplate = !!(template?.active);
 
-      // status must always be a valid booking status value ("scheduled", "confirmed",
-      // "completed", "cancelled"). "awaiting_assessment" belongs on assessment_status only.
+      // ── 3. Create the appointment, fully linked ────────────────────────────
+      // status must always be a valid booking status value ("scheduled",
+      // "confirmed", "completed", "cancelled").
+      // "awaiting_assessment" lives on assessment_status only.
       const appt = await createAppointment({
         client_name:  name.trim() || user?.email || "Customer",
         client_email: user?.email ?? null,
-        user_id:      user?.id ?? null,
+        user_id:      user?.id    ?? null,
         date,
         time,
         type:         plan.name,
         status:       "scheduled",
         notes:        null,
-        client_id:    null,
+        client_id:    resolvedClientId,
         ...(hasTemplate && {
           assessment_template_id: template!.id,
           assessment_status:      "awaiting_assessment",
         }),
       });
 
-      if (appt && hasTemplate) {
-        // Pre-create the blank response row then redirect to the questionnaire
-        await createResponse(template!.id, appt.id, user?.id ?? null, null);
-        onClose();
-        navigate(`/assessment/respond/${appt.id}`);
-      } else {
-        setStatus("success");
+      if (!appt) {
+        setError("Could not create appointment. Please try again.");
+        setStatus("idle");
+        return;
       }
+
+      // ── 4. Pre-create assessment response and redirect ─────────────────────
+      // If a template exists, always assign it and redirect to the questionnaire.
+      // No booking should complete without the client being directed to assess.
+      if (hasTemplate) {
+        const response = await createResponse(
+          template!.id,
+          appt.id,
+          user?.id          ?? null,
+          resolvedClientId,           // now always passed when logged in
+        );
+        if (response) {
+          onClose();
+          navigate(`/assessment/respond/${appt.id}`);
+          return;
+        }
+      }
+
+      // No template available — confirm the booking without assessment redirect.
+      setStatus("success");
     } catch (err) {
       console.error("[CheckoutModal] booking error:", err);
       setError("Something went wrong. Please try again.");

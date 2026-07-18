@@ -29,7 +29,15 @@ const COUNTRY_AR: Record<string, string> = {
 // ─── Row → Client mapper ───────────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapRowToClient(row: any): Client {
-  const latestAssessment  = (row.assessments   as any[])?.[0] ?? null;
+  // assessment_responses is the canonical table (assessment unification fix).
+  // Sort by submitted_at DESC so [0] is always the most recent submission.
+  const assessmentRows = ((row.assessment_responses as any[]) ?? [])
+    .filter((a: any) => a.status === "submitted" || a.score != null)
+    .sort((a: any, b: any) =>
+      new Date(b.submitted_at ?? b.created_at).getTime() -
+      new Date(a.submitted_at ?? a.created_at).getTime()
+    );
+  const latestAssessment  = assessmentRows[0] ?? null;
   const timelineRows      = (row.timeline_events as any[]) ?? [];
   const fileRows          = (row.uploaded_files  as any[]) ?? [];
 
@@ -104,12 +112,12 @@ function mapRowToClient(row: any): Client {
 }
 
 // Nested select reused across read operations.
-// Note: nutrition_plans no longer has a plan_data column (schema was replaced by the
-// Nutrition Plans module).  We only fetch id + name so PostgREST doesn't error out;
-// full plan data is loaded by NutritionTab via the nutrition repository.
+// Assessment data is now read from assessment_responses (canonical table after
+// the unification migration). The legacy `assessments` table is no longer the
+// source of truth for client assessment history or dashboard metrics.
 const FULL_SELECT = `
   *,
-  assessments(id, score, risk_level, risk_percentage, diagnosis_category, diagnosis_category_ar, submitted_at),
+  assessment_responses(id, score, risk_level, risk_percentage, diagnosis_category, diagnosis_category_ar, submitted_at, status),
   timeline_events(id, event, event_ar, type, date),
   nutrition_plans(id, name, status),
   uploaded_files(id, filename, type, size, url, uploaded_at)
@@ -265,8 +273,14 @@ export async function createClient(result: AssessmentResult): Promise<Client | n
 
   const clientId = clientRow.id as string;
 
-  await supabase.from("assessments").insert({
+  // Write to assessment_responses (canonical table after unification fix).
+  // Use the well-known legacy template UUID so the NOT NULL FK is satisfied.
+  const LEGACY_TEMPLATE_ID = "00000000-0000-0000-0000-000000000001";
+  await supabase.from("assessment_responses").insert({
+    template_id:           LEGACY_TEMPLATE_ID,
     client_id:             clientId,
+    status:                "submitted",
+    submitted_at:          new Date().toISOString(),
     score:                 result.score,
     risk_level:            result.riskLevel,
     risk_percentage:       result.riskPercentage,
@@ -303,8 +317,13 @@ export async function saveAssessment(
     })
     .eq("id", clientId);
 
-  await supabase.from("assessments").insert({
+  // Write to assessment_responses (canonical table after unification fix).
+  const LEGACY_TEMPLATE_ID = "00000000-0000-0000-0000-000000000001";
+  await supabase.from("assessment_responses").insert({
+    template_id:           LEGACY_TEMPLATE_ID,
     client_id:             clientId,
+    status:                "submitted",
+    submitted_at:          new Date().toISOString(),
     score:                 result.score,
     risk_level:            result.riskLevel,
     risk_percentage:       result.riskPercentage,

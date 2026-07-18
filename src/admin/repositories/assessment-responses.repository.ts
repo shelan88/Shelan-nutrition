@@ -24,19 +24,61 @@ export interface ResponseWithAnswers extends AssessmentResponseRow {
 }
 
 // ─── Create blank response on booking confirm ─────────────────────────────────
+// clientId should always be passed when the booking is made by an authenticated
+// user who has a linked client record. This is required so the portal
+// AssessmentsPage can show the response without relying on appointment lookup.
 
 export async function createResponse(
   templateId: string,
   appointmentId: string | null,
   userId: string | null,
-  clientId: string | null
+  clientId: string | null,
 ): Promise<AssessmentResponseRow | null> {
   const { data, error } = await supabase
     .from("assessment_responses")
-    .insert({ template_id: templateId, appointment_id: appointmentId, user_id: userId, client_id: clientId, status: "pending" })
-    .select().single();
-  if (error) { console.error("[assessment-responses] createResponse:", error.message); return null; }
+    .insert({
+      template_id:    templateId,
+      appointment_id: appointmentId,
+      user_id:        userId,
+      client_id:      clientId,
+      status:         "pending",
+    })
+    .select()
+    .single();
+  if (error) {
+    console.error("[assessment-responses] createResponse:", error.message);
+    return null;
+  }
   return data;
+}
+
+// ─── Update scoring after submission ─────────────────────────────────────────
+// Called when the assessment wizard completes scoring. Stores the computed
+// risk data on assessment_responses (canonical table, unification fix C-3).
+
+export async function updateResponseScoring(
+  responseId: string,
+  scoring: {
+    score:                 number;
+    risk_level:            string;
+    risk_percentage:       number;
+    diagnosis_category:    string;
+    diagnosis_category_ar: string;
+  },
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("assessment_responses")
+    .update({
+      ...scoring,
+      status:       "submitted",
+      submitted_at: new Date().toISOString(),
+    })
+    .eq("id", responseId);
+  if (error) {
+    console.error("[assessment-responses] updateResponseScoring:", error.message);
+    return false;
+  }
+  return true;
 }
 
 // ─── Load full response with questions + answers ──────────────────────────────

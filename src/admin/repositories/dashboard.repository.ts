@@ -83,10 +83,16 @@ async function fetchStats(): Promise<DashboardStats> {
     await Promise.all([
       supabase.from("clients").select("id", { count: "exact", head: true }),
       supabase.from("clients").select("id", { count: "exact", head: true }).gte("join_date", monthStart),
-      supabase.from("assessments").select("id", { count: "exact", head: true }),
+      // C-3 fix: dashboard now reads from assessment_responses (canonical table).
+      // The legacy `assessments` table is no longer the source of truth.
       supabase
-        .from("assessments")
+        .from("assessment_responses")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "submitted"),
+      supabase
+        .from("assessment_responses")
         .select("id, risk_level, risk_percentage, submitted_at, clients(full_name, initials)")
+        .eq("status", "submitted")
         .order("submitted_at", { ascending: false })
         .limit(5),
       supabase.from("appointments").select("id", { count: "exact", head: true }).eq("date", today),
