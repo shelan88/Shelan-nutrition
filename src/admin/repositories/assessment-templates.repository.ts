@@ -177,8 +177,7 @@ export async function upsertQuestion(
   data: Omit<TemplateQuestionRow, "id" | "created_at"> & { id?: string }
 ): Promise<TemplateQuestionRow | null> {
   const { id, ...rest } = data;
-  // Ensure enabled defaults to true if not supplied
-  const payload = { enabled: true, library_question_id: null, ...rest };
+  const payload = rest;
   if (id) {
     const { data: row, error } = await supabase.from("template_questions").update(payload).eq("id", id).select().single();
     if (error) { console.error("[assessment-templates] updateQuestion:", error.message); return null; }

@@ -357,7 +357,8 @@ export type QuestionType =
   | "number"
   | "date"
   | "file_upload"
-  | "image_upload";
+  | "image_upload"
+  | "scale";
 
 export interface TemplateQuestionRow {
   id: string;

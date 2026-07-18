@@ -1,6 +1,6 @@
 import { useLanguage } from "@/context/LanguageContext";
 import PageHeader from "../components/PageHeader";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
 import { Plus, Pencil, Trash2, Eye, EyeOff, ArrowLeft, Save, Search } from "lucide-react";
 import { getAllServices, createService, updateService, deleteService } from "@/admin/repositories/services.repository";
@@ -108,7 +108,8 @@ const EMPTY_FORM: FormState = {
 };
 
 function formFromRow(row: ServiceRow): FormState {
-  const d = row.details ?? {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const d = (row.details ?? {}) as any;
   const who = d.whoIsItFor ?? {};
   const ben = d.benefits ?? {};
   const cta = d.cta ?? {};

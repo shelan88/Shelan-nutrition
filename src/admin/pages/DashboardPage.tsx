@@ -538,7 +538,7 @@ export default function DashboardPage() {
 
           <div className="px-5">
             {messages.length > 0
-              ? messages.map((msg) => <MessageItem key={msg.id} {...msg} />)
+              ? messages.map((msg, i) => <MessageItem key={i} {...msg} />)
               : !store.loading && (
                 <p className="text-[13px] text-[var(--admin-text-faint)] py-6 text-center">
                   {isAr ? "لا توجد رسائل حتى الآن" : "No messages yet"}

@@ -17,13 +17,12 @@ import {
   AlertCircle, Type, AlignLeft, ToggleRight as YesNoIcon, List,
   CheckSquare, ChevronDown as DropdownIcon, Hash, Calendar as CalendarIcon,
   Paperclip, Image as ImageIcon, ClipboardList, BookOpen, Bookmark,
-  Eye, EyeOff, Layers,
+  Eye, EyeOff,
 } from "lucide-react";
 import QuestionLibraryDrawer from "../components/QuestionLibraryDrawer";
 import type { LibraryQuestion } from "../components/QuestionLibraryDrawer";
 import BundlePickerModal from "../components/BundlePickerModal";
 import TemplatePreviewOverlay from "../components/TemplatePreviewOverlay";
-import { ASSESSMENT_BUNDLES } from "@/admin/data/assessment-bundles";
 import type { AssessmentBundle } from "@/admin/data/assessment-bundles";
 import {
   saveQuestionToLibrary,

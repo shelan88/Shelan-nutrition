@@ -41,7 +41,6 @@ export async function uploadFile(
 ): Promise<MediaLibraryRow | null> {
   await ensureBucket();
 
-  const ext  = file.name.split(".").pop() ?? "bin";
   const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const path = `${folder}/${Date.now()}_${safe}`;
 

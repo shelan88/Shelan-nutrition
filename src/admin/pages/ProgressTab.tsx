@@ -10,15 +10,15 @@
  *  • Entry editor modal: all measurements + progress photos + notes
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, TrendingUp, TrendingDown, Minus,
-  Scale, Target, ArrowDownToLine, Ruler,
+  Scale, Target, ArrowDownToLine,
   Edit2, Copy, Trash2, ChevronDown, ChevronUp,
   X, Save, Loader2, Upload, Camera,
   BarChart2, GitCompare, List,
-  AlertTriangle, ArrowRight, Eye,
+  AlertTriangle, Eye,
   Droplets, Percent,
 } from "lucide-react";
 import {
@@ -422,8 +422,8 @@ function Btn({
 // ─── Comparison view ──────────────────────────────────────────────────────────
 
 function ComparisonRow({
-  label, a, b, unit, metricKey, isAr,
-}: { label: string; a: number | null; b: number | null; unit: string; metricKey: string; isAr: boolean }) {
+  label, a, b, unit, metricKey,
+}: { label: string; a: number | null; b: number | null; unit: string; metricKey: string }) {
   if (a == null && b == null) return null;
   const { dir, text } = diff(a, b);
   const improved = isImprovement(metricKey, dir);
@@ -534,15 +534,15 @@ function CompareView({
 
           {/* Measurement diffs */}
           <div className="bg-[var(--admin-hover-bg)]/60 rounded-xl p-3 mb-5">
-            <ComparisonRow label={isAr ? "الوزن" : "Weight"} a={entryA.weight_kg} b={entryB.weight_kg} unit="kg"   metricKey="weight" isAr={isAr} />
-            <ComparisonRow label="BMI"                        a={entryA.bmi}       b={entryB.bmi}       unit=""    metricKey="bmi"    isAr={isAr} />
-            <ComparisonRow label={isAr ? "الخصر" : "Waist"}  a={entryA.waist_cm}  b={entryB.waist_cm}  unit="cm"  metricKey="waist"  isAr={isAr} />
-            <ComparisonRow label={isAr ? "الوركين" : "Hip"}  a={entryA.hip_cm}    b={entryB.hip_cm}    unit="cm"  metricKey="hip"    isAr={isAr} />
-            <ComparisonRow label={isAr ? "الفخذ" : "Thigh"}  a={entryA.thigh_cm}  b={entryB.thigh_cm}  unit="cm"  metricKey="thigh"  isAr={isAr} />
-            <ComparisonRow label={isAr ? "الذراع" : "Arm"}   a={entryA.arm_cm}    b={entryB.arm_cm}    unit="cm"  metricKey="arm"    isAr={isAr} />
-            <ComparisonRow label={isAr ? "الصدر" : "Chest"}  a={entryA.chest_cm}  b={entryB.chest_cm}  unit="cm"  metricKey="chest"  isAr={isAr} />
-            <ComparisonRow label={isAr ? "دهون" : "Body Fat"} a={entryA.body_fat_pct} b={entryB.body_fat_pct} unit="%" metricKey="body_fat" isAr={isAr} />
-            <ComparisonRow label={isAr ? "عضلات" : "Muscle"} a={entryA.muscle_mass_pct} b={entryB.muscle_mass_pct} unit="%" metricKey="muscle_mass" isAr={isAr} />
+            <ComparisonRow label={isAr ? "الوزن" : "Weight"} a={entryA.weight_kg} b={entryB.weight_kg} unit="kg"   metricKey="weight"/>
+            <ComparisonRow label="BMI"                        a={entryA.bmi}       b={entryB.bmi}       unit=""    metricKey="bmi"   />
+            <ComparisonRow label={isAr ? "الخصر" : "Waist"}  a={entryA.waist_cm}  b={entryB.waist_cm}  unit="cm"  metricKey="waist" />
+            <ComparisonRow label={isAr ? "الوركين" : "Hip"}  a={entryA.hip_cm}    b={entryB.hip_cm}    unit="cm"  metricKey="hip"   />
+            <ComparisonRow label={isAr ? "الفخذ" : "Thigh"}  a={entryA.thigh_cm}  b={entryB.thigh_cm}  unit="cm"  metricKey="thigh" />
+            <ComparisonRow label={isAr ? "الذراع" : "Arm"}   a={entryA.arm_cm}    b={entryB.arm_cm}    unit="cm"  metricKey="arm"   />
+            <ComparisonRow label={isAr ? "الصدر" : "Chest"}  a={entryA.chest_cm}  b={entryB.chest_cm}  unit="cm"  metricKey="chest" />
+            <ComparisonRow label={isAr ? "دهون" : "Body Fat"} a={entryA.body_fat_pct} b={entryB.body_fat_pct} unit="%" metricKey="body_fat"/>
+            <ComparisonRow label={isAr ? "عضلات" : "Muscle"} a={entryA.muscle_mass_pct} b={entryB.muscle_mass_pct} unit="%" metricKey="muscle_mass"/>
           </div>
 
           {/* Photos side-by-side */}
@@ -948,8 +948,8 @@ function EField({
 // ─── Photo viewer modal ───────────────────────────────────────────────────────
 
 function PhotoViewer({
-  entry, clientId, isAr, onClose,
-}: { entry: ProgressEntryRow; clientId: string; isAr: boolean; onClose: () => void }) {
+  entry, isAr, onClose,
+}: { entry: ProgressEntryRow; clientId?: string; isAr: boolean; onClose: () => void }) {
   const [photos, setPhotos]       = useState<ProgressPhotoRow[]>([]);
   const [loading, setLoading]     = useState(true);
   const [lightbox, setLightbox]   = useState<string | null>(null);

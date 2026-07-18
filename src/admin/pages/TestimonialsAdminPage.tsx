@@ -285,7 +285,7 @@ export default function TestimonialsAdminPage() {
                     <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Client Name (AR)</label>
                     <input
                       dir="rtl"
-                      value={form.client_name_ar}
+                      value={form.client_name_ar ?? ""}
                       onChange={(e) => set("client_name_ar", e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                       placeholder="جين دو"
@@ -298,7 +298,7 @@ export default function TestimonialsAdminPage() {
                   <div>
                     <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Role (EN)</label>
                     <input
-                      value={form.role_en}
+                      value={form.role_en ?? ""}
                       onChange={(e) => set("role_en", e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                       placeholder="Wellness Client"
@@ -308,7 +308,7 @@ export default function TestimonialsAdminPage() {
                     <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Role (AR)</label>
                     <input
                       dir="rtl"
-                      value={form.role_ar}
+                      value={form.role_ar ?? ""}
                       onChange={(e) => set("role_ar", e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                       placeholder="عميل صحة"
@@ -333,7 +333,7 @@ export default function TestimonialsAdminPage() {
                     <textarea
                       dir="rtl"
                       rows={4}
-                      value={form.content_ar}
+                      value={form.content_ar ?? ""}
                       onChange={(e) => set("content_ar", e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
                       placeholder="اكتب المحتوى بالعربية…"

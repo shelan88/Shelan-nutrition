@@ -201,16 +201,16 @@ export async function getSubmittedResponsesWithTemplateNames(
 
   if (appointmentIds.length) {
     queries.push(
-      supabase
-        .from("assessment_responses")
-        .select("*")
-        .in("appointment_id", appointmentIds)
-        .eq("status", "submitted")
-        .order("submitted_at", { ascending: false })
-        .then(({ data, error }) => {
-          if (error) console.error("[assessment-responses] getSubmittedResponsesWithTemplateNames:", error.message);
-          return data ?? [];
-        })
+      (async (): Promise<AssessmentResponseRow[]> => {
+        const { data, error } = await supabase
+          .from("assessment_responses")
+          .select("*")
+          .in("appointment_id", appointmentIds)
+          .eq("status", "submitted")
+          .order("submitted_at", { ascending: false });
+        if (error) console.error("[assessment-responses] getSubmittedResponsesWithTemplateNames:", error.message);
+        return (data ?? []) as AssessmentResponseRow[];
+      })()
     );
   }
 

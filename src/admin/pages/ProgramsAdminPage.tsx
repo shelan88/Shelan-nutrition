@@ -244,7 +244,7 @@ export default function ProgramsAdminPage() {
                     <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Name (AR)</label>
                     <input
                       dir="rtl"
-                      value={form.name_ar}
+                      value={form.name_ar ?? ""}
                       onChange={(e) => set("name_ar", e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                       placeholder="اسم البرنامج بالعربية"
@@ -258,7 +258,7 @@ export default function ProgramsAdminPage() {
                     <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Short Description (EN)</label>
                     <textarea
                       rows={2}
-                      value={form.short_description_en}
+                      value={form.short_description_en ?? ""}
                       onChange={(e) => set("short_description_en", e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
                       placeholder="Brief summary in English…"
@@ -269,7 +269,7 @@ export default function ProgramsAdminPage() {
                     <textarea
                       dir="rtl"
                       rows={2}
-                      value={form.short_description_ar}
+                      value={form.short_description_ar ?? ""}
                       onChange={(e) => set("short_description_ar", e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
                       placeholder="وصف مختصر بالعربية…"
@@ -283,7 +283,7 @@ export default function ProgramsAdminPage() {
                     <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Full Description (EN)</label>
                     <textarea
                       rows={5}
-                      value={form.full_description_en}
+                      value={form.full_description_en ?? ""}
                       onChange={(e) => set("full_description_en", e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
                       placeholder="Full program description in English…"
@@ -294,7 +294,7 @@ export default function ProgramsAdminPage() {
                     <textarea
                       dir="rtl"
                       rows={5}
-                      value={form.full_description_ar}
+                      value={form.full_description_ar ?? ""}
                       onChange={(e) => set("full_description_ar", e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
                       placeholder="وصف كامل بالعربية…"

@@ -2,7 +2,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { footer, siteMeta } from "@/content/content";
 import { useState, useEffect } from "react";
 import { getSetting } from "@/admin/repositories/settings.repository";
-import { getSocialIcon, getPlatformEntry, platformKey } from "@/components/SocialIcons";
+import { getSocialIcon, getPlatformEntry } from "@/components/SocialIcons";
 
 // ─── Social link shape ─────────────────────────────────────────────────────────
 

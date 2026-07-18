@@ -162,7 +162,7 @@ export default function SEOPage() {
 
   const handleSave = useCallback(async () => {
     setSaving(true);
-    const ok = await setSetting("site.seo", seo as unknown as Record<string, unknown>);
+    const ok = await setSetting("site.seo", seo as unknown as import("@/types/database.types").Json);
     setSaving(false);
     if (ok) {
       setSaved(true);

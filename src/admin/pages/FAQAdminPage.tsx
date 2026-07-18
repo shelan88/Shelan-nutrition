@@ -254,7 +254,7 @@ export default function FAQAdminPage() {
                     <textarea
                       dir="rtl"
                       rows={2}
-                      value={form.question_ar}
+                      value={form.question_ar ?? ""}
                       onChange={(e) => set("question_ar", e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
                       placeholder="اكتب السؤال بالعربية…"
@@ -279,7 +279,7 @@ export default function FAQAdminPage() {
                     <textarea
                       dir="rtl"
                       rows={4}
-                      value={form.answer_ar}
+                      value={form.answer_ar ?? ""}
                       onChange={(e) => set("answer_ar", e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
                       placeholder="اكتب الإجابة بالعربية…"

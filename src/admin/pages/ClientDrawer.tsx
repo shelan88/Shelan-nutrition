@@ -12,7 +12,6 @@ import {
   getResponse,
 } from "@/admin/repositories/assessment-responses.repository";
 import type {
-  AssessmentResponseRow,
   ResponseWithAnswers,
   ResponseWithTemplateName,
 } from "@/admin/repositories/assessment-responses.repository";
@@ -25,8 +24,8 @@ import {
   ShieldCheck, Stethoscope, Lock, Printer, Download,
   Edit2, Archive, Trash2, ArrowLeftRight,
 } from "lucide-react";
-import type { Client, TimelineType, FileType, RiskIndicatorLevel, ClientStatus } from "../data/clients";
-import { updateClient, deleteClient, archiveClient } from "@/admin/repositories/clients.repository";
+import type { Client, TimelineType, FileType, RiskIndicatorLevel } from "../data/clients";
+import { deleteClient, archiveClient } from "@/admin/repositories/clients.repository";
 
 // ─── Risk helpers ──────────────────────────────────────────────────────────────
 

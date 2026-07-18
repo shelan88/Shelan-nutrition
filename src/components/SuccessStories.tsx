@@ -31,8 +31,8 @@ interface StoryItem {
 
 function mapDbRow(row: SuccessStoryRow, lang: "en" | "ar"): StoryItem {
   return {
-    title:       (lang === "ar" ? row.title_ar       : row.title_en)       || (lang === "ar" ? row.title_en       : row.title_ar       || ""),
-    content:     (lang === "ar" ? row.story_ar       : row.story_en)       || (lang === "ar" ? row.story_en       : row.story_ar       || ""),
+    title:       ((lang === "ar" ? row.title_ar   : row.title_en)   || (lang === "ar" ? row.title_en   : row.title_ar)   || ""),
+    content:     ((lang === "ar" ? row.story_ar   : row.story_en)   || (lang === "ar" ? row.story_en   : row.story_ar)   || ""),
     clientName:  (lang === "ar" ? row.client_name_ar : row.client_name_en) || row.client_name_en,
     beforeImage: row.before_image_url,
     afterImage:  row.after_image_url,

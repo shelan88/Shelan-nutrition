@@ -13,7 +13,7 @@ import {
   BookOpen, Star, Wand2, FolderPlus, Folder, FolderOpen,
   Type, AlignLeft, ToggleRight, List, CheckSquare,
   ChevronDown, Hash, Calendar, Paperclip, Image as ImageIcon,
-  Filter, Check, ChevronRight, MoveRight,
+  Filter, Check, MoveRight,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import PageHeader from "../components/PageHeader";
@@ -25,7 +25,6 @@ import {
   updateMyLibraryQuestion,
   deleteMyLibraryQuestion,
   duplicateMyLibraryQuestion,
-  customizeSystemQuestion,
   moveQuestionToFolder,
   addMyLibraryFolder,
   updateMyLibraryFolder,

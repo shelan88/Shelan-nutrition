@@ -209,7 +209,7 @@ export default function BookingsAdminPage() {
           {/* Status filter */}
           <div className="relative">
             <select
-              value={filter}
+              value={filter ?? ""}
               onChange={(e) => setFilter(e.target.value as Status | "")}
               className="appearance-none h-9 ps-3 pe-7 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[12.5px] font-medium text-[var(--admin-text-muted)] focus:outline-none focus:border-primary-pink/40 focus:ring-2 focus:ring-primary-pink/10 transition-all cursor-pointer"
             >

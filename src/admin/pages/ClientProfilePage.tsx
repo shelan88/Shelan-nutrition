@@ -15,10 +15,9 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Calendar, FileText, BookOpen, CreditCard, TrendingUp,
-  Phone, Mail, MapPin, Clock, Edit2, Download, Download as DownloadIcon,
+  Phone, Mail, MapPin, Clock, Edit2, Download as DownloadIcon,
   ClipboardList, Users, MessageSquare, Info, RefreshCw,
   CalendarCheck, UserCircle, Star, File as FileIcon, Image as ImageIcon,
-  AlertTriangle,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import PageHeader from "@/admin/components/PageHeader";

@@ -1,8 +1,8 @@
 import { useLanguage } from "@/context/LanguageContext";
 import PageHeader from "../components/PageHeader";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Pencil, Trash2, Eye, EyeOff, ArrowLeft, Save, X, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, EyeOff, ArrowLeft, Save, Search } from "lucide-react";
 import { getAllPosts, createPost, updatePost, deletePost } from "@/admin/repositories/blog.repository";
 import type { BlogPostRow } from "@/types/database.types";
 import FileUploadField from "../components/FileUploadField";
@@ -80,7 +80,8 @@ const EMPTY_FORM: FormState = {
 };
 
 function formFromRow(row: BlogPostRow): FormState {
-  const details = row.details ?? {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const details = (row.details ?? {}) as any;
   return {
     title_en: row.title_en ?? "",
     title_ar: row.title_ar ?? "",

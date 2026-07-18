@@ -52,6 +52,7 @@ const TYPE_META: Record<QuestionType, { label: string; labelAr: string; icon: Re
   date:            { label: "Date",            labelAr: "تاريخ",         icon: <Calendar size={11} /> },
   file_upload:     { label: "File Upload",     labelAr: "رفع ملف",       icon: <Paperclip size={11} /> },
   image_upload:    { label: "Image Upload",    labelAr: "رفع صورة",      icon: <ImageIcon size={11} /> },
+  scale:           { label: "Scale (1–10)",    labelAr: "مقياس (١-١٠)",  icon: <Hash size={11} /> },
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
