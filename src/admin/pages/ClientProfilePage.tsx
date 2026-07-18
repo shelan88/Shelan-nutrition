@@ -26,6 +26,7 @@ import {
   getClient, archiveClient, deleteClient,
 } from "@/admin/repositories/clients.repository";
 import { uploadClientFile, deleteClientFile } from "@/admin/repositories/client-files.repository";
+import { createAppointment } from "@/admin/repositories/appointments.repository";
 import {
   getClientAppointments,
   getClientAssessmentResponses,
@@ -1128,6 +1129,210 @@ function AssignTemplateModal({
   );
 }
 
+// ─── Book Appointment Modal ───────────────────────────────────────────────────
+
+const APPOINTMENT_TYPES_EN = [
+  "Consultation",
+  "Follow-up",
+  "Nutrition Review",
+  "Assessment Session",
+  "Initial Intake",
+  "Other",
+];
+const APPOINTMENT_TYPES_AR = [
+  "استشارة",
+  "متابعة",
+  "مراجعة غذائية",
+  "جلسة تقييم",
+  "الزيارة الأولى",
+  "أخرى",
+];
+
+function BookAppointmentModal({
+  client, isAr, onClose, onBooked,
+}: {
+  client: Client;
+  isAr: boolean;
+  onClose: () => void;
+  onBooked: (appt: AppointmentRow) => void;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [apptType,  setApptType]  = useState("Consultation");
+  const [date,      setDate]      = useState(today);
+  const [time,      setTime]      = useState("10:00");
+  const [notes,     setNotes]     = useState("");
+  const [saving,    setSaving]    = useState(false);
+  const [error,     setError]     = useState<string | null>(null);
+
+  async function handleSave() {
+    if (!date) { setError(isAr ? "الرجاء اختيار تاريخ" : "Please pick a date"); return; }
+    setSaving(true);
+    setError(null);
+    const row = await createAppointment({
+      client_id:    client.id,
+      user_id:      null,
+      client_name:  client.fullName,
+      client_email: client.email ?? null,
+      date,
+      time:         time || null,
+      type:         apptType || null,
+      status:       "scheduled",
+      notes:        notes.trim() || null,
+    });
+    setSaving(false);
+    if (!row) {
+      setError(isAr ? "فشل حفظ الموعد. حاولي مجدداً." : "Failed to save appointment. Please try again.");
+      return;
+    }
+    onBooked(row);
+    onClose();
+  }
+
+  const labelCls = "block text-[11.5px] font-semibold text-[var(--admin-text-muted)] mb-1.5";
+  const inputCls = `
+    w-full h-10 px-3 rounded-xl text-[13px] text-[var(--admin-text)]
+    bg-[var(--admin-hover-bg)] border border-[var(--admin-border)]
+    focus:outline-none focus:ring-2 focus:ring-blue-400/40 focus:border-blue-400
+    transition-colors
+  `;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 8 }}
+        transition={{ duration: 0.18 }}
+        className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] shadow-2xl shadow-black/20 w-full max-w-md overflow-hidden"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-border)]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center">
+              <Calendar size={15} strokeWidth={1.8} className="text-blue-600" />
+            </div>
+            <div>
+              <p className="text-[13.5px] font-bold text-[var(--admin-text)]">
+                {isAr ? "حجز موعد جديد" : "Book Appointment"}
+              </p>
+              <p className="text-[11px] text-[var(--admin-text-faint)]">
+                {isAr ? client.fullNameAr : client.fullName}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] transition-colors"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-5 space-y-4">
+
+          {/* Service type */}
+          <div>
+            <label className={labelCls}>
+              {isAr ? "نوع الخدمة" : "Service Type"}
+            </label>
+            <select
+              value={apptType}
+              onChange={(e) => setApptType(e.target.value)}
+              className={inputCls}
+            >
+              {APPOINTMENT_TYPES_EN.map((en, i) => (
+                <option key={en} value={en}>
+                  {isAr ? APPOINTMENT_TYPES_AR[i] : en}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Date + Time row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>
+                {isAr ? "التاريخ" : "Date"}
+              </label>
+              <input
+                type="date"
+                value={date}
+                min={today}
+                onChange={(e) => setDate(e.target.value)}
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>
+                {isAr ? "الوقت" : "Time"}
+              </label>
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className={inputCls}
+              />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className={labelCls}>
+              {isAr ? "ملاحظات" : "Notes"}
+              <span className="font-normal text-[var(--admin-text-faint)] ml-1">
+                ({isAr ? "اختياري" : "optional"})
+              </span>
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder={isAr ? "أي تفاصيل إضافية…" : "Any additional details…"}
+              className={`${inputCls} h-auto py-2.5 resize-none`}
+            />
+          </div>
+
+          {/* Error */}
+          {error && (
+            <p className="text-[12px] text-red-500 bg-red-50 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3.5 border-t border-[var(--admin-border)] flex gap-2.5">
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="flex-1 h-10 rounded-xl text-[12.5px] font-semibold text-[var(--admin-text-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-hover-bg)] transition-colors disabled:opacity-50"
+          >
+            {isAr ? "إلغاء" : "Cancel"}
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !date}
+            className="flex-1 h-10 rounded-xl text-[12.5px] font-semibold bg-blue-500 text-white hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {saving ? (
+              <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+            ) : (
+              <CalendarCheck size={13} strokeWidth={2.2} />
+            )}
+            {saving
+              ? (isAr ? "جارٍ الحفظ…" : "Saving…")
+              : (isAr ? "حجز الموعد" : "Book Appointment")}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ─── Primary Action Bar ───────────────────────────────────────────────────────
 
 function ActionBar({
@@ -1301,6 +1506,8 @@ export default function ClientProfilePage() {
   const [pendingUpload,        setPendingUpload]        = useState(false);
   // Assign-template modal
   const [showAssignModal,      setShowAssignModal]      = useState(false);
+  // Book-appointment modal
+  const [showBookModal,        setShowBookModal]        = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -1354,6 +1561,17 @@ export default function ClientProfilePage() {
   // Called by AssignTemplateModal when a response row is created
   function handleAssigned(response: ClientAssessmentResponse) {
     setAssessments((prev) => [response, ...prev]);
+  }
+
+  // Open book-appointment modal; also pre-navigate to the appointments tab
+  function handleBookAppointment() {
+    setActiveTab("appointments");
+    setShowBookModal(true);
+  }
+
+  // Called by BookAppointmentModal when a new appointment is saved
+  function handleBooked(appt: AppointmentRow) {
+    setAppointments((prev) => [appt, ...prev].sort((a, b) => b.date.localeCompare(a.date)));
   }
 
   // Archive client — sets status to Inactive
@@ -1475,6 +1693,18 @@ export default function ClientProfilePage() {
         )}
       </AnimatePresence>
 
+      {/* Book-appointment modal */}
+      <AnimatePresence>
+        {showBookModal && (
+          <BookAppointmentModal
+            client={client}
+            isAr={isAr}
+            onClose={() => setShowBookModal(false)}
+            onBooked={handleBooked}
+          />
+        )}
+      </AnimatePresence>
+
       <div>
         {/* ── Page Header ────────────────────────────────────────────────── */}
         <PageHeader
@@ -1491,7 +1721,7 @@ export default function ClientProfilePage() {
           isAr={isAr}
           onCreatePlan={() => handleNavigate("nutrition", "createPlan")}
           onCreateAssessment={handleCreateAssessment}
-          onBookAppointment={() => handleNavigate("appointments")}
+          onBookAppointment={handleBookAppointment}
           onUploadFile={() => handleNavigate("files", "upload")}
           onEditProfile={() => setDrawerOpen(true)}
           onArchive={handleArchive}
@@ -1653,7 +1883,7 @@ export default function ClientProfilePage() {
                   <AppointmentsTab
                     appointments={appointments}
                     isAr={isAr}
-                    onBook={() => setActiveTab("appointments")}
+                    onBook={() => setShowBookModal(true)}
                   />
                 )}
                 {activeTab === "assessments" && (
