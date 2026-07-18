@@ -12,6 +12,8 @@ export interface PortalAssessmentResponse {
   id: string;
   templateId: string;
   templateName: string;
+  templateNameEn: string;
+  templateNameAr: string | null;
   status: AssessmentResponseRow["status"];
   submittedAt: string | null;
   createdAt: string;
@@ -42,12 +44,14 @@ export async function getOwnAssessmentResponses(
   }
 
   return (data ?? []).map((row: any) => ({
-    id:           row.id,
-    templateId:   row.template_id,
-    templateName: row.assessment_templates?.name_en ?? "Assessment",
-    status:       row.status,
-    submittedAt:  row.submitted_at,
-    createdAt:    row.created_at,
+    id:             row.id,
+    templateId:     row.template_id,
+    templateNameEn: row.assessment_templates?.name_en ?? "Assessment",
+    templateNameAr: row.assessment_templates?.name_ar ?? null,
+    templateName:   row.assessment_templates?.name_en ?? "Assessment",
+    status:         row.status,
+    submittedAt:    row.submitted_at,
+    createdAt:      row.created_at,
   }));
 }
 
@@ -90,12 +94,14 @@ export async function getOwnFullResponse(
   });
 
   return {
-    id:           response.id,
-    templateId:   response.template_id,
-    templateName: (response as any).assessment_templates?.name_en ?? "Assessment",
-    status:       response.status,
-    submittedAt:  response.submitted_at,
-    createdAt:    response.created_at,
-    answers:      answersWithQuestions,
+    id:             response.id,
+    templateId:     response.template_id,
+    templateNameEn: (response as any).assessment_templates?.name_en ?? "Assessment",
+    templateNameAr: (response as any).assessment_templates?.name_ar ?? null,
+    templateName:   (response as any).assessment_templates?.name_en ?? "Assessment",
+    status:         response.status,
+    submittedAt:    response.submitted_at,
+    createdAt:      response.created_at,
+    answers:        answersWithQuestions,
   };
 }

@@ -60,7 +60,9 @@ function ResponseCard({ response, isAr }: { response: PortalAssessmentResponse; 
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <p className="font-semibold text-ivory text-sm">{response.templateName}</p>
+            <p className="font-semibold text-ivory text-sm">
+              {isAr ? (response.templateNameAr ?? response.templateNameEn) : response.templateNameEn}
+            </p>
             <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${
               submitted
                 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
