@@ -140,6 +140,8 @@ export async function duplicateTemplate(id: string): Promise<AssessmentTemplateR
         placeholder_en: q.placeholder_en, placeholder_ar: q.placeholder_ar,
         help_en: q.help_en, help_ar: q.help_ar,
         required: q.required, sort_order: q.sort_order,
+        enabled: q.enabled ?? true,
+        library_question_id: null, // clear library tracking on duplicate
         // conditional fields are wired in the second pass after all IDs are known
         conditional_question_id: null,
         conditional_value: null,
@@ -175,14 +177,46 @@ export async function upsertQuestion(
   data: Omit<TemplateQuestionRow, "id" | "created_at"> & { id?: string }
 ): Promise<TemplateQuestionRow | null> {
   const { id, ...rest } = data;
+  // Ensure enabled defaults to true if not supplied
+  const payload = { enabled: true, library_question_id: null, ...rest };
   if (id) {
-    const { data: row, error } = await supabase.from("template_questions").update(rest).eq("id", id).select().single();
+    const { data: row, error } = await supabase.from("template_questions").update(payload).eq("id", id).select().single();
     if (error) { console.error("[assessment-templates] updateQuestion:", error.message); return null; }
     return row;
   }
-  const { data: row, error } = await supabase.from("template_questions").insert(rest).select().single();
+  const { data: row, error } = await supabase.from("template_questions").insert(payload).select().single();
   if (error) { console.error("[assessment-templates] insertQuestion:", error.message); return null; }
   return row;
+}
+
+export async function toggleQuestionEnabled(id: string, enabled: boolean): Promise<boolean> {
+  const { error } = await supabase.from("template_questions").update({ enabled }).eq("id", id);
+  if (error) { console.error("[assessment-templates] toggleQuestionEnabled:", error.message); return false; }
+  return true;
+}
+
+/** Bulk-update template_questions that came from a My Library question. */
+export async function updateTemplateQuestionsFromLibrary(
+  libraryQuestionId: string,
+  updates: Partial<Pick<TemplateQuestionRow, "type" | "label_en" | "label_ar" | "placeholder_en" | "placeholder_ar" | "help_en" | "help_ar" | "required">>
+): Promise<number> {
+  const { data, error } = await supabase
+    .from("template_questions")
+    .update(updates)
+    .eq("library_question_id", libraryQuestionId)
+    .select("id");
+  if (error) { console.error("[assessment-templates] updateTemplateQuestionsFromLibrary:", error.message); return 0; }
+  return data?.length ?? 0;
+}
+
+/** Count how many template_questions were imported from a given library question. */
+export async function countTemplateUsesOfLibraryQuestion(libraryQuestionId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("template_questions")
+    .select("id", { count: "exact", head: true })
+    .eq("library_question_id", libraryQuestionId);
+  if (error) return 0;
+  return count ?? 0;
 }
 
 export async function deleteQuestion(id: string): Promise<boolean> {

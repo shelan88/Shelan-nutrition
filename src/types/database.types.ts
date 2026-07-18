@@ -299,6 +299,8 @@ export interface TemplateQuestionRow {
   sort_order: number;
   conditional_question_id: string | null;
   conditional_value: string | null;
+  enabled: boolean;
+  library_question_id: string | null;
   created_at: string;
 }
 

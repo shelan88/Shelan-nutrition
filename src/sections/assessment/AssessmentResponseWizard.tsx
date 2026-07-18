@@ -300,9 +300,11 @@ export default function AssessmentResponseWizard({
     [template.questions]
   );
 
-  // Conditionally visible questions
+  // Conditionally visible questions (also exclude disabled questions)
   const visibleQuestions = useMemo<QuestionWithOptions[]>(() => {
     return allQuestions.filter((q) => {
+      // Skip questions explicitly disabled by the admin
+      if (q.enabled === false) return false;
       if (!q.conditional_question_id) return true;
       const dep = answers[q.conditional_question_id];
       if (Array.isArray(dep)) return dep.includes(q.conditional_value ?? "");

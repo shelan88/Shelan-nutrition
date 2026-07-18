@@ -33,6 +33,10 @@ import {
   LIBRARY_CATEGORIES,
   CATEGORY_STYLES,
 } from "@/admin/repositories/question-library.repository";
+import {
+  countTemplateUsesOfLibraryQuestion,
+  updateTemplateQuestionsFromLibrary,
+} from "@/admin/repositories/assessment-templates.repository";
 import type {
   LibraryQuestion,
   LibraryCategory,
@@ -124,6 +128,10 @@ export default function QuestionLibraryPage() {
 
   // ── Moving question to folder
   const [movingId, setMovingId]           = useState<string | null>(null);
+
+  // ── Safety guardrail: warn when editing a My Library question used in templates
+  const [safetyDialog, setSafetyDialog]   = useState<{ count: number; payload: Record<string, unknown> } | null>(null);
+  const [safetyChoosing, setSafetyChoosing] = useState(false);
 
   // ── Inline toast
   const [toast, setToast]                 = useState<{ msg: string; ok: boolean } | null>(null);
@@ -288,6 +296,13 @@ export default function QuestionLibraryPage() {
       await addMyLibraryQuestion({ ...payload, isDefault: false });
       showToast(isAr ? "تم حفظ نسختك في مكتبتي" : "Personal copy saved to My Library");
     } else if (editingId) {
+      // ── Safety guardrail: check how many template questions came from this library question
+      const usedCount = await countTemplateUsesOfLibraryQuestion(editingId);
+      if (usedCount > 0) {
+        setSafetyDialog({ count: usedCount, payload: payload as Record<string, unknown> });
+        setSaving(false);
+        return; // halt — user must choose in the dialog
+      }
       await updateMyLibraryQuestion(editingId, payload);
       showToast(isAr ? "تم تحديث السؤال" : "Question updated");
     } else {
@@ -296,6 +311,32 @@ export default function QuestionLibraryPage() {
     }
     await loadMy();
     setSaving(false);
+    closeForm();
+  }
+
+  async function handleSafetyConfirm(updateTemplates: boolean) {
+    if (!safetyDialog || !editingId) return;
+    setSafetyChoosing(true);
+    const payload = safetyDialog.payload;
+    await updateMyLibraryQuestion(editingId, payload as Parameters<typeof updateMyLibraryQuestion>[1]);
+    if (updateTemplates) {
+      await updateTemplateQuestionsFromLibrary(editingId, {
+        type: payload.type as Parameters<typeof updateTemplateQuestionsFromLibrary>[1]["type"],
+        label_en: payload.label_en as string,
+        label_ar: (payload.label_ar as string) || null,
+        placeholder_en: (payload.placeholder_en as string) || null,
+        placeholder_ar: (payload.placeholder_ar as string) || null,
+        help_en: (payload.help_en as string) || null,
+        help_ar: (payload.help_ar as string) || null,
+        required: payload.required as boolean,
+      });
+      showToast(isAr ? "تم تحديث السؤال وجميع القوالب المرتبطة" : "Question and all linked templates updated");
+    } else {
+      showToast(isAr ? "تم تحديث السؤال — القوالب الموجودة لم تتغير" : "Question updated — existing templates unchanged");
+    }
+    setSafetyDialog(null);
+    setSafetyChoosing(false);
+    await loadMy();
     closeForm();
   }
 
@@ -361,6 +402,83 @@ export default function QuestionLibraryPage() {
             className={`fixed top-4 right-4 z-[999] flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg text-[13px] font-medium text-white ${toast.ok ? "bg-emerald-500" : "bg-red-500"}`}
           >
             <Check size={14} /> {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Safety guardrail dialog */}
+      <AnimatePresence>
+        {safetyDialog && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/35 backdrop-blur-sm z-[998] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 8 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.96, opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="bg-[var(--admin-surface)] rounded-2xl border border-amber-200 shadow-2xl w-full max-w-md p-6"
+            >
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                  <span className="text-lg">⚠️</span>
+                </div>
+                <div>
+                  <h3 className="text-[14px] font-bold text-[var(--admin-text)]">
+                    {isAr ? "هذا السؤال مستخدم في قوالب" : "This question is used in templates"}
+                  </h3>
+                  <p className="text-[12px] text-[var(--admin-text-muted)] mt-1">
+                    {isAr
+                      ? `هذا السؤال مُستورد في ${safetyDialog.count} سؤال${safetyDialog.count > 1 ? "" : ""} داخل قوالب تقييم موجودة. ماذا تريدين أن تفعلي؟`
+                      : `This question was imported into ${safetyDialog.count} existing template question${safetyDialog.count !== 1 ? "s" : ""}. What would you like to do?`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2 mb-5">
+                <button
+                  onClick={() => handleSafetyConfirm(true)}
+                  disabled={safetyChoosing}
+                  className="w-full flex items-start gap-3 px-4 py-3 rounded-xl border border-[var(--admin-border)] hover:border-primary-pink/40 hover:bg-primary-pink/3 transition-all text-start disabled:opacity-60"
+                >
+                  <span className="text-sm mt-0.5">🔄</span>
+                  <div>
+                    <p className="text-[13px] font-semibold text-[var(--admin-text)]">
+                      {isAr ? "تحديث جميع القوالب" : "Update all templates"}
+                    </p>
+                    <p className="text-[11px] text-[var(--admin-text-muted)] mt-0.5">
+                      {isAr ? "ستنعكس التغييرات على جميع نسخ هذا السؤال في القوالب." : "Your changes will be reflected in all template copies of this question."}
+                    </p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => handleSafetyConfirm(false)}
+                  disabled={safetyChoosing}
+                  className="w-full flex items-start gap-3 px-4 py-3 rounded-xl border border-[var(--admin-border)] hover:border-[var(--admin-text-muted)]/40 hover:bg-[var(--admin-hover-bg)] transition-all text-start disabled:opacity-60"
+                >
+                  <span className="text-sm mt-0.5">🔒</span>
+                  <div>
+                    <p className="text-[13px] font-semibold text-[var(--admin-text)]">
+                      {isAr ? "إبقاء القوالب الموجودة كما هي" : "Keep existing templates unchanged"}
+                    </p>
+                    <p className="text-[11px] text-[var(--admin-text-muted)] mt-0.5">
+                      {isAr ? "يتم تحديث نسختك في مكتبتي فقط. القوالب تبقى بلا تغيير." : "Only your My Library copy is updated. Templates remain as-is."}
+                    </p>
+                  </div>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setSafetyDialog(null)}
+                disabled={safetyChoosing}
+                className="w-full py-2 rounded-xl border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors disabled:opacity-60"
+              >
+                {safetyChoosing ? "…" : (isAr ? "إلغاء" : "Cancel")}
+              </button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

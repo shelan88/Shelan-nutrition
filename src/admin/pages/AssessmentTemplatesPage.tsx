@@ -17,9 +17,14 @@ import {
   AlertCircle, Type, AlignLeft, ToggleRight as YesNoIcon, List,
   CheckSquare, ChevronDown as DropdownIcon, Hash, Calendar as CalendarIcon,
   Paperclip, Image as ImageIcon, ClipboardList, BookOpen, Bookmark,
+  Eye, EyeOff, Layers,
 } from "lucide-react";
 import QuestionLibraryDrawer from "../components/QuestionLibraryDrawer";
 import type { LibraryQuestion } from "../components/QuestionLibraryDrawer";
+import BundlePickerModal from "../components/BundlePickerModal";
+import TemplatePreviewOverlay from "../components/TemplatePreviewOverlay";
+import { ASSESSMENT_BUNDLES } from "@/admin/data/assessment-bundles";
+import type { AssessmentBundle } from "@/admin/data/assessment-bundles";
 import {
   saveQuestionToLibrary,
   getMyLibraryFolders,
@@ -42,6 +47,7 @@ import {
   reorderQuestions,
   replaceOptions,
   setServiceAssignments,
+  toggleQuestionEnabled,
 } from "@/admin/repositories/assessment-templates.repository";
 import type {
   TemplateWithDetails,
@@ -151,6 +157,9 @@ export default function AssessmentTemplatesPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [showNewModal, setShowNewModal] = useState(false);
+  const [creatingBundle, setCreatingBundle] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<TemplateWithDetails | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -168,12 +177,78 @@ export default function AssessmentTemplatesPage() {
 
   // ── List actions ─────────────────────────────────────────────────────────
 
-  async function openNew() {
+  function openNew() {
+    setShowNewModal(true);
+  }
+
+  async function handleCreateBlank() {
+    setShowNewModal(false);
     setEditingTemplate(null);
     setTemplateForm(blankTemplateForm());
     setQuestions([]);
     setMetaError("");
     setView("edit");
+  }
+
+  async function handleCreateFromBundle(bundle: AssessmentBundle) {
+    setCreatingBundle(true);
+    setShowNewModal(false);
+
+    const created = await createTemplate({
+      name_en: bundle.name_en,
+      name_ar: bundle.name_ar || null,
+      description_en: bundle.description_en || null,
+      description_ar: bundle.description_ar || null,
+      active: false,
+    });
+    if (!created) { setCreatingBundle(false); return; }
+
+    // Bulk-insert bundle questions sequentially so sort_order is correct
+    for (let i = 0; i < bundle.questions.length; i++) {
+      const bq = bundle.questions[i];
+      const savedQ = await upsertQuestion({
+        template_id: created.id,
+        type: bq.type,
+        label_en: bq.label_en,
+        label_ar: bq.label_ar || null,
+        placeholder_en: bq.placeholder_en || null,
+        placeholder_ar: bq.placeholder_ar || null,
+        help_en: bq.help_en || null,
+        help_ar: bq.help_ar || null,
+        required: bq.required,
+        sort_order: i,
+        conditional_question_id: null,
+        conditional_value: null,
+        enabled: true,
+        library_question_id: null,
+      });
+      if (savedQ && NEEDS_OPTIONS.includes(bq.type) && bq.options.length > 0) {
+        await replaceOptions(savedQ.id, bq.options.map((o, idx) => ({ ...o, sort_order: idx })));
+      }
+    }
+
+    const full = await getTemplateWithDetails(created.id);
+    if (full) {
+      setEditingTemplate(full);
+      setTemplateForm({
+        name_en: full.name_en,
+        name_ar: full.name_ar ?? "",
+        description_en: full.description_en ?? "",
+        description_ar: full.description_ar ?? "",
+        active: full.active,
+        assignedServiceIds: full.assignedServiceIds,
+      });
+      setQuestions(full.questions);
+    }
+    await load();
+    setCreatingBundle(false);
+    setMetaError("");
+    setView("edit");
+  }
+
+  async function handlePreview(t: TemplateWithDetails) {
+    const full = await getTemplateWithDetails(t.id);
+    if (full) setPreviewTemplate(full);
   }
 
   async function openEdit(t: TemplateWithDetails) {
@@ -299,6 +374,7 @@ export default function AssessmentTemplatesPage() {
               onDelete={handleDelete}
               onToggleActive={handleToggleActive}
               onDuplicate={handleDuplicate}
+              onPreview={handlePreview}
             />
           </motion.div>
         ) : (
@@ -315,6 +391,7 @@ export default function AssessmentTemplatesPage() {
               metaError={metaError}
               onSaveMeta={handleMetaSave}
               onCancel={cancelEdit}
+              onPreview={editingTemplate ? () => handlePreview(editingTemplate) : undefined}
               onReloadTemplate={async () => {
                 if (editingTemplate) {
                   const full = await getTemplateWithDetails(editingTemplate.id);
@@ -325,6 +402,25 @@ export default function AssessmentTemplatesPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Bundle picker modal */}
+      <BundlePickerModal
+        open={showNewModal}
+        onClose={() => setShowNewModal(false)}
+        onBlank={handleCreateBlank}
+        onBundle={handleCreateFromBundle}
+        creating={creatingBundle}
+        isAr={isAr}
+      />
+
+      {/* Full-screen preview overlay */}
+      {previewTemplate && (
+        <TemplatePreviewOverlay
+          template={previewTemplate}
+          onClose={() => setPreviewTemplate(null)}
+          isAr={isAr}
+        />
+      )}
     </div>
   );
 }
@@ -334,7 +430,7 @@ export default function AssessmentTemplatesPage() {
 function TemplateList({
   isAr, templates, loading,
   deletingId, togglingId, duplicatingId,
-  onNew, onEdit, onDelete, onToggleActive, onDuplicate,
+  onNew, onEdit, onDelete, onToggleActive, onDuplicate, onPreview,
 }: {
   isAr: boolean;
   templates: TemplateWithDetails[];
@@ -347,6 +443,7 @@ function TemplateList({
   onDelete: (t: TemplateWithDetails) => void;
   onToggleActive: (t: TemplateWithDetails) => void;
   onDuplicate: (t: TemplateWithDetails) => void;
+  onPreview: (t: TemplateWithDetails) => void;
 }) {
   return (
     <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
@@ -432,6 +529,13 @@ function TemplateList({
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <button
+                        onClick={() => onPreview(t)}
+                        className="px-2.5 py-1.5 rounded-lg border border-[var(--admin-border)] text-[11px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors flex items-center gap-1"
+                        title={isAr ? "معاينة" : "Preview"}
+                      >
+                        <Eye size={11} /> {isAr ? "معاينة" : "Preview"}
+                      </button>
+                      <button
                         onClick={() => onEdit(t)}
                         className="px-2.5 py-1.5 rounded-lg border border-[var(--admin-border)] text-[11px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors flex items-center gap-1"
                       >
@@ -476,7 +580,7 @@ function TemplateList({
 function TemplateEditor({
   isAr, editingTemplate, templateForm, setTemplateForm,
   questions, setQuestions, services,
-  metaSaving, metaError, onSaveMeta, onCancel, onReloadTemplate,
+  metaSaving, metaError, onSaveMeta, onCancel, onReloadTemplate, onPreview,
 }: {
   isAr: boolean;
   editingTemplate: TemplateWithDetails | null;
@@ -490,6 +594,7 @@ function TemplateEditor({
   onSaveMeta: () => void;
   onCancel: () => void;
   onReloadTemplate: () => Promise<void>;
+  onPreview?: () => void;
 }) {
   function setField<K extends keyof TemplateForm>(k: K, v: TemplateForm[K]) {
     setTemplateForm({ ...templateForm, [k]: v });
@@ -515,6 +620,15 @@ function TemplateEditor({
         </button>
 
         <div className="flex items-center gap-2">
+          {onPreview && (
+            <button
+              onClick={onPreview}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors"
+              title={isAr ? "معاينة القالب كما يراه العميل" : "Preview as the client sees it"}
+            >
+              <Eye size={12} /> {isAr ? "معاينة" : "Preview"}
+            </button>
+          )}
           <button
             onClick={onCancel}
             className="px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors flex items-center gap-1"
@@ -749,6 +863,9 @@ function QuestionBuilder({
       sort_order: questionId ? questions.find((q) => q.id === questionId)?.sort_order ?? questions.length : questions.length,
       conditional_question_id: form.conditional_question_id || null,
       conditional_value: form.conditional_value || null,
+      // preserve existing enabled & library_question_id on edit
+      enabled: questionId ? (questions.find((q) => q.id === questionId)?.enabled ?? true) : true,
+      library_question_id: questionId ? (questions.find((q) => q.id === questionId)?.library_question_id ?? null) : null,
     });
 
     if (saved && NEEDS_OPTIONS.includes(form.type)) {
@@ -782,6 +899,8 @@ function QuestionBuilder({
         sort_order: startLen + i,
         conditional_question_id: null,
         conditional_value: null,
+        enabled: true,
+        library_question_id: lq.source === "my" ? lq.id : null,
       });
       if (saved && NEEDS_OPTIONS.includes(lq.type) && lq.options?.length) {
         await replaceOptions(saved.id, lq.options.map((o, idx) => ({ ...o, sort_order: idx })));
@@ -789,6 +908,23 @@ function QuestionBuilder({
     }
     await onReload();
     setSavingId(null);
+  }
+
+  // ── Enable / Disable toggle ─────────────────────────────────────────────
+
+  const [togglingEnabledId, setTogglingEnabledId] = useState<string | null>(null);
+
+  async function handleToggleEnabled(q: QuestionWithOptions) {
+    const newEnabled = !(q.enabled ?? true);
+    // Optimistic update
+    setQuestions(questions.map((x) => x.id === q.id ? { ...x, enabled: newEnabled } : x));
+    setTogglingEnabledId(q.id);
+    const ok = await toggleQuestionEnabled(q.id, newEnabled);
+    if (!ok) {
+      // Revert on failure
+      setQuestions(questions.map((x) => x.id === q.id ? { ...x, enabled: !newEnabled } : x));
+    }
+    setTogglingEnabledId(null);
   }
 
   // ── Save to Library ────────────────────────────────────────────────────
@@ -867,6 +1003,7 @@ function QuestionBuilder({
             allQuestions={questions}
             saving={savingId === q.id}
             deleting={deletingId === q.id}
+            togglingEnabled={togglingEnabledId === q.id}
             onToggle={() => setExpandedId(expandedId === q.id ? null : q.id)}
             onDelete={() => handleDelete(q)}
             onSave={(form) => handleSaveQuestion(form, q.id)}
@@ -874,6 +1011,7 @@ function QuestionBuilder({
             onDragEnter={() => handleDragEnter(idx)}
             onDragEnd={handleDragEnd}
             onSaveToLibrary={() => { openSaveToLibrary(q); setSaveToLibCat("basic_info"); }}
+            onToggleEnabled={() => handleToggleEnabled(q)}
           />
         ))}
 
@@ -1000,8 +1138,8 @@ function QuestionBuilder({
 // ─── Question Row (collapsed + expanded) ─────────────────────────────────────
 
 function QuestionRow({
-  isAr, question, idx, expanded, allQuestions, saving, deleting,
-  onToggle, onDelete, onSave, onDragStart, onDragEnter, onDragEnd, onSaveToLibrary,
+  isAr, question, idx, expanded, allQuestions, saving, deleting, togglingEnabled,
+  onToggle, onDelete, onSave, onDragStart, onDragEnter, onDragEnd, onSaveToLibrary, onToggleEnabled,
 }: {
   isAr: boolean;
   question: QuestionWithOptions;
@@ -1010,6 +1148,7 @@ function QuestionRow({
   allQuestions: QuestionWithOptions[];
   saving: boolean;
   deleting: boolean;
+  togglingEnabled: boolean;
   onToggle: () => void;
   onDelete: () => void;
   onSave: (form: QuestionForm & { template_id: string }) => void;
@@ -1017,6 +1156,7 @@ function QuestionRow({
   onDragEnter: () => void;
   onDragEnd: () => void;
   onSaveToLibrary?: () => void;
+  onToggleEnabled: () => void;
 }) {
   const typeInfo = QUESTION_TYPES.find((t) => t.value === question.type);
 
@@ -1036,13 +1176,15 @@ function QuestionRow({
     conditional_value: question.conditional_value ?? "",
   };
 
+  const isEnabled = question.enabled !== false;
+
   return (
     <div
       draggable
       onDragStart={onDragStart}
       onDragEnter={onDragEnter}
       onDragEnd={onDragEnd}
-      className="group"
+      className={`group ${isEnabled ? "" : "opacity-55"}`}
     >
       {/* Collapsed row */}
       <div className={`flex items-center gap-3 px-4 py-3 hover:bg-[var(--admin-hover-bg)] transition-colors cursor-pointer ${expanded ? "bg-[var(--admin-hover-bg)]" : ""}`}>
@@ -1050,10 +1192,15 @@ function QuestionRow({
           <GripVertical size={14} />
         </span>
         <span className="text-[11px] font-bold text-[var(--admin-text-faint)] w-5 text-center">{idx + 1}</span>
-        <span className="text-[var(--admin-text-muted)]">{typeInfo?.icon}</span>
+        <span className={isEnabled ? "text-[var(--admin-text-muted)]" : "text-[var(--admin-text-faint)]"}>{typeInfo?.icon}</span>
         <div className="flex-1 min-w-0" onClick={onToggle}>
           <p className="text-[13px] font-medium text-[var(--admin-text)] truncate">
             {question.label_en || <span className="text-[var(--admin-text-faint)] italic">{isAr ? "بدون عنوان" : "Untitled"}</span>}
+            {!isEnabled && (
+              <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-[var(--admin-text-faint)] bg-[var(--admin-hover-bg)] px-1.5 py-0.5 rounded">
+                {isAr ? "معطّل" : "Disabled"}
+              </span>
+            )}
           </p>
           <p className="text-[11px] text-[var(--admin-text-muted)]">
             {isAr ? typeInfo?.labelAr : typeInfo?.labelEn}
@@ -1061,6 +1208,15 @@ function QuestionRow({
           </p>
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Enable/Disable toggle */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleEnabled(); }}
+            disabled={togglingEnabled}
+            title={isEnabled ? (isAr ? "تعطيل السؤال" : "Disable question") : (isAr ? "تفعيل السؤال" : "Enable question")}
+            className={`p-1.5 rounded-lg transition-colors ${isEnabled ? "text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600" : "text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] hover:text-emerald-500"}`}
+          >
+            {isEnabled ? <Eye size={12} /> : <EyeOff size={12} />}
+          </button>
           {onSaveToLibrary && (
             <button
               onClick={(e) => { e.stopPropagation(); onSaveToLibrary(); }}
