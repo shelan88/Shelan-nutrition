@@ -5,3 +5,4 @@
 - [Admin CMS architecture](cms-architecture.md) — 8 CMS admin pages live, 3 new DB tables, extended services/blog/testimonials, JSONB details pattern, public pages wired to Supabase.
 - [Nutrition Plans module](nutrition-plans-module.md) — version-history via plan_group_id; meals stored as JSONB; files in nutrition_plan_files table; form-input CSS utility in admin-shell.
 - [Progress Tracking module](progress-tracking-module.md) — progress_entries + progress_photos tables; SVG line charts (no external lib); self-contained ProgressTab; photos in media bucket under progress/{clientId}/{entryId}/.
+- [Client portal](client-portal.md) — SECURITY DEFINER RPCs must derive identity from auth.uid()/auth.email(), not parameters; broad auth_all policies must be dropped before adding scoped replacements; loading gates need a null-profile exit path.

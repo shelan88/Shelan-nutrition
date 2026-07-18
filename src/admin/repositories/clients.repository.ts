@@ -191,10 +191,6 @@ export async function findClientByPhone(phone: string): Promise<Client | null> {
 export async function upsertClientFromAuth(user: SupabaseUser): Promise<void> {
   if (!user.email) return;
 
-  // Don't create a duplicate if one already exists (from a prior assessment).
-  const existing = await findClientByEmail(user.email);
-  if (existing) return;
-
   const rawName =
     (user.user_metadata?.full_name as string | undefined) ||
     (user.user_metadata?.name as string | undefined) ||
@@ -211,16 +207,22 @@ export async function upsertClientFromAuth(user: SupabaseUser): Promise<void> {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  const { error } = await supabase.from("clients").insert({
-    full_name:       fullName,
-    email:           user.email,
-    initials,
-    avatar_color:    "bg-gradient-to-br from-primary-pink to-soft-pink",
-    status:          "Waiting",
-    risk_level:      "Low",
-    join_date:       today,
-    risk_indicators: [],
-    consultations:   [],
+  // Uses a SECURITY DEFINER Postgres function so the upsert runs with elevated
+  // privileges (bypasses RLS). This is required because:
+  //   • INSERT: clients RLS only allows admins to insert rows.
+  //   • Backfill UPDATE: a row with user_id IS NULL cannot be matched by the
+  //     client's own UPDATE policy (USING: user_id = auth.uid()).
+  // The function is safe: it only links the calling user's auth.uid() to a row
+  // whose email matches, and only creates rows linked to that uid.
+  // The RPC derives the caller's identity from auth.uid() / auth.email() inside
+  // the Postgres function — no identity fields are passed as parameters.
+  const { error } = await supabase.rpc("upsert_client_from_auth", {
+    p_name:       fullName,
+    p_initials:   initials,
+    p_color:      "bg-gradient-to-br from-primary-pink to-soft-pink",
+    p_status:     "Waiting",
+    p_risk_level: "Low",
+    p_join_date:  today,
   });
 
   if (error) {

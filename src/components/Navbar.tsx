@@ -4,12 +4,18 @@
  * Navigation items are loaded from Supabase (site.nav key) and fall back to
  * the static pagesNav from content.ts when no DB data exists.
  *
- * The "Admin Dashboard" link is shown in the overlay menu ONLY for authenticated
- * admin/staff users (verified against admin_profiles table).
+ * Auth-aware behaviour:
+ *   • When NOT authenticated: shows Login/Register button (opens AuthModal).
+ *   • When authenticated: shows avatar + portal dropdown (desktop) and portal
+ *     navigation links inside the overlay menu. Login/Register is hidden.
+ *   • "Admin Dashboard" link appears in the overlay ONLY for admin/staff users.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Globe, X, UserCircle2, LayoutDashboard, LogOut } from "lucide-react";
+import {
+  Globe, X, UserCircle2, LayoutDashboard, LogOut,
+  User, Calendar, ClipboardList, Utensils, TrendingUp, Folder, Settings, ChevronDown,
+} from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useLanguage } from "@/context/LanguageContext";
 import { pagesNav, authModal } from "@/content/content";
@@ -30,6 +36,18 @@ type DBNavItem = {
   cta?: boolean;
 };
 
+// ── Portal nav links shown to authenticated clients ───────────────────────────
+
+const PORTAL_NAV = [
+  { href: "/portal/profile",      labelEn: "My Profile",      labelAr: "ملفي الشخصي",  Icon: User          },
+  { href: "/portal/appointments", labelEn: "Appointments",    labelAr: "المواعيد",      Icon: Calendar      },
+  { href: "/portal/assessments",  labelEn: "Assessments",     labelAr: "التقييمات",     Icon: ClipboardList },
+  { href: "/portal/nutrition",    labelEn: "Nutrition Plans", labelAr: "خطط التغذية",   Icon: Utensils      },
+  { href: "/portal/progress",     labelEn: "Progress",        labelAr: "التقدم",        Icon: TrendingUp    },
+  { href: "/portal/files",        labelEn: "My Files",        labelAr: "ملفاتي",        Icon: Folder        },
+  { href: "/portal/settings",     labelEn: "Settings",        labelAr: "الإعدادات",     Icon: Settings      },
+] as const;
+
 // ── Framer variants (unchanged) ───────────────────────────────────────────────
 
 const curtainVariants = {
@@ -40,8 +58,8 @@ const curtainVariants = {
     transition: {
       duration: 0.4,
       ease: "easeInOut" as const,
-      staggerChildren: 0.08,
-      delayChildren: 0.15,
+      staggerChildren: 0.06,
+      delayChildren: 0.12,
     },
   },
   exit: {
@@ -76,22 +94,37 @@ export default function Navbar() {
   const { lang, toggleLang } = useLanguage();
   const [open,          setOpen]          = useState(false);
   const [authOpen,      setAuthOpen]      = useState(false);
+  const [dropOpen,      setDropOpen]      = useState(false);
   const [isAdmin,       setIsAdmin]       = useState(false);
   const [hasSession,    setHasSession]    = useState(false);
   const [userInitials,  setUserInitials]  = useState("");
+  const [avatarUrl,     setAvatarUrl]     = useState<string | null>(null);
   const [dbNavItems,    setDbNavItems]    = useState<DBNavItem[] | null>(null);
   const location = useLocation();
+  const dropRef  = useRef<HTMLDivElement>(null);
 
   const authT = authModal[lang];
 
   // Close menu on route change
-  useEffect(() => { setOpen(false); }, [location.pathname]);
+  useEffect(() => { setOpen(false); setDropOpen(false); }, [location.pathname]);
 
-  // Lock body scroll when menu is open
+  // Lock body scroll when overlay menu is open
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [open]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!dropOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
+        setDropOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [dropOpen]);
 
   // Load navigation from DB
   useEffect(() => {
@@ -99,15 +132,14 @@ export default function Navbar() {
       if (val && typeof val === "object" && !Array.isArray(val) && Array.isArray((val as any).items)) {
         setDbNavItems((val as any).items as DBNavItem[]);
       }
-      // null → use static fallback; no update needed
     });
   }, []);
 
-  // Track session + admin status + user initials
+  // Track session + admin status + user initials + avatar
   useEffect(() => {
     let cancelled = false;
 
-    function applySession(session: import("@supabase/supabase-js").Session | null) {
+    async function applySession(session: import("@supabase/supabase-js").Session | null) {
       setHasSession(!!session);
       if (session?.user) {
         const name: string =
@@ -121,8 +153,17 @@ export default function Navbar() {
             ? name.trim()[0].toUpperCase()
             : email[0]?.toUpperCase() ?? "?";
         setUserInitials(initials);
+
+        // Fetch avatar_url from client row
+        const { data } = await supabase
+          .from("clients")
+          .select("avatar_url")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        if (!cancelled) setAvatarUrl((data as any)?.avatar_url ?? null);
       } else {
         setUserInitials("");
+        setAvatarUrl(null);
       }
     }
 
@@ -144,6 +185,7 @@ export default function Navbar() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setOpen(false);
+    setDropOpen(false);
   };
 
   // Compute display nav — DB items (filtered + sorted) or static fallback
@@ -157,6 +199,27 @@ export default function Navbar() {
           cta:   i.cta ?? false,
         }))
     : pagesNav[lang];
+
+  // Avatar display helper
+  const AvatarBubble = ({ size = "sm" }: { size?: "sm" | "lg" }) => {
+    const dim = size === "sm" ? "w-8 h-8 text-xs" : "w-10 h-10 text-sm";
+    if (avatarUrl) {
+      return (
+        <img
+          src={avatarUrl}
+          alt="avatar"
+          className={`${dim} rounded-full object-cover border border-white/20 select-none`}
+        />
+      );
+    }
+    return (
+      <span
+        className={`${dim} rounded-full bg-primary-pink/80 flex items-center justify-center font-bold text-white select-none`}
+      >
+        {userInitials}
+      </span>
+    );
+  };
 
   return (
     <header className="fixed top-0 inset-x-0 z-[1000] backdrop-blur-md bg-gradient-to-b from-deep-purple/95 to-soft-purple/90 border-b border-white/10">
@@ -174,57 +237,87 @@ export default function Navbar() {
 
         {/* Header actions */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* User indicator — desktop: avatar + Sign Out (only when authenticated) */}
+
+          {/* ── AUTHENTICATED ─── */}
           {hasSession && (
-            <div className="hidden sm:flex items-center gap-1.5">
-              <span className="w-8 h-8 rounded-full bg-primary-pink/80 flex items-center justify-center text-xs font-bold text-white select-none">
-                {userInitials}
-              </span>
-              <button
-                onClick={handleSignOut}
-                className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-full border border-white/15 text-ivory/80 hover:bg-white/15 hover:text-ivory transition-colors"
-                aria-label={lang === "ar" ? "تسجيل الخروج" : "Sign Out"}
-              >
-                <LogOut size={12} />
-                {lang === "ar" ? "خروج" : "Sign Out"}
-              </button>
-            </div>
+            <>
+              {/* Desktop portal dropdown */}
+              <div ref={dropRef} className="hidden sm:block relative">
+                <button
+                  onClick={() => setDropOpen((v) => !v)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-white/15 hover:bg-white/10 transition-colors"
+                  aria-label="My portal"
+                  aria-expanded={dropOpen}
+                >
+                  <AvatarBubble size="sm" />
+                  <ChevronDown size={12} className={`text-ivory/60 transition-transform ${dropOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                <AnimatePresence>
+                  {dropOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 4, scale: 0.97 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute end-0 mt-2 w-52 rounded-2xl bg-[#1a1333] border border-white/15 shadow-2xl shadow-black/40 overflow-hidden z-[1001]"
+                    >
+                      {/* Portal links */}
+                      <div className="py-1">
+                        {PORTAL_NAV.map(({ href, labelEn, labelAr, Icon }) => (
+                          <Link
+                            key={href}
+                            to={href}
+                            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ivory/70 hover:text-ivory hover:bg-white/8 transition-colors"
+                          >
+                            <Icon size={14} className="text-ivory/40 shrink-0" />
+                            {lang === "ar" ? labelAr : labelEn}
+                          </Link>
+                        ))}
+                      </div>
+                      {/* Divider + Sign Out */}
+                      <div className="border-t border-white/10 py-1">
+                        <button
+                          type="button"
+                          onClick={handleSignOut}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400/80 hover:text-red-300 hover:bg-white/5 transition-colors"
+                        >
+                          <LogOut size={14} className="shrink-0" />
+                          {lang === "ar" ? "تسجيل الخروج" : "Sign Out"}
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Mobile: avatar bubble (tap opens overlay where portal links live) */}
+              <div className="sm:hidden">
+                <AvatarBubble size="sm" />
+              </div>
+            </>
           )}
 
-          {/* User indicator — mobile: avatar + LogOut icon (only when authenticated) */}
-          {hasSession && (
-            <div className="sm:hidden flex items-center gap-1">
-              <span className="w-8 h-8 rounded-full bg-primary-pink/80 flex items-center justify-center text-xs font-bold text-white select-none">
-                {userInitials}
-              </span>
+          {/* ── NOT AUTHENTICATED: show auth button ─── */}
+          {!hasSession && (
+            <>
               <button
-                onClick={handleSignOut}
-                className="flex items-center justify-center w-8 h-8 rounded-full border border-white/15 text-ivory/80 hover:bg-white/10 transition-colors"
-                aria-label={lang === "ar" ? "تسجيل الخروج" : "Sign Out"}
+                onClick={() => setAuthOpen(true)}
+                className="hidden sm:flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-full border border-white/15 text-ivory hover:bg-white/15 transition-colors"
+                aria-label={authT.trigger}
               >
-                <LogOut size={15} />
+                <UserCircle2 size={16} />
+                {authT.trigger}
               </button>
-            </div>
+              <button
+                onClick={() => setAuthOpen(true)}
+                className="sm:hidden flex items-center justify-center w-11 h-11 rounded-full border border-white/15 text-ivory hover:bg-white/10 transition-colors"
+                aria-label={authT.trigger}
+              >
+                <UserCircle2 size={20} />
+              </button>
+            </>
           )}
-
-          {/* Auth button — desktop (always visible) */}
-          <button
-            onClick={() => setAuthOpen(true)}
-            className="hidden sm:flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-full border border-white/15 text-ivory hover:bg-white/15 transition-colors"
-            aria-label={authT.trigger}
-          >
-            <UserCircle2 size={16} />
-            {authT.trigger}
-          </button>
-
-          {/* Auth button — mobile (always visible) */}
-          <button
-            onClick={() => setAuthOpen(true)}
-            className="sm:hidden flex items-center justify-center w-11 h-11 rounded-full border border-white/15 text-ivory hover:bg-white/10 transition-colors"
-            aria-label={authT.trigger}
-          >
-            <UserCircle2 size={20} />
-          </button>
 
           {/* Language toggle */}
           <button
@@ -274,7 +367,7 @@ export default function Navbar() {
             variants={curtainVariants}
             className="fixed inset-x-0 top-0 z-[999] w-full h-dvh overflow-y-auto bg-[rgba(15,23,42,0.97)] backdrop-blur-[12px] shadow-2xl shadow-black/40"
           >
-            {/* Close button — stays fixed while content scrolls */}
+            {/* Close button */}
             <button
               onClick={() => setOpen(false)}
               aria-label="Close menu"
@@ -283,10 +376,10 @@ export default function Navbar() {
               <X size={26} />
             </button>
 
-            <nav className="min-h-full flex flex-col items-center justify-center gap-6 sm:gap-7 text-center px-6 pt-28 pb-12">
+            <nav className="min-h-full flex flex-col items-center justify-center gap-5 sm:gap-6 text-center px-6 pt-28 pb-12">
+              {/* Main site links */}
               {items.map((item) =>
                 item.cta ? (
-                  /* CTA button */
                   <motion.div key={item.href} variants={linkVariants}>
                     <Link
                       to={item.href}
@@ -296,7 +389,6 @@ export default function Navbar() {
                     </Link>
                   </motion.div>
                 ) : (
-                  /* Regular page link */
                   <motion.div key={item.href} variants={linkVariants}>
                     <Link
                       to={item.href}
@@ -312,35 +404,63 @@ export default function Navbar() {
                 )
               )}
 
-              {/* Signed-in indicator + Sign Out — only when authenticated */}
+              {/* Divider */}
+              <motion.div variants={linkVariants} className="w-16 h-px bg-white/10 my-1" />
+
+              {/* ── AUTHENTICATED: portal links ───────── */}
               {hasSession && (
-                <motion.div variants={linkVariants} className="flex flex-col items-center gap-2 mt-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-full bg-primary-pink/80 flex items-center justify-center text-xs font-bold text-white select-none">
-                      {userInitials}
+                <>
+                  {/* User info */}
+                  <motion.div variants={linkVariants} className="flex items-center gap-2.5">
+                    <AvatarBubble size="sm" />
+                    <span className="text-sm font-medium text-ivory/60">
+                      {lang === "ar" ? "بوابتي الشخصية" : "My Portal"}
                     </span>
+                  </motion.div>
+
+                  {/* Portal nav links */}
+                  {PORTAL_NAV.map(({ href, labelEn, labelAr, Icon }) => (
+                    <motion.div key={href} variants={linkVariants}>
+                      <Link
+                        to={href}
+                        className={`flex items-center justify-center gap-2 font-heading text-base font-semibold transition-colors ${
+                          location.pathname === href
+                            ? "text-primary-pink"
+                            : "text-ivory/70 hover:text-ivory"
+                        }`}
+                      >
+                        <Icon size={16} className="text-ivory/40 shrink-0" />
+                        {lang === "ar" ? labelAr : labelEn}
+                      </Link>
+                    </motion.div>
+                  ))}
+
+                  {/* Sign Out */}
+                  <motion.div variants={linkVariants}>
                     <button
                       type="button"
                       onClick={handleSignOut}
-                      className="flex items-center gap-1.5 text-sm font-medium text-ivory/70 hover:text-white transition-colors"
+                      className="flex items-center gap-2 font-heading text-base font-semibold text-red-400/80 hover:text-red-300 transition-colors"
                     >
-                      <LogOut size={14} />
+                      <LogOut size={16} />
                       {lang === "ar" ? "تسجيل الخروج" : "Sign Out"}
                     </button>
-                  </div>
-                </motion.div>
+                  </motion.div>
+                </>
               )}
 
-              {/* Login / Sign Up — always visible */}
-              <motion.button
-                type="button"
-                variants={linkVariants}
-                onClick={() => { setOpen(false); window.setTimeout(() => setAuthOpen(true), 320); }}
-                className="flex items-center gap-2 font-heading text-base sm:text-lg font-bold text-light-pink hover:text-white transition-colors mt-2"
-              >
-                <UserCircle2 size={22} />
-                {authT.trigger}
-              </motion.button>
+              {/* ── NOT AUTHENTICATED: login button ───── */}
+              {!hasSession && (
+                <motion.button
+                  type="button"
+                  variants={linkVariants}
+                  onClick={() => { setOpen(false); window.setTimeout(() => setAuthOpen(true), 320); }}
+                  className="flex items-center gap-2 font-heading text-base sm:text-lg font-bold text-light-pink hover:text-white transition-colors"
+                >
+                  <UserCircle2 size={22} />
+                  {authT.trigger}
+                </motion.button>
+              )}
 
               {/* Admin Dashboard — ONLY visible to authenticated admin/staff users */}
               {isAdmin && (

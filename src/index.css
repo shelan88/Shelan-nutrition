@@ -117,6 +117,14 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Hide scrollbars on horizontally-scrolling elements (testimonial slider)
    while keeping native touch/trackpad scrolling fully functional. */
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 .no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;

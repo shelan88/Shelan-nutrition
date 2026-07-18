@@ -46,6 +46,13 @@ export interface ClientRow {
   risk_indicators: Json | null;
   created_at: string;
   updated_at: string;
+  // ── Client portal columns (added by client_portal migration) ──────────────
+  user_id: string | null;
+  avatar_url: string | null;
+  date_of_birth: string | null;   // "YYYY-MM-DD"
+  city: string | null;
+  preferred_language: string | null;
+  bio: string | null;
 }
 
 export interface AssessmentRow {

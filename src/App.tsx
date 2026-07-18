@@ -12,6 +12,7 @@
  *     /contact       → ContactPage
  *     /booking       → BookingPage
  *     /assessment    → AssessmentPage
+ *     /portal/*      → Client Portal (PortalLayout guard)
  *     *              → NotFoundPage
  *
  *   ADMIN (completely isolated shell — no public Navbar/Footer):
@@ -21,7 +22,7 @@
  * The public and admin worlds are completely separated at the routing level.
  * Admin pages never see the public Navbar/Footer, and vice-versa.
  */
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "@/context/LanguageContext";
 import ScrollToTop from "@/components/ui/ScrollToTop";
 
@@ -44,6 +45,16 @@ import AssessmentPage from "@/pages/AssessmentPage";
 import AssessmentResponsePage from "@/pages/AssessmentResponsePage";
 import NotFoundPage from "@/pages/NotFoundPage";
 
+// ─── Client portal ─────────────────────────────────────────────────────────────
+import PortalLayout from "@/portal/components/PortalLayout";
+import ProfilePage from "@/portal/pages/ProfilePage";
+import AppointmentsPage from "@/portal/pages/AppointmentsPage";
+import AssessmentsPage from "@/portal/pages/AssessmentsPage";
+import NutritionPage from "@/portal/pages/NutritionPage";
+import ProgressPage from "@/portal/pages/ProgressPage";
+import FilesPage from "@/portal/pages/FilesPage";
+import SettingsPage from "@/portal/pages/SettingsPage";
+
 // ─── Admin portal ──────────────────────────────────────────────────────────────
 import AdminLoginPage from "@/admin/pages/LoginPage";
 import AdminLayout from "@/admin/components/AdminLayout";
@@ -60,6 +71,7 @@ function PublicLayout() {
       <Navbar />
       <main>
         <Routes>
+          {/* Standard public pages */}
           <Route path="/" element={<HomePage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/services" element={<ServicesPage />} />
@@ -70,6 +82,38 @@ function PublicLayout() {
           <Route path="/booking" element={<BookingPage />} />
           <Route path="/assessment" element={<AssessmentPage />} />
           <Route path="/assessment/respond/:appointmentId" element={<AssessmentResponsePage />} />
+
+          {/* Client portal — guarded inside PortalLayout */}
+          <Route path="/portal" element={<Navigate to="/portal/profile" replace />} />
+          <Route
+            path="/portal/profile"
+            element={<PortalLayout><ProfilePage /></PortalLayout>}
+          />
+          <Route
+            path="/portal/appointments"
+            element={<PortalLayout><AppointmentsPage /></PortalLayout>}
+          />
+          <Route
+            path="/portal/assessments"
+            element={<PortalLayout><AssessmentsPage /></PortalLayout>}
+          />
+          <Route
+            path="/portal/nutrition"
+            element={<PortalLayout><NutritionPage /></PortalLayout>}
+          />
+          <Route
+            path="/portal/progress"
+            element={<PortalLayout><ProgressPage /></PortalLayout>}
+          />
+          <Route
+            path="/portal/files"
+            element={<PortalLayout><FilesPage /></PortalLayout>}
+          />
+          <Route
+            path="/portal/settings"
+            element={<PortalLayout><SettingsPage /></PortalLayout>}
+          />
+
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
