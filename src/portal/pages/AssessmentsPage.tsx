@@ -1,10 +1,12 @@
 /**
  * Portal — My Assessments
- * Lists submitted and pending assessment responses with expandable answer view.
+ * Lists completed and pending assessment responses for the authenticated client.
+ * Answers are lazy-loaded when a completed response is expanded.
  */
 
 import { useState, useEffect } from "react";
-import { ClipboardList, ChevronDown, ChevronUp, AlertCircle, Clock, CheckCircle2 } from "lucide-react";
+import { ClipboardList, CheckCircle2, Clock, ChevronDown, ChevronUp, CalendarPlus } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useClientProfile } from "@/hooks/useClientProfile";
 import { useLanguage } from "@/context/LanguageContext";
 import {
@@ -14,108 +16,100 @@ import {
   type FullPortalResponse,
 } from "@/portal/repositories/assessments.repository";
 
-function StatusChip({ status, isAr }: { status: PortalAssessmentResponse["status"]; isAr: boolean }) {
-  const cfg =
-    status === "submitted"   ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/20" :
-    status === "in_progress" ? "bg-amber-500/15 text-amber-300 border-amber-500/20" :
-                               "bg-white/10 text-ivory/50 border-white/10";
-  const label =
-    status === "submitted"   ? (isAr ? "مكتمل" : "Completed") :
-    status === "in_progress" ? (isAr ? "قيد التنفيذ" : "In Progress") :
-                               (isAr ? "معلق" : "Pending");
-
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${cfg}`}>
-      {label}
-    </span>
-  );
-}
-
-function AnswerRow({ label, value }: { label: string; value: string | null }) {
-  if (!value) return null;
-  return (
-    <div className="border-b border-white/5 py-2.5 last:border-0">
-      <p className="text-xs text-ivory/40 mb-0.5">{label}</p>
-      <p className="text-sm text-ivory/80">{value}</p>
-    </div>
-  );
-}
+// ── Response card ─────────────────────────────────────────────────────────────
 
 function ResponseCard({ response, isAr }: { response: PortalAssessmentResponse; isAr: boolean }) {
-  const [expanded, setExpanded] = useState(false);
-  const [full,     setFull]     = useState<FullPortalResponse | null>(null);
-  const [loading,  setLoading]  = useState(false);
+  const [open,        setOpen]        = useState(false);
+  const [full,        setFull]        = useState<FullPortalResponse | null>(null);
+  const [loadingFull, setLoadingFull] = useState(false);
 
-  const toggle = async () => {
-    if (response.status !== "submitted") return;
-    if (!expanded && !full) {
-      setLoading(true);
-      const data = await getOwnFullResponse(response.id);
-      setFull(data);
-      setLoading(false);
-    }
-    setExpanded((v) => !v);
-  };
+  const submitted = response.status === "submitted";
 
   const date = response.submittedAt
-    ? new Date(response.submittedAt).toLocaleDateString(isAr ? "ar-KW" : "en-US", { month: "short", day: "numeric", year: "numeric" })
-    : new Date(response.createdAt).toLocaleDateString(isAr ? "ar-KW" : "en-US", { month: "short", day: "numeric", year: "numeric" });
+    ? new Date(response.submittedAt).toLocaleDateString(isAr ? "ar-KW" : "en-US", {
+        month: "short", day: "numeric", year: "numeric",
+      })
+    : null;
 
-  const submittedLabel = isAr ? "تاريخ الإرسال" : "Submitted";
-  const createdLabel   = isAr ? "تاريخ الإنشاء" : "Created";
+  const handleToggle = async () => {
+    if (!submitted) return;
+    const next = !open;
+    setOpen(next);
+    if (next && !full) {
+      setLoadingFull(true);
+      const data = await getOwnFullResponse(response.id);
+      setFull(data);
+      setLoadingFull(false);
+    }
+  };
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
       <button
         type="button"
-        onClick={toggle}
-        className="w-full flex items-center gap-4 p-5 text-start"
-        disabled={response.status !== "submitted"}
+        onClick={handleToggle}
+        className={`w-full flex items-start gap-4 p-5 text-start ${submitted ? "hover:bg-white/3 transition-colors cursor-pointer" : "cursor-default"}`}
       >
-        <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-lavender-purple/15 flex items-center justify-center">
-          <ClipboardList className="text-lavender-purple" size={18} />
+        <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${
+          submitted ? "bg-emerald-500/10" : "bg-amber-500/10"
+        }`}>
+          {submitted
+            ? <CheckCircle2 className="text-emerald-400" size={18} />
+            : <Clock className="text-amber-400" size={18} />
+          }
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 mb-0.5">
-            <span className="font-semibold text-ivory text-sm truncate">{response.templateName}</span>
-            <StatusChip status={response.status} isAr={isAr} />
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <p className="font-semibold text-ivory text-sm">{response.templateName}</p>
+            <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${
+              submitted
+                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+            }`}>
+              {submitted ? (isAr ? "مكتمل" : "Completed") : (isAr ? "في انتظار الإكمال" : "Pending")}
+            </span>
           </div>
-          <p className="text-xs text-ivory/40 flex items-center gap-1">
-            {response.status === "submitted"
-              ? <CheckCircle2 size={11} className="text-emerald-400" />
-              : <Clock size={11} />}
-            {response.status === "submitted" ? submittedLabel : createdLabel}: {date}
-          </p>
+          {date && (
+            <p className="text-xs text-ivory/40">
+              {isAr ? `تم الإرسال: ${date}` : `Submitted: ${date}`}
+            </p>
+          )}
         </div>
-        {response.status === "submitted" && (
-          <span className="text-ivory/30 shrink-0">
-            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </span>
+        {submitted && (
+          open
+            ? <ChevronUp size={16} className="text-ivory/30 shrink-0 mt-1" />
+            : <ChevronDown size={16} className="text-ivory/30 shrink-0 mt-1" />
         )}
       </button>
 
-      {expanded && (
-        <div className="px-5 pb-5 border-t border-white/10 pt-4">
-          {loading ? (
+      {/* Expanded answers */}
+      {open && submitted && (
+        <div className="border-t border-white/8 px-5 pb-4 pt-3">
+          {loadingFull ? (
             <div className="flex justify-center py-4">
-              <div className="w-6 h-6 rounded-full border-2 border-primary-pink border-t-transparent animate-spin" />
+              <div className="w-5 h-5 rounded-full border-2 border-primary-pink border-t-transparent animate-spin" />
             </div>
           ) : full && full.answers.length > 0 ? (
-            <div>
-              {full.answers.map((ans) => (
-                <AnswerRow
-                  key={ans.id}
-                  label={
-                    (isAr && ans.question?.label_ar)
-                      ? ans.question.label_ar
-                      : (ans.question?.label_en ?? (isAr ? "سؤال" : "Question"))
-                  }
-                  value={ans.answer_text ?? (ans.answer_json ? JSON.stringify(ans.answer_json) : null)}
-                />
-              ))}
+            <div className="space-y-3">
+              {full.answers.map((a) => {
+                const val = a.answer_text ?? (
+                  Array.isArray(a.answer_json)
+                    ? (a.answer_json as string[]).join(", ")
+                    : a.answer_json != null ? String(a.answer_json) : ""
+                );
+                if (!val) return null;
+                return (
+                  <div key={a.id} className="pb-3 border-b border-white/5 last:border-0">
+                    <p className="text-xs text-ivory/40 mb-0.5">
+                      {(a.question as any)?.label ?? (a.question as any)?.text ?? "Question"}
+                    </p>
+                    <p className="text-sm text-ivory/80">{val}</p>
+                  </div>
+                );
+              })}
             </div>
           ) : (
-            <p className="text-ivory/40 text-sm text-center py-4">
+            <p className="text-sm text-ivory/40 text-center py-3">
               {isAr ? "لا توجد إجابات مسجلة." : "No answers recorded."}
             </p>
           )}
@@ -124,6 +118,35 @@ function ResponseCard({ response, isAr }: { response: PortalAssessmentResponse; 
     </div>
   );
 }
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+
+function EmptyAssessments({ isAr }: { isAr: boolean }) {
+  return (
+    <div className="py-16 flex flex-col items-center text-center bg-white/3 border border-white/8 rounded-2xl px-6">
+      <div className="w-14 h-14 rounded-2xl bg-lavender-purple/15 flex items-center justify-center mb-4">
+        <ClipboardList className="text-lavender-purple/60" size={26} />
+      </div>
+      <h3 className="font-heading text-base font-semibold text-ivory mb-2">
+        {isAr ? "لا توجد تقييمات بعد" : "No assessments yet"}
+      </h3>
+      <p className="text-sm text-ivory/40 max-w-xs mb-6">
+        {isAr
+          ? "يتم إرسال التقييمات إليك بعد حجز موعدك. ستظهر هنا بمجرد توفرها."
+          : "Assessments are sent to you after booking a consultation and will appear here once available."}
+      </p>
+      <Link
+        to="/booking"
+        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/15 text-sm font-medium text-ivory/70 hover:text-ivory hover:border-white/30 transition-colors"
+      >
+        <CalendarPlus size={14} />
+        {isAr ? "احجزي موعداً" : "Book a Consultation"}
+      </Link>
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AssessmentsPage() {
   const { profile, loading: profileLoading } = useClientProfile();
@@ -154,13 +177,6 @@ export default function AssessmentsPage() {
   const completed = responses.filter((r) => r.status === "submitted");
   const pending   = responses.filter((r) => r.status !== "submitted");
 
-  const EmptyState = ({ label }: { label: string }) => (
-    <div className="py-10 text-center bg-white/3 border border-white/8 rounded-2xl">
-      <AlertCircle className="mx-auto text-ivory/20 mb-3" size={28} />
-      <p className="text-ivory/40 text-sm">{label}</p>
-    </div>
-  );
-
   return (
     <div className="space-y-8">
       <h1 className="font-heading text-2xl font-bold text-ivory">
@@ -168,7 +184,7 @@ export default function AssessmentsPage() {
       </h1>
 
       {responses.length === 0 ? (
-        <EmptyState label={isAr ? "لا توجد تقييمات." : "No assessments found."} />
+        <EmptyAssessments isAr={isAr} />
       ) : (
         <>
           {completed.length > 0 && (
@@ -177,10 +193,10 @@ export default function AssessmentsPage() {
                 <CheckCircle2 size={16} className="text-emerald-400" />
                 <h2 className="font-heading text-base font-semibold text-ivory">
                   {isAr ? "المكتملة" : "Completed"}
-                  <span className="ms-2 text-xs font-normal text-ivory/40 bg-white/5 px-2 py-0.5 rounded-full">
-                    {completed.length}
-                  </span>
                 </h2>
+                <span className="text-xs font-medium text-ivory/40 bg-white/5 px-2 py-0.5 rounded-full">
+                  {completed.length}
+                </span>
               </div>
               <div className="space-y-3">
                 {completed.map((r) => <ResponseCard key={r.id} response={r} isAr={isAr} />)}
@@ -193,11 +209,11 @@ export default function AssessmentsPage() {
               <div className="flex items-center gap-2 mb-4">
                 <Clock size={16} className="text-amber-400" />
                 <h2 className="font-heading text-base font-semibold text-ivory">
-                  {isAr ? "المعلقة" : "Pending"}
-                  <span className="ms-2 text-xs font-normal text-ivory/40 bg-white/5 px-2 py-0.5 rounded-full">
-                    {pending.length}
-                  </span>
+                  {isAr ? "في الانتظار" : "Pending"}
                 </h2>
+                <span className="text-xs font-medium text-ivory/40 bg-white/5 px-2 py-0.5 rounded-full">
+                  {pending.length}
+                </span>
               </div>
               <div className="space-y-3">
                 {pending.map((r) => <ResponseCard key={r.id} response={r} isAr={isAr} />)}

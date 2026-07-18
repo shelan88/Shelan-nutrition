@@ -76,10 +76,17 @@ export default function FilesPage() {
       </div>
 
       {files.length === 0 ? (
-        <div className="py-16 text-center bg-white/3 border border-white/8 rounded-2xl">
-          <Folder className="mx-auto text-ivory/20 mb-3" size={32} />
-          <p className="text-ivory/40 text-sm">
-            {isAr ? "لم تتم مشاركة أي ملفات بعد." : "No files shared yet."}
+        <div className="py-16 flex flex-col items-center text-center bg-white/3 border border-white/8 rounded-2xl px-6">
+          <div className="w-14 h-14 rounded-2xl bg-white/8 flex items-center justify-center mb-4">
+            <Folder className="text-ivory/30" size={26} />
+          </div>
+          <h3 className="font-heading text-base font-semibold text-ivory mb-2">
+            {isAr ? "لا توجد ملفات بعد" : "No files shared yet"}
+          </h3>
+          <p className="text-sm text-ivory/40 max-w-xs">
+            {isAr
+              ? "ستظهر هنا الملفات التي يشاركها معك أخصائي التغذية، مثل التقارير والتحاليل."
+              : "Files shared by your nutritionist — such as reports and lab results — will appear here."}
           </p>
         </div>
       ) : (

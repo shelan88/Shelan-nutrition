@@ -4,7 +4,8 @@
  */
 
 import { useState, useEffect } from "react";
-import { Calendar, Clock, FileText, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Calendar, Clock, FileText, CheckCircle2, XCircle, CalendarPlus } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useClientProfile } from "@/hooks/useClientProfile";
 import { useLanguage } from "@/context/LanguageContext";
 import { getOwnAppointments, type PortalAppointment } from "@/portal/repositories/appointments.repository";
@@ -61,6 +62,31 @@ function AppointmentCard({ appt, isAr }: { appt: PortalAppointment; isAr: boolea
   );
 }
 
+function EmptyAppointments({ isAr }: { isAr: boolean }) {
+  return (
+    <div className="py-16 flex flex-col items-center text-center bg-white/3 border border-white/8 rounded-2xl px-6">
+      <div className="w-14 h-14 rounded-2xl bg-primary-pink/10 flex items-center justify-center mb-4">
+        <CalendarPlus className="text-primary-pink/60" size={26} />
+      </div>
+      <h3 className="font-heading text-base font-semibold text-ivory mb-2">
+        {isAr ? "لا توجد مواعيد حتى الآن" : "No appointments yet"}
+      </h3>
+      <p className="text-sm text-ivory/40 max-w-xs mb-6">
+        {isAr
+          ? "احجزي موعدك الأول مع أخصائية التغذية لبدء رحلتك الصحية."
+          : "Book your first consultation to start your health journey with your nutritionist."}
+      </p>
+      <Link
+        to="/booking"
+        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple text-sm font-semibold text-white hover:shadow-lg hover:shadow-primary-pink/20 transition-all"
+      >
+        <CalendarPlus size={14} />
+        {isAr ? "احجزي موعداً" : "Book a Consultation"}
+      </Link>
+    </div>
+  );
+}
+
 export default function AppointmentsPage() {
   const { profile, loading: profileLoading } = useClientProfile();
   const { lang } = useLanguage();
@@ -90,12 +116,16 @@ export default function AppointmentsPage() {
   const upcoming = appointments.filter((a) => !a.isPast);
   const past     = appointments.filter((a) => a.isPast);
 
-  const EmptyState = ({ label }: { label: string }) => (
-    <div className="py-10 text-center bg-white/3 border border-white/8 rounded-2xl">
-      <AlertCircle className="mx-auto text-ivory/20 mb-3" size={28} />
-      <p className="text-ivory/40 text-sm">{label}</p>
-    </div>
-  );
+  if (appointments.length === 0) {
+    return (
+      <div className="space-y-6">
+        <h1 className="font-heading text-2xl font-bold text-ivory">
+          {isAr ? "مواعيدي" : "My Appointments"}
+        </h1>
+        <EmptyAppointments isAr={isAr} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -116,30 +146,36 @@ export default function AppointmentsPage() {
             </span>
           )}
         </div>
-        {upcoming.length === 0
-          ? <EmptyState label={isAr ? "لا توجد مواعيد قادمة." : "No upcoming appointments."} />
-          : <div className="space-y-3">{upcoming.map((a) => <AppointmentCard key={a.id} appt={a} isAr={isAr} />)}</div>
-        }
+        {upcoming.length === 0 ? (
+          <div className="py-8 text-center bg-white/3 border border-white/8 rounded-xl">
+            <p className="text-sm text-ivory/40">
+              {isAr ? "لا توجد مواعيد قادمة." : "No upcoming appointments."}
+            </p>
+            <Link to="/booking" className="inline-flex items-center gap-1.5 mt-3 text-sm text-primary-pink/80 hover:text-primary-pink transition-colors">
+              <CalendarPlus size={13} />
+              {isAr ? "احجزي موعداً" : "Book one"}
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-3">{upcoming.map((a) => <AppointmentCard key={a.id} appt={a} isAr={isAr} />)}</div>
+        )}
       </section>
 
       {/* Past */}
-      <section>
-        <div className="flex items-center gap-2 mb-4">
-          <XCircle size={16} className="text-ivory/30" />
-          <h2 className="font-heading text-base font-semibold text-ivory">
-            {isAr ? "السابقة" : "Past"}
-          </h2>
-          {past.length > 0 && (
+      {past.length > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <XCircle size={16} className="text-ivory/30" />
+            <h2 className="font-heading text-base font-semibold text-ivory">
+              {isAr ? "السابقة" : "Past"}
+            </h2>
             <span className="text-xs font-medium text-ivory/40 bg-white/5 px-2 py-0.5 rounded-full">
               {past.length}
             </span>
-          )}
-        </div>
-        {past.length === 0
-          ? <EmptyState label={isAr ? "لا توجد مواعيد سابقة." : "No past appointments."} />
-          : <div className="space-y-3">{past.map((a) => <AppointmentCard key={a.id} appt={a} isAr={isAr} />)}</div>
-        }
-      </section>
+          </div>
+          <div className="space-y-3">{past.map((a) => <AppointmentCard key={a.id} appt={a} isAr={isAr} />)}</div>
+        </section>
+      )}
     </div>
   );
 }

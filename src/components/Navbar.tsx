@@ -241,11 +241,11 @@ export default function Navbar() {
           {/* ── AUTHENTICATED ─── */}
           {hasSession && (
             <>
-              {/* Desktop portal dropdown */}
-              <div ref={dropRef} className="hidden sm:block relative">
+              {/* Avatar dropdown — all screen sizes */}
+              <div ref={dropRef} className="relative">
                 <button
                   onClick={() => setDropOpen((v) => !v)}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-white/15 hover:bg-white/10 transition-colors"
+                  className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-full border border-white/15 hover:bg-white/10 transition-colors"
                   aria-label="My portal"
                   aria-expanded={dropOpen}
                 >
@@ -260,8 +260,19 @@ export default function Navbar() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 4, scale: 0.97 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute end-0 mt-2 w-52 rounded-2xl bg-[#1a1333] border border-white/15 shadow-2xl shadow-black/40 overflow-hidden z-[1001]"
+                      className="absolute end-0 mt-2 w-56 rounded-2xl bg-[#1a1333] border border-white/15 shadow-2xl shadow-black/40 overflow-hidden z-[1001]"
                     >
+                      {/* User identity hint */}
+                      {userInitials && (
+                        <div className="px-4 py-3 border-b border-white/8">
+                          <div className="flex items-center gap-2.5">
+                            <AvatarBubble size="sm" />
+                            <span className="text-xs font-medium text-ivory/50 truncate">
+                              {lang === "ar" ? "حسابي" : "My Account"}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                       {/* Portal links */}
                       <div className="py-1">
                         {PORTAL_NAV.map(({ href, labelEn, labelAr, Icon }) => (
@@ -289,11 +300,6 @@ export default function Navbar() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
-
-              {/* Mobile: avatar bubble (tap opens overlay where portal links live) */}
-              <div className="sm:hidden">
-                <AvatarBubble size="sm" />
               </div>
             </>
           )}

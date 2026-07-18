@@ -6,7 +6,7 @@
 import { useState, useEffect } from "react";
 import {
   Utensils, ChevronDown, ChevronUp, FileText, Droplets,
-  Footprints, Dumbbell, Pill, AlertCircle, ExternalLink,
+  Footprints, Dumbbell, Pill, ExternalLink,
 } from "lucide-react";
 import { useClientProfile } from "@/hooks/useClientProfile";
 import { useLanguage } from "@/context/LanguageContext";
@@ -199,10 +199,17 @@ export default function NutritionPage() {
       </h1>
 
       {plans.length === 0 ? (
-        <div className="py-16 text-center bg-white/3 border border-white/8 rounded-2xl">
-          <AlertCircle className="mx-auto text-ivory/20 mb-3" size={28} />
-          <p className="text-ivory/40 text-sm">
-            {isAr ? "لم يتم تعيين خطط تغذية بعد." : "No nutrition plans assigned yet."}
+        <div className="py-16 flex flex-col items-center text-center bg-white/3 border border-white/8 rounded-2xl px-6">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-4">
+            <Utensils className="text-emerald-400/60" size={26} />
+          </div>
+          <h3 className="font-heading text-base font-semibold text-ivory mb-2">
+            {isAr ? "لا توجد خطط تغذية بعد" : "No nutrition plans yet"}
+          </h3>
+          <p className="text-sm text-ivory/40 max-w-xs">
+            {isAr
+              ? "سيقوم أخصائي التغذية بمشاركة خطتك الغذائية هنا بعد موعدك."
+              : "Your nutritionist will share your personalised meal plan here after your consultation."}
           </p>
         </div>
       ) : (

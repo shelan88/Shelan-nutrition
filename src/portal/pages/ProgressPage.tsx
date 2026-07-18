@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { TrendingUp, Scale, Ruler, AlertCircle, ChevronDown, ChevronUp, Image } from "lucide-react";
+import { TrendingUp, Scale, Ruler, ChevronDown, ChevronUp, Image } from "lucide-react";
 import { useClientProfile } from "@/hooks/useClientProfile";
 import { useLanguage } from "@/context/LanguageContext";
 import {
@@ -292,10 +292,17 @@ export default function ProgressPage() {
       </h1>
 
       {entries.length === 0 ? (
-        <div className="py-16 text-center bg-white/3 border border-white/8 rounded-2xl">
-          <AlertCircle className="mx-auto text-ivory/20 mb-3" size={28} />
-          <p className="text-ivory/40 text-sm">
-            {isAr ? "لا توجد إدخالات تقدم بعد." : "No progress entries yet."}
+        <div className="py-16 flex flex-col items-center text-center bg-white/3 border border-white/8 rounded-2xl px-6">
+          <div className="w-14 h-14 rounded-2xl bg-primary-pink/10 flex items-center justify-center mb-4">
+            <TrendingUp className="text-primary-pink/60" size={26} />
+          </div>
+          <h3 className="font-heading text-base font-semibold text-ivory mb-2">
+            {isAr ? "لا توجد بيانات تقدم بعد" : "No progress recorded yet"}
+          </h3>
+          <p className="text-sm text-ivory/40 max-w-xs">
+            {isAr
+              ? "سيتم تسجيل بيانات تقدمك هنا من قِبل أخصائية التغذية بعد كل جلسة."
+              : "Your progress data — weight, measurements, and photos — will be recorded here by your nutritionist after each session."}
           </p>
         </div>
       ) : (
