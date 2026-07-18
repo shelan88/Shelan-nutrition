@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import type { Client, TimelineType, FileType, RiskIndicatorLevel } from "../data/clients";
 import { deleteClient, archiveClient } from "@/admin/repositories/clients.repository";
+import NutritionPlansTab from "./NutritionPlansTab";
 
 // ─── Risk helpers ──────────────────────────────────────────────────────────────
 
@@ -400,7 +401,7 @@ function AssessmentsTab({ client, isAr }: { client: { id: string; email: string 
 export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefresh }: ClientDrawerProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [actioning, setActioning] = useState<string | null>(null);
-  const [tab, setTab] = useState<"profile" | "assessments">("profile");
+  const [tab, setTab] = useState<"profile" | "assessments" | "nutrition">("profile");
 
   async function handleArchive() {
     if (!client) return;
@@ -552,11 +553,11 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
 
             {/* ── Tab bar ───────────────────────────────────────────────── */}
             <div className="shrink-0 flex border-b border-[var(--admin-border)] px-6 bg-[var(--admin-surface)]">
-              {(["profile", "assessments"] as const).map((t) => (
+              {(["profile", "nutrition", "assessments"] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setTab(t)}
-                  className={`py-3 px-1 me-5 text-[12px] font-bold border-b-2 transition-colors ${
+                  className={`py-3 px-1 me-5 text-[12px] font-bold border-b-2 transition-colors whitespace-nowrap ${
                     tab === t
                       ? "border-primary-pink text-primary-pink"
                       : "border-transparent text-[var(--admin-text-faint)] hover:text-[var(--admin-text)]"
@@ -564,6 +565,8 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
                 >
                   {t === "profile"
                     ? (isAr ? "الملف الشخصي" : "Profile")
+                    : t === "nutrition"
+                    ? (isAr ? "الخطط الغذائية" : "Nutrition Plans")
                     : (isAr ? "الاستبيانات" : "Assessments")}
                 </button>
               ))}
@@ -576,6 +579,13 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
               {tab === "assessments" && client && (
                 <div className="px-6 py-6">
                   <AssessmentsTab client={{ id: client.id, email: client.email }} isAr={isAr} />
+                </div>
+              )}
+
+              {/* Nutrition Plans tab */}
+              {tab === "nutrition" && client && (
+                <div className="px-6 py-6">
+                  <NutritionPlansTab clientId={client.id} isAr={isAr} />
                 </div>
               )}
 
