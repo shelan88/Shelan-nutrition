@@ -18,7 +18,7 @@ import {
   Image as ImageIcon, File as FileIcon, Paperclip, RotateCcw,
   Droplets, Footprints, Dumbbell, Pill, ClipboardList,
   Sun, Sunset, Moon, Coffee, Apple, UtensilsCrossed,
-  Download, AlertTriangle, CheckCircle,
+  Download, AlertTriangle, CheckCircle, Printer, Send as SendIcon,
 } from "lucide-react";
 import {
   getClientNutritionPlans,
@@ -112,7 +112,7 @@ function EmptyPlans({ isAr, onCreate }: { isAr: boolean; onCreate: () => void })
       </div>
       <div>
         <p className="text-[15px] font-bold text-[var(--admin-text)]">
-          {isAr ? "لا توجد خطط غذائية بعد" : "No nutrition plans yet"}
+          {isAr ? "لم يتم إنشاء أي خطة غذائية بعد" : "No nutrition plan has been created yet."}
         </p>
         <p className="text-[12.5px] text-[var(--admin-text-muted)] mt-1 max-w-sm leading-relaxed">
           {isAr
@@ -122,10 +122,10 @@ function EmptyPlans({ isAr, onCreate }: { isAr: boolean; onCreate: () => void })
       </div>
       <button
         onClick={onCreate}
-        className="flex items-center gap-2 h-9 px-4 rounded-xl bg-primary-pink text-white text-[12.5px] font-semibold hover:opacity-90 transition-opacity"
+        className="flex items-center gap-2 h-9 px-4 rounded-xl bg-emerald-500 text-white text-[12.5px] font-semibold hover:opacity-90 transition-opacity"
       >
         <Plus size={13} strokeWidth={2.5} />
-        {isAr ? "إنشاء خطة" : "Create Plan"}
+        {isAr ? "+ إنشاء خطة غذائية" : "+ Create Nutrition Plan"}
       </button>
     </div>
   );
@@ -267,6 +267,24 @@ function PlanCard({
             variant="danger"
           />
         )}
+
+        {/* ── Placeholder actions ── */}
+        <button
+          disabled
+          title={isAr ? "قريباً" : "Coming Soon"}
+          className="flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11.5px] font-semibold text-[var(--admin-text-faint)] opacity-40 cursor-not-allowed"
+        >
+          <Printer size={11} strokeWidth={2} />
+          {isAr ? "طباعة PDF" : "Print PDF"}
+        </button>
+        <button
+          disabled
+          title={isAr ? "قريباً" : "Coming Soon"}
+          className="flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11.5px] font-semibold text-[var(--admin-text-faint)] opacity-40 cursor-not-allowed"
+        >
+          <SendIcon size={11} strokeWidth={2} />
+          {isAr ? "إرسال للعميل" : "Send to Client"}
+        </button>
       </div>
     </motion.div>
   );
@@ -994,14 +1012,18 @@ interface NutritionPlansTabProps {
   clientId: string;
   isAr: boolean;
   onCountChange?: (activePlans: number) => void;
+  /** Called whenever the active-plans list changes so the parent can display a summary. */
+  onActivePlansChange?: (plans: NutritionPlanRow[]) => void;
   /** When true on mount, immediately opens the Create Plan editor. */
   autoOpenCreate?: boolean;
   /** Called after autoOpenCreate has been consumed so the parent can reset its flag. */
   onAutoOpenConsumed?: () => void;
+  /** Increment to force a reload from outside the tab (e.g. after a quick-action from Overview). */
+  refreshKey?: number;
 }
 
 export default function NutritionPlansTab({
-  clientId, isAr, onCountChange, autoOpenCreate, onAutoOpenConsumed,
+  clientId, isAr, onCountChange, onActivePlansChange, autoOpenCreate, onAutoOpenConsumed, refreshKey,
 }: NutritionPlansTabProps) {
   const [plans, setPlans]         = useState<NutritionPlanRow[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -1022,11 +1044,13 @@ export default function NutritionPlansTab({
     }
     setHistoryMap(map);
 
-    onCountChange?.(data.filter((p) => p.status === "active").length);
+    const active = data.filter((p) => p.status === "active");
+    onCountChange?.(active.length);
+    onActivePlansChange?.(active);
     setLoading(false);
   }
 
-  useEffect(() => { loadPlans(); }, [clientId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadPlans(); }, [clientId, refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Whenever autoOpenCreate flips to true (from the action bar or overview
   // empty-state), open the plan editor and immediately consume the flag so

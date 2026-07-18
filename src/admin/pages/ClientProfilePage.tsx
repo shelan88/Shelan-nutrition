@@ -17,7 +17,7 @@ import {
   Phone, Mail, MapPin, Clock, Edit2, Download as DownloadIcon,
   ClipboardList, Users, MessageSquare, Info, RefreshCw,
   CalendarCheck, UserCircle, Star, File as FileIcon, Image as ImageIcon,
-  Plus, MoreHorizontal, Upload, Send, ChevronDown, ChevronUp, Trash2, Archive,
+  Plus, MoreHorizontal, Upload, Send, ChevronDown, ChevronUp, Trash2, Archive, Copy,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import PageHeader from "@/admin/components/PageHeader";
@@ -38,6 +38,11 @@ import ProgressTab from "@/admin/pages/ProgressTab";
 import type { Client, TimelineEvent } from "@/admin/data/clients";
 import type { AppointmentRow } from "@/types/database.types";
 import type { ClientAssessmentResponse } from "@/admin/repositories/client-profile.repository";
+import {
+  duplicateNutritionPlan,
+  setNutritionPlanStatus,
+} from "@/admin/repositories/nutrition-plans.repository";
+import type { NutritionPlanRow } from "@/admin/repositories/nutrition-plans.repository";
 
 // ─── Animation preset ─────────────────────────────────────────────────────────
 const fadeUp = (delay = 0) => ({
@@ -307,14 +312,19 @@ function InfoRow({
 // ─── Overview Tab (fully rewritten as clinic-first layout) ────────────────────
 
 function OverviewTab({
-  client, assessments, nutritionCount, isAr, onNavigate, onCreateAssessment,
+  client, assessments, nutritionCount, activePlan, isAr,
+  onNavigate, onCreateAssessment, onEditPlan, onDuplicatePlan, onArchivePlan,
 }: {
   client: Client;
   assessments: ClientAssessmentResponse[];
   nutritionCount: number;
+  activePlan: NutritionPlanRow | null;
   isAr: boolean;
   onNavigate: (tab: TabId, action?: "createPlan" | "upload") => void;
   onCreateAssessment: () => void;
+  onEditPlan: () => void;
+  onDuplicatePlan: () => void;
+  onArchivePlan: () => void;
 }) {
   const latestAssessment =
     assessments.find((a) => a.status === "submitted") ?? assessments[0] ?? null;
@@ -475,45 +485,115 @@ function OverviewTab({
 
         {/* 3. Nutrition Plan snapshot */}
         <div className="bg-[var(--admin-hover-bg)] rounded-xl p-4">
-          <p className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider mb-3">
-            {isAr ? "الخطة الغذائية" : "Nutrition Plan"}
-          </p>
-          {nutritionCount > 0 ? (
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-                  <BookOpen size={14} strokeWidth={1.8} className="text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-[13px] font-semibold text-[var(--admin-text)]">
-                    {nutritionCount === 1
-                      ? (isAr ? "خطة غذائية نشطة" : "1 active plan")
-                      : (isAr ? `${nutritionCount} خطط غذائية نشطة` : `${nutritionCount} active plans`)}
-                  </p>
-                  <p className="text-[11px] text-[var(--admin-text-faint)]">
-                    {isAr ? "برنامج التغذية" : "Nutrition program"}
-                  </p>
-                </div>
-              </div>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider">
+              {isAr ? "الخطة الغذائية" : "Nutrition Plan"}
+            </p>
+            {nutritionCount > 1 && (
               <button
                 onClick={() => onNavigate("nutrition")}
-                className="text-[11.5px] font-semibold text-emerald-600 hover:underline shrink-0"
+                className="text-[10.5px] font-semibold text-emerald-600 hover:underline"
               >
-                {isAr ? "← عرض" : "View →"}
+                {isAr ? `← عرض الكل (${nutritionCount})` : `View all (${nutritionCount}) →`}
               </button>
+            )}
+          </div>
+
+          {activePlan ? (
+            <div className="space-y-3">
+              {/* Plan summary */}
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0 mt-0.5">
+                  <BookOpen size={14} strokeWidth={1.8} className="text-emerald-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <p className="text-[13px] font-bold text-[var(--admin-text)] leading-tight truncate">
+                      {activePlan.name}
+                    </p>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      {isAr ? "نشطة" : "Active"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1.5">
+                    <div>
+                      <p className="text-[10px] text-[var(--admin-text-faint)] uppercase tracking-wide">
+                        {isAr ? "تاريخ الإنشاء" : "Created"}
+                      </p>
+                      <p className="text-[11.5px] font-semibold text-[var(--admin-text)]">
+                        {activePlan.created_at
+                          ? new Date(activePlan.created_at).toLocaleDateString(isAr ? "ar-SA" : "en-US", { month: "short", day: "numeric", year: "numeric" })
+                          : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-[var(--admin-text-faint)] uppercase tracking-wide">
+                        {isAr ? "المراجعة القادمة" : "Next Review"}
+                      </p>
+                      <p className="text-[11.5px] font-semibold text-[var(--admin-text)]">
+                        {activePlan.end_date
+                          ? new Date(activePlan.end_date).toLocaleDateString(isAr ? "ar-SA" : "en-US", { month: "short", day: "numeric", year: "numeric" })
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex flex-wrap gap-1.5 pt-2 border-t border-[var(--admin-border)]">
+                <button
+                  onClick={onEditPlan}
+                  className="flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-semibold text-primary-pink hover:bg-primary-pink/8 transition-colors"
+                >
+                  <Edit2 size={10} strokeWidth={2} />
+                  {isAr ? "تعديل الخطة" : "Edit Plan"}
+                </button>
+                <button
+                  onClick={onDuplicatePlan}
+                  className="flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-semibold text-[var(--admin-text-muted)] hover:text-[var(--admin-text)] hover:bg-[var(--admin-hover-bg)] transition-colors"
+                >
+                  <Copy size={10} strokeWidth={2} />
+                  {isAr ? "نسخ الخطة" : "Duplicate"}
+                </button>
+                <button
+                  onClick={onArchivePlan}
+                  className="flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-semibold text-[var(--admin-text-muted)] hover:text-[var(--admin-text)] hover:bg-[var(--admin-hover-bg)] transition-colors"
+                >
+                  <Archive size={10} strokeWidth={2} />
+                  {isAr ? "أرشفة" : "Archive"}
+                </button>
+                <button
+                  disabled
+                  title={isAr ? "قريباً" : "Coming Soon"}
+                  className="flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-semibold text-[var(--admin-text-faint)] opacity-40 cursor-not-allowed"
+                >
+                  <FileText size={10} strokeWidth={2} />
+                  {isAr ? "PDF" : "Print PDF"}
+                </button>
+                <button
+                  disabled
+                  title={isAr ? "قريباً" : "Coming Soon"}
+                  className="flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-semibold text-[var(--admin-text-faint)] opacity-40 cursor-not-allowed"
+                >
+                  <Send size={10} strokeWidth={2} />
+                  {isAr ? "إرسال للعميل" : "Send to Client"}
+                </button>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3 py-6 text-center">
               <BookOpen size={22} strokeWidth={1.3} className="text-[var(--admin-text-faint)]" />
               <p className="text-[12.5px] text-[var(--admin-text-muted)]">
-                {isAr ? "لا توجد خطة غذائية نشطة بعد" : "No nutrition plan yet"}
+                {isAr ? "لم يتم إنشاء أي خطة غذائية بعد" : "No nutrition plan has been created yet."}
               </p>
               <button
                 onClick={() => onNavigate("nutrition", "createPlan")}
                 className="flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-emerald-500 text-white text-[12px] font-semibold hover:opacity-90 transition-opacity"
               >
                 <Plus size={11} strokeWidth={2.5} />
-                {isAr ? "إنشاء خطة" : "Create Plan"}
+                {isAr ? "+ إنشاء خطة غذائية" : "+ Create Nutrition Plan"}
               </button>
             </div>
           )}
@@ -1500,6 +1580,8 @@ export default function ClientProfilePage() {
   const [activeTab,            setActiveTab]            = useState<TabId>("overview");
   const [drawerOpen,           setDrawerOpen]           = useState(false);
   const [nutritionCount,       setNutritionCount]       = useState(0);
+  const [activePlans,          setActivePlans]          = useState<NutritionPlanRow[]>([]);
+  const [planRefreshKey,       setPlanRefreshKey]       = useState(0);
   const [progressCount,        setProgressCount]        = useState(0);
   // Pending remote-trigger flags for NutritionPlansTab and FilesTab
   const [pendingNutritionOpen, setPendingNutritionOpen] = useState(false);
@@ -1567,6 +1649,28 @@ export default function ClientProfilePage() {
   function handleBookAppointment() {
     setActiveTab("appointments");
     setShowBookModal(true);
+  }
+
+  // Quick plan actions triggered from the Overview tab nutrition snapshot
+  async function handlePlanDuplicate() {
+    const plan = activePlans[0];
+    if (!plan || !id) return;
+    await duplicateNutritionPlan(plan, id);
+    setPlanRefreshKey((k) => k + 1);
+    // Navigate to nutrition tab so the user sees the duplicate immediately
+    setActiveTab("nutrition");
+  }
+
+  async function handlePlanArchive() {
+    const plan = activePlans[0];
+    if (!plan) return;
+    await setNutritionPlanStatus(plan.id, "archived");
+    setPlanRefreshKey((k) => k + 1);
+  }
+
+  function handleEditPlan() {
+    // Navigate to the nutrition tab; the plan card's Edit button is there
+    setActiveTab("nutrition");
   }
 
   // Called by BookAppointmentModal when a new appointment is saved
@@ -1874,9 +1978,13 @@ export default function ClientProfilePage() {
                     client={client}
                     assessments={assessments}
                     nutritionCount={nutritionCount}
+                    activePlan={activePlans[0] ?? null}
                     isAr={isAr}
                     onNavigate={handleNavigate}
                     onCreateAssessment={handleCreateAssessment}
+                    onEditPlan={handleEditPlan}
+                    onDuplicatePlan={handlePlanDuplicate}
+                    onArchivePlan={handlePlanArchive}
                   />
                 )}
                 {activeTab === "appointments" && (
@@ -1898,8 +2006,10 @@ export default function ClientProfilePage() {
                     clientId={client.id}
                     isAr={isAr}
                     onCountChange={setNutritionCount}
+                    onActivePlansChange={setActivePlans}
                     autoOpenCreate={pendingNutritionOpen}
                     onAutoOpenConsumed={() => setPendingNutritionOpen(false)}
+                    refreshKey={planRefreshKey}
                   />
                 )}
                 {activeTab === "payments" && (

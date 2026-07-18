@@ -29,4 +29,10 @@ Each value: `{ title, description, instructions, notes }`.
 - `src/admin/repositories/nutrition-plans.repository.ts` — all DB + storage operations
 - `src/admin/pages/NutritionPlansTab.tsx` — self-contained tab (editor modal, history modal, files modal)
 - `supabase/migrations/20260718000001_nutrition_plans.sql` — schema (run successfully)
-- `ClientProfilePage.tsx` — passes `clientId` and `onCountChange` to `NutritionPlansTab`
+## Client Profile Integration (ClientProfilePage.tsx)
+- `NutritionPlansTab` receives: `clientId`, `onCountChange`, `onActivePlansChange`, `autoOpenCreate`, `onAutoOpenConsumed`, `refreshKey`
+- `onActivePlansChange` bubbles the active-plans array up to the parent so Overview can show a real plan summary without a second query
+- `refreshKey` (incremented integer) forces a reload from outside the tab — used by Overview's Duplicate/Archive quick actions
+- Overview nutrition card: shows plan name, status badge, created date, end_date (Next Review) when a plan exists; otherwise shows "No nutrition plan has been created yet." + "+ Create Nutrition Plan"
+- Overview action buttons (when plan exists): Edit Plan (navigates to tab), Duplicate, Archive (async via repo imports in ClientProfilePage), Print PDF (placeholder disabled), Send to Client (placeholder disabled)
+- PlanCard action buttons include Print PDF and Send to Client placeholders (disabled, "Coming Soon")
