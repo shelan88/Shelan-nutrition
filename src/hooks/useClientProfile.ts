@@ -70,7 +70,24 @@ export function useClientProfile(): ClientProfileState {
         return;
       }
 
-      // ── 3. No row found — auto-create then retry ────────────────────────────
+      // ── 3. No row found — verify this is a client before auto-creating ─────
+      // Admin users must never have a client record silently created for them.
+      const { data: adminCheck } = await supabase
+        .from("admin_profiles")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (adminCheck) {
+        // This is an admin account — no client profile is expected or wanted.
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+
+      // ── 4. Confirmed client with no row — auto-create then retry ────────────
       // This handles: email-confirmed signups, OAuth logins, timing races after
       // registration, and any other path where the upsert wasn't awaited.
       await upsertClientFromAuth(session.user);

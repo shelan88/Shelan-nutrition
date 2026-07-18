@@ -2,6 +2,7 @@
  * PortalLayout — wraps all client portal pages with:
  *   • Dark site background (portal always renders on dark)
  *   • Auth guard (shows sign-in prompt if no session)
+ *   • Role guard (admins are redirected to /admin — not the client portal)
  *   • RTL direction when Arabic is active
  *   • Consistent top padding to clear the fixed Navbar
  *   • Centred max-width content container
@@ -10,12 +11,14 @@
  * no duplicate tab bar is rendered here.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Navigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { ShieldAlert } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
 import AuthModal from "@/components/AuthModal";
+import { supabase } from "@/lib/supabase";
 import type { ReactNode } from "react";
 
 interface PortalLayoutProps {
@@ -27,10 +30,29 @@ export default function PortalLayout({ children }: PortalLayoutProps) {
   const { lang } = useLanguage();
   const [authOpen, setAuthOpen] = useState(false);
 
+  // null = check in progress, true = admin, false = client/guest
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+
   const isAr = lang === "ar";
 
-  // ── Still resolving auth ──────────────────────────────────────────────────
-  if (authLoading) {
+  // ── Check whether the authenticated user is an admin ─────────────────────
+  // This runs any time the user identity changes.
+  useEffect(() => {
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
+    supabase
+      .from("admin_profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .in("role", ["admin", "staff"])
+      .maybeSingle()
+      .then(({ data }) => setIsAdmin(!!data));
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Spinner — auth not resolved yet OR admin-check still in flight ────────
+  if (authLoading || isAdmin === null) {
     return (
       <div
         dir={isAr ? "rtl" : "ltr"}
@@ -39,6 +61,11 @@ export default function PortalLayout({ children }: PortalLayoutProps) {
         <div className="w-10 h-10 rounded-full border-2 border-primary-pink border-t-transparent animate-spin" />
       </div>
     );
+  }
+
+  // ── Admin trying to access client portal — send them home ─────────────────
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />;
   }
 
   // ── Not authenticated ─────────────────────────────────────────────────────
@@ -73,7 +100,7 @@ export default function PortalLayout({ children }: PortalLayoutProps) {
     );
   }
 
-  // ── Authenticated ─────────────────────────────────────────────────────────
+  // ── Authenticated client ──────────────────────────────────────────────────
   return (
     <div
       dir={isAr ? "rtl" : "ltr"}

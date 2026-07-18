@@ -13,7 +13,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu, Search, Bell, Sun, Moon, ChevronDown,
-  ChevronRight, LogOut, User, Settings2, ExternalLink,
+  ChevronRight, LogOut, User, ExternalLink,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAdmin } from "../context/AdminContext";
@@ -45,9 +45,21 @@ function useBreadcrumbs(lang: "en" | "ar") {
 
 // ─── User dropdown ────────────────────────────────────────────────────────────
 function UserMenu({ lang }: { lang: "en" | "ar" }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [open,       setOpen]       = useState(false);
+  const [adminName,  setAdminName]  = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const ref      = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  // Load the authenticated admin's real name and email from Supabase Auth
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      const name = (user.user_metadata?.full_name as string | undefined) ?? "";
+      setAdminName(name || user.email?.split("@")[0] || "Admin");
+      setAdminEmail(user.email ?? "");
+    });
+  }, []);
 
   const handleSignOut = async () => {
     setOpen(false);
@@ -63,15 +75,22 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Compute initials from real name / email
+  const nameParts = adminName.trim().split(/\s+/).filter(Boolean);
+  const inits =
+    nameParts.length >= 2
+      ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
+      : adminName.trim()
+      ? adminName.trim()[0].toUpperCase()
+      : adminEmail[0]?.toUpperCase() ?? "A";
+
   const items = lang === "ar"
     ? [
-        { icon: User, label: "الملف الشخصي", href: "/admin/settings" },
-        { icon: Settings2, label: "الإعدادات", href: "/admin/settings" },
-        { icon: ExternalLink, label: "الموقع العام", href: "/", external: true },
+        { icon: User,         label: "الملف الشخصي", href: "/admin/profile"  },
+        { icon: ExternalLink, label: "الموقع العام",  href: "/", external: true },
       ]
     : [
-        { icon: User, label: "Profile", href: "/admin/settings" },
-        { icon: Settings2, label: "Settings", href: "/admin/settings" },
+        { icon: User,         label: "Profile",        href: "/admin/profile"  },
         { icon: ExternalLink, label: "View public site", href: "/", external: true },
       ];
 
@@ -84,10 +103,10 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
         aria-label="User menu"
       >
         <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-pink to-lavender-purple flex items-center justify-center text-white text-[11px] font-bold shadow-sm">
-          S
+          {inits}
         </div>
         <span className="hidden sm:block text-[13px] font-medium text-[var(--admin-text)]">
-          Shelan
+          {adminName || "Admin"}
         </span>
         <ChevronDown size={13} className={`text-[var(--admin-text-faint)] transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
@@ -109,8 +128,10 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
           >
             {/* User info */}
             <div className="px-4 py-3 border-b border-[var(--admin-border)]">
-              <p className="text-[13px] font-semibold text-[var(--admin-text)]">Shelan</p>
-              <p className="text-[11px] text-[var(--admin-text-faint)]">admin@shelan.com</p>
+              <p className="text-[13px] font-semibold text-[var(--admin-text)]">
+                {adminName || "Admin"}
+              </p>
+              <p className="text-[11px] text-[var(--admin-text-faint)]">{adminEmail}</p>
             </div>
 
             {/* Items */}

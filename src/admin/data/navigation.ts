@@ -183,6 +183,14 @@ export const NAV_ITEMS: NavItem[] = [
 
   // ── System ─────────────────────────────────────────────────────────────────
   {
+    id: "profile",
+    label: "My Profile",
+    labelAr: "ملفي الشخصي",
+    href: "/admin/profile",
+    iconName: "User",
+    group: "system",
+  },
+  {
     id: "settings",
     label: "Settings",
     labelAr: "الإعدادات",
@@ -323,6 +331,13 @@ export const PAGE_META: Record<string, PageMeta> = {
     description: "Manage meta tags, Open Graph, sitemaps, and keyword rankings for every page.",
     descriptionAr: "إدارة العلامات الوصفية وOpen Graph وخرائط الموقع وتصنيفات الكلمات الرئيسية لكل صفحة.",
     illustrationVariant: "seo",
+  },
+  profile: {
+    title: "My Profile",
+    titleAr: "ملفي الشخصي",
+    description: "Manage your display name, email, password, language, and theme preferences.",
+    descriptionAr: "إدارة اسمك وبريدك الإلكتروني وكلمة المرور وتفضيلات اللغة والمظهر.",
+    illustrationVariant: "settings",
   },
   settings: {
     title: "Settings",

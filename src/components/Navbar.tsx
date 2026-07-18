@@ -154,29 +154,39 @@ export default function Navbar() {
             : email[0]?.toUpperCase() ?? "?";
         setUserInitials(initials);
 
-        // Fetch avatar_url from client row
-        const { data } = await supabase
-          .from("clients")
-          .select("avatar_url")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-        if (!cancelled) setAvatarUrl((data as any)?.avatar_url ?? null);
+        // Check admin status first — gates the avatar fetch below.
+        // Admins have no clients row so fetching from it would fail silently or
+        // trigger the auto-create path in useClientProfile.
+        const admin = await checkAdminProfile(session);
+        if (cancelled) return;
+        setIsAdmin(admin);
+
+        if (!admin) {
+          // Fetch avatar_url from client row only for non-admin users
+          const { data } = await supabase
+            .from("clients")
+            .select("avatar_url")
+            .eq("user_id", session.user.id)
+            .maybeSingle();
+          if (!cancelled) setAvatarUrl((data as any)?.avatar_url ?? null);
+        } else {
+          setAvatarUrl(null);
+        }
       } else {
         setUserInitials("");
         setAvatarUrl(null);
+        setIsAdmin(false);
       }
     }
 
     supabase.auth.getSession().then(({ data }) => {
       if (cancelled) return;
       applySession(data.session);
-      checkAdminProfile(data.session).then(result => { if (!cancelled) setIsAdmin(result); });
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (cancelled) return;
       applySession(session);
-      checkAdminProfile(session).then(result => { if (!cancelled) setIsAdmin(result); });
     });
 
     return () => { cancelled = true; subscription.unsubscribe(); };
@@ -296,18 +306,30 @@ export default function Navbar() {
                           </div>
                         </div>
                       )}
-                      {/* Portal links */}
+                      {/* Portal links (clients) or Admin Dashboard link (admins) */}
                       <div className="py-1">
-                        {PORTAL_NAV.map(({ href, labelEn, labelAr, Icon }) => (
+                        {!isAdmin ? (
+                          PORTAL_NAV.map(({ href, labelEn, labelAr, Icon }) => (
+                            <Link
+                              key={href}
+                              to={href}
+                              onClick={() => setDropOpen(false)}
+                              className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ivory/70 hover:text-ivory hover:bg-white/8 transition-colors"
+                            >
+                              <Icon size={14} className="text-ivory/40 shrink-0" />
+                              {lang === "ar" ? labelAr : labelEn}
+                            </Link>
+                          ))
+                        ) : (
                           <Link
-                            key={href}
-                            to={href}
+                            to="/admin"
+                            onClick={() => setDropOpen(false)}
                             className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ivory/70 hover:text-ivory hover:bg-white/8 transition-colors"
                           >
-                            <Icon size={14} className="text-ivory/40 shrink-0" />
-                            {lang === "ar" ? labelAr : labelEn}
+                            <LayoutDashboard size={14} className="text-ivory/40 shrink-0" />
+                            {lang === "ar" ? "لوحة الإدارة" : "Admin Dashboard"}
                           </Link>
-                        ))}
+                        )}
                       </div>
                       {/* Divider + Sign Out */}
                       <div className="border-t border-white/10 py-1">
@@ -436,8 +458,8 @@ export default function Navbar() {
               {/* Divider */}
               <motion.div variants={linkVariants} className="w-16 h-px bg-white/10 my-1" />
 
-              {/* ── AUTHENTICATED: portal links ───────── */}
-              {hasSession && (
+              {/* ── AUTHENTICATED CLIENT: portal links ── */}
+              {hasSession && !isAdmin && (
                 <>
                   {/* User info */}
                   <motion.div variants={linkVariants} className="flex items-center gap-2.5">
@@ -478,6 +500,32 @@ export default function Navbar() {
                 </>
               )}
 
+              {/* ── AUTHENTICATED ADMIN: dashboard shortcut + sign out ── */}
+              {hasSession && isAdmin && (
+                <>
+                  <motion.div variants={linkVariants}>
+                    <Link
+                      to="/admin"
+                      className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/25 text-sm font-semibold text-ivory/70 hover:text-white hover:border-white/50 hover:bg-white/10 transition-colors"
+                    >
+                      <LayoutDashboard size={15} />
+                      {lang === "ar" ? "لوحة الإدارة" : "Admin Dashboard"}
+                    </Link>
+                  </motion.div>
+
+                  <motion.div variants={linkVariants}>
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      className="flex items-center gap-2 font-heading text-base font-semibold text-red-400/80 hover:text-red-300 transition-colors"
+                    >
+                      <LogOut size={16} />
+                      {lang === "ar" ? "تسجيل الخروج" : "Sign Out"}
+                    </button>
+                  </motion.div>
+                </>
+              )}
+
               {/* ── NOT AUTHENTICATED: login button ───── */}
               {!hasSession && (
                 <motion.button
@@ -489,19 +537,6 @@ export default function Navbar() {
                   <UserCircle2 size={22} />
                   {authT.trigger}
                 </motion.button>
-              )}
-
-              {/* Admin Dashboard — ONLY visible to authenticated admin/staff users */}
-              {isAdmin && (
-                <motion.div variants={linkVariants}>
-                  <Link
-                    to="/admin"
-                    className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-white/25 text-sm font-semibold text-ivory/70 hover:text-white hover:border-white/50 hover:bg-white/10 transition-colors"
-                  >
-                    <LayoutDashboard size={15} />
-                    {lang === "ar" ? "لوحة الإدارة" : "Admin Dashboard"}
-                  </Link>
-                </motion.div>
               )}
             </nav>
           </motion.div>

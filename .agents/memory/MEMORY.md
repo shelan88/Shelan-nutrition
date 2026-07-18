@@ -6,3 +6,4 @@
 - [Nutrition Plans module](nutrition-plans-module.md) — version-history via plan_group_id; meals stored as JSONB; files in nutrition_plan_files table; form-input CSS utility in admin-shell.
 - [Progress Tracking module](progress-tracking-module.md) — progress_entries + progress_photos tables; SVG line charts (no external lib); self-contained ProgressTab; photos in media bucket under progress/{clientId}/{entryId}/.
 - [Client portal](client-portal.md) — SECURITY DEFINER RPCs must derive identity from auth.uid()/auth.email(), not parameters; broad auth_all policies must be dropped before adding scoped replacements; loading gates need a null-profile exit path.
+- [Admin/Client role separation](role-separation.md) — two separate auth domains; admin_profiles table gates /admin/*; PortalLayout gates /portal/* and redirects admins; useClientProfile guards against auto-creating client rows for admins.

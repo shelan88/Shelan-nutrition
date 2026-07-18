@@ -42,6 +42,7 @@ import SEOPage from "../pages/SEOPage";
 import AssessmentTemplatesPage from "../pages/AssessmentTemplatesPage";
 import QuestionLibraryPage from "../pages/QuestionLibraryPage";
 import ClientProfilePage from "../pages/ClientProfilePage";
+import AdminProfilePage from "../pages/AdminProfilePage";
 
 export default function AdminLayout() {
   return (
@@ -87,6 +88,7 @@ export default function AdminLayout() {
               <Route path="seo"                   element={<SEOPage />} />
 
               {/* System */}
+              <Route path="profile"               element={<AdminProfilePage />} />
               <Route path="settings"              element={<PlaceholderPage pageId="settings" />} />
 
               {/* Fallback — redirect to dashboard */}
