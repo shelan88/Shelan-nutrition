@@ -166,6 +166,7 @@ export interface UploadedFileRow {
   filename: string;
   type: string;
   size: number | null;
+  url: string | null;
   uploaded_at: string;
   created_at: string;
 }

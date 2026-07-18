@@ -23,6 +23,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import PageHeader from "@/admin/components/PageHeader";
 import ClientDrawer from "@/admin/pages/ClientDrawer";
 import { getClient } from "@/admin/repositories/clients.repository";
+import { uploadClientFile, deleteClientFile } from "@/admin/repositories/client-files.repository";
 import {
   getClientAppointments,
   getClientAssessmentResponses,
@@ -510,46 +511,129 @@ function AssessmentsTab({
   );
 }
 
-function FilesTab({ files, isAr }: { files: Client["files"]; isAr: boolean }) {
-  if (files.length === 0) {
-    return (
-      <EmptyState
-        icon={FileIcon}
-        label={isAr ? "لا توجد ملفات مرفوعة بعد" : "No files uploaded yet"}
-      />
-    );
+function FilesTab({
+  initialFiles, clientId, isAr,
+}: { initialFiles: Client["files"]; clientId: string; isAr: boolean }) {
+  const [files,     setFiles]     = useState(initialFiles);
+  const [uploading, setUploading] = useState(false);
+  const [deleting,  setDeleting]  = useState<string | null>(null);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset the input so the same file can be re-selected
+    e.target.value = "";
+    setUploading(true);
+    const row = await uploadClientFile(clientId, file);
+    setUploading(false);
+    if (!row) return;
+    const newFile: Client["files"][number] = {
+      id:         row.id,
+      name:       row.filename,
+      type:       (row.type ?? "PDF") as import("@/admin/data/clients").FileType,
+      size:       row.size ? `${(Number(row.size) / 1_048_576).toFixed(1)} MB` : "",
+      uploadedAt: row.uploaded_at,
+      url:        row.url ?? null,
+    };
+    setFiles((prev) => [newFile, ...prev]);
+  }
+
+  async function handleDelete(f: Client["files"][number]) {
+    if (!window.confirm(isAr ? "هل تريد حذف هذا الملف؟" : "Delete this file?")) return;
+    setDeleting(f.id);
+    await deleteClientFile(f.id, f.url ?? null);
+    setFiles((prev) => prev.filter((x) => x.id !== f.id));
+    setDeleting(null);
   }
 
   return (
-    <div className="space-y-2">
-      {files.map((f) => {
-        const Icon = f.type === "Image" ? ImageIcon : FileIcon;
-        return (
-          <div
-            key={f.id}
-            className="
-              flex items-center gap-3 p-3.5 rounded-xl
-              border border-[var(--admin-border)] hover:bg-[var(--admin-hover-bg)] transition-colors
-            "
-          >
-            <div className="w-9 h-9 rounded-xl bg-[var(--admin-hover-bg)] border border-[var(--admin-border)] flex items-center justify-center shrink-0">
-              <Icon size={15} strokeWidth={1.8} className="text-[var(--admin-text-muted)]" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-semibold text-[var(--admin-text)] truncate">{f.name}</p>
-              <p className="text-[11.5px] text-[var(--admin-text-faint)]">
-                {f.type} · {f.size} · {fmtDate(f.uploadedAt, isAr)}
-              </p>
-            </div>
-            <button
-              title={isAr ? "تنزيل" : "Download"}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--admin-text-faint)] hover:text-primary-pink hover:bg-primary-pink/8 transition-all"
-            >
-              <DownloadIcon size={14} strokeWidth={2} />
-            </button>
-          </div>
-        );
-      })}
+    <div className="space-y-4">
+      {/* Upload button */}
+      <div className="flex justify-end">
+        <label className={`
+          inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12.5px] font-semibold cursor-pointer
+          bg-primary-pink/10 text-primary-pink hover:bg-primary-pink/20 transition-colors
+          ${uploading ? "opacity-50 pointer-events-none" : ""}
+        `}>
+          {uploading ? (
+            <span className="w-3.5 h-3.5 rounded-full border-2 border-primary-pink border-t-transparent animate-spin" />
+          ) : (
+            <FileIcon size={13} strokeWidth={2} />
+          )}
+          {isAr ? (uploading ? "جارٍ الرفع…" : "رفع ملف") : (uploading ? "Uploading…" : "Upload File")}
+          <input
+            type="file"
+            className="hidden"
+            disabled={uploading}
+            onChange={handleUpload}
+          />
+        </label>
+      </div>
+
+      {files.length === 0 ? (
+        <EmptyState
+          icon={FileIcon}
+          label={isAr ? "لا توجد ملفات مرفوعة بعد" : "No files uploaded yet"}
+        />
+      ) : (
+        <div className="space-y-2">
+          {files.map((f) => {
+            const Icon = f.type === "Image" ? ImageIcon : FileIcon;
+            const isDeleting = deleting === f.id;
+            return (
+              <div
+                key={f.id}
+                className={`
+                  flex items-center gap-3 p-3.5 rounded-xl
+                  border border-[var(--admin-border)] hover:bg-[var(--admin-hover-bg)] transition-colors
+                  ${isDeleting ? "opacity-50" : ""}
+                `}
+              >
+                <div className="w-9 h-9 rounded-xl bg-[var(--admin-hover-bg)] border border-[var(--admin-border)] flex items-center justify-center shrink-0">
+                  <Icon size={15} strokeWidth={1.8} className="text-[var(--admin-text-muted)]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-[var(--admin-text)] truncate">{f.name}</p>
+                  <p className="text-[11.5px] text-[var(--admin-text-faint)]">
+                    {f.type} · {f.size} · {fmtDate(f.uploadedAt, isAr)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {f.url ? (
+                    <a
+                      href={f.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download={f.name}
+                      title={isAr ? "تنزيل" : "Download"}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--admin-text-faint)] hover:text-primary-pink hover:bg-primary-pink/8 transition-all"
+                    >
+                      <DownloadIcon size={14} strokeWidth={2} />
+                    </a>
+                  ) : (
+                    <span
+                      title={isAr ? "الرابط غير متاح" : "No URL available"}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--admin-text-faint)]/30 cursor-default"
+                    >
+                      <DownloadIcon size={14} strokeWidth={2} />
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleDelete(f)}
+                    disabled={isDeleting}
+                    title={isAr ? "حذف" : "Delete"}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--admin-text-faint)] hover:text-red-500 hover:bg-red-50 transition-all"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -946,7 +1030,7 @@ export default function ClientProfilePage() {
                   />
                 )}
                 {activeTab === "files" && (
-                  <FilesTab files={client.files} isAr={isAr} />
+                  <FilesTab initialFiles={client.files} clientId={client.id} isAr={isAr} />
                 )}
                 {activeTab === "progress" && (
                   <ProgressTab

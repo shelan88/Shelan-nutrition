@@ -49,6 +49,7 @@ export interface ClientFile {
   type: FileType;
   size: string;
   uploadedAt: string;
+  url: string | null;
 }
 
 export interface TimelineEvent {
@@ -165,8 +166,8 @@ export const MOCK_CLIENTS: Client[] = [
       notesAr: "كربوهيدرات منخفضة المؤشر الجلايسيمي فقط. تجنب السكريات المكررة. هدف الترطيب: 2.5 لتر/يوم.",
     },
     files: [
-      { id: "f-1", name: "Blood Test Results.pdf",    type: "Lab Report", size: "1.2 MB", uploadedAt: "Jun 25, 2026" },
-      { id: "f-2", name: "Body Composition Scan.pdf", type: "PDF",        size: "0.8 MB", uploadedAt: "Jun 28, 2026" },
+      { id: "f-1", name: "Blood Test Results.pdf",    type: "Lab Report", size: "1.2 MB", uploadedAt: "Jun 25, 2026", url: null },
+      { id: "f-2", name: "Body Composition Scan.pdf", type: "PDF",        size: "0.8 MB", uploadedAt: "Jun 28, 2026", url: null },
     ],
     timeline: [
       { id: "t-1", event: "Assessment Submitted",      eventAr: "تم تقديم التقييم",        date: "Jun 20, 2026", type: "assessment"    },
@@ -228,8 +229,8 @@ export const MOCK_CLIENTS: Client[] = [
       notesAr: "توزيع الكربوهيدرات بالتساوي على 5 وجبات. الحد من الصوديوم إلى 1500 ملغ/يوم.",
     },
     files: [
-      { id: "f-3", name: "HbA1c Results May 2026.pdf", type: "Lab Report", size: "0.9 MB", uploadedAt: "May 10, 2026" },
-      { id: "f-4", name: "HbA1c Results Jul 2026.pdf",  type: "Lab Report", size: "0.9 MB", uploadedAt: "Jul 8, 2026"  },
+      { id: "f-3", name: "HbA1c Results May 2026.pdf", type: "Lab Report", size: "0.9 MB", uploadedAt: "May 10, 2026", url: null },
+      { id: "f-4", name: "HbA1c Results Jul 2026.pdf",  type: "Lab Report", size: "0.9 MB", uploadedAt: "Jul 8, 2026", url: null  },
     ],
     timeline: [
       { id: "t-6",  event: "Assessment Submitted",  eventAr: "تم تقديم التقييم",     date: "Apr 28, 2026", type: "assessment"   },
@@ -290,9 +291,9 @@ export const MOCK_CLIENTS: Client[] = [
       notesAr: "نهج قريب من الكيتو. دهون مضادة للالتهابات. تخلص من الغلوتين والسكريات المكررة.",
     },
     files: [
-      { id: "f-5", name: "Lipedema Specialist Report.pdf", type: "PDF",        size: "2.1 MB", uploadedAt: "Jun 15, 2026" },
-      { id: "f-6", name: "Thyroid Panel Results.pdf",      type: "Lab Report", size: "1.0 MB", uploadedAt: "Jun 10, 2026" },
-      { id: "f-7", name: "Body Scan Image.jpg",            type: "Image",      size: "3.4 MB", uploadedAt: "Jul 16, 2026" },
+      { id: "f-5", name: "Lipedema Specialist Report.pdf", type: "PDF",        size: "2.1 MB", uploadedAt: "Jun 15, 2026", url: null },
+      { id: "f-6", name: "Thyroid Panel Results.pdf",      type: "Lab Report", size: "1.0 MB", uploadedAt: "Jun 10, 2026", url: null },
+      { id: "f-7", name: "Body Scan Image.jpg",            type: "Image",      size: "3.4 MB", uploadedAt: "Jul 16, 2026", url: null },
     ],
     timeline: [
       { id: "t-11", event: "Assessment Submitted",    eventAr: "تم تقديم التقييم",     date: "Jun 5, 2026",  type: "assessment"   },
@@ -353,7 +354,7 @@ export const MOCK_CLIENTS: Client[] = [
       notesAr: "نهج الأغذية الكاملة. ألياف عالية. أغذية غنية بالحديد. مكمل: حمض الفوليك 400 ميكروجرام يومياً.",
     },
     files: [
-      { id: "f-8", name: "Hormone Panel.pdf", type: "Lab Report", size: "1.1 MB", uploadedAt: "May 18, 2026" },
+      { id: "f-8", name: "Hormone Panel.pdf", type: "Lab Report", size: "1.1 MB", uploadedAt: "May 18, 2026", url: null },
     ],
     timeline: [
       { id: "t-15", event: "Assessment Submitted",  eventAr: "تم تقديم التقييم",     date: "May 12, 2026", type: "assessment"   },
@@ -400,7 +401,7 @@ export const MOCK_CLIENTS: Client[] = [
     ],
     nutritionPlan: null,
     files: [
-      { id: "f-9", name: "Final Progress Report.pdf", type: "PDF", size: "1.8 MB", uploadedAt: "Jun 20, 2026" },
+      { id: "f-9", name: "Final Progress Report.pdf", type: "PDF", size: "1.8 MB", uploadedAt: "Jun 20, 2026", url: null },
     ],
     timeline: [
       { id: "t-20", event: "Assessment Submitted",  eventAr: "تم تقديم التقييم",     date: "Jan 8, 2026",  type: "assessment"   },
@@ -462,8 +463,8 @@ export const MOCK_CLIENTS: Client[] = [
       notesAr: "كيتو معدّل. إدارة صارمة للكربوهيدرات. تركيز مضاد للالتهابات. صوديوم منخفض لضبط ضغط الدم.",
     },
     files: [
-      { id: "f-10", name: "Specialist Referral Letter.pdf", type: "PDF",        size: "0.5 MB", uploadedAt: "Feb 25, 2026" },
-      { id: "f-11", name: "Metabolic Panel Jun 2026.pdf",   type: "Lab Report", size: "1.3 MB", uploadedAt: "Jun 18, 2026" },
+      { id: "f-10", name: "Specialist Referral Letter.pdf", type: "PDF",        size: "0.5 MB", uploadedAt: "Feb 25, 2026", url: null },
+      { id: "f-11", name: "Metabolic Panel Jun 2026.pdf",   type: "Lab Report", size: "1.3 MB", uploadedAt: "Jun 18, 2026", url: null },
     ],
     timeline: [
       { id: "t-25", event: "Assessment Submitted",  eventAr: "تم تقديم التقييم",     date: "Feb 20, 2026", type: "assessment"   },
@@ -511,7 +512,7 @@ export const MOCK_CLIENTS: Client[] = [
     ],
     nutritionPlan: null,
     files: [
-      { id: "f-12", name: "PCOS Hormonal Panel.pdf", type: "Lab Report", size: "1.4 MB", uploadedAt: "Jun 28, 2026" },
+      { id: "f-12", name: "PCOS Hormonal Panel.pdf", type: "Lab Report", size: "1.4 MB", uploadedAt: "Jun 28, 2026", url: null },
     ],
     timeline: [
       { id: "t-30", event: "Assessment Submitted", eventAr: "تم تقديم التقييم",  date: "May 30, 2026", type: "assessment"   },
@@ -570,7 +571,7 @@ export const MOCK_CLIENTS: Client[] = [
       notesAr: "لا سكريات مضافة. قاعدة متوسطية. خضروات الكرنب يومياً.",
     },
     files: [
-      { id: "f-13", name: "Liver Ultrasound Report.pdf", type: "Lab Report", size: "1.6 MB", uploadedAt: "Apr 28, 2026" },
+      { id: "f-13", name: "Liver Ultrasound Report.pdf", type: "Lab Report", size: "1.6 MB", uploadedAt: "Apr 28, 2026", url: null },
     ],
     timeline: [
       { id: "t-33", event: "Assessment Submitted",  eventAr: "تم تقديم التقييم",     date: "Apr 22, 2026", type: "assessment"   },
@@ -632,9 +633,9 @@ export const MOCK_CLIENTS: Client[] = [
       notesAr: "كيتو علاجي لليبيديما. إعطاء الأولوية لأوميغا 3 والدهون المضادة للالتهابات. تجنب الفيتوإستروجين.",
     },
     files: [
-      { id: "f-14", name: "Lymphatic Assessment.pdf",  type: "PDF",        size: "1.8 MB", uploadedAt: "Mar 8, 2026"  },
-      { id: "f-15", name: "Thyroid Panel Results.pdf",  type: "Lab Report", size: "0.9 MB", uploadedAt: "Mar 25, 2026" },
-      { id: "f-16", name: "Progress Photos Jun.jpg",    type: "Image",      size: "4.1 MB", uploadedAt: "Jun 30, 2026" },
+      { id: "f-14", name: "Lymphatic Assessment.pdf",  type: "PDF",        size: "1.8 MB", uploadedAt: "Mar 8, 2026", url: null  },
+      { id: "f-15", name: "Thyroid Panel Results.pdf",  type: "Lab Report", size: "0.9 MB", uploadedAt: "Mar 25, 2026", url: null },
+      { id: "f-16", name: "Progress Photos Jun.jpg",    type: "Image",      size: "4.1 MB", uploadedAt: "Jun 30, 2026", url: null },
     ],
     timeline: [
       { id: "t-38", event: "Assessment Submitted",  eventAr: "تم تقديم التقييم",     date: "Mar 1, 2026",  type: "assessment"   },
@@ -736,7 +737,7 @@ export const MOCK_CLIENTS: Client[] = [
       notesAr: "متوسطي منخفض الكربوهيدرات. لا كربوهيدرات مكررة. صيام متقطع 16:8 اختياري. الهدف: HbA1c < 6.5% بحلول ديسمبر 2026.",
     },
     files: [
-      { id: "f-17", name: "Initial Diabetes Panel.pdf", type: "Lab Report", size: "1.1 MB", uploadedAt: "Jun 15, 2026" },
+      { id: "f-17", name: "Initial Diabetes Panel.pdf", type: "Lab Report", size: "1.1 MB", uploadedAt: "Jun 15, 2026", url: null },
     ],
     timeline: [
       { id: "t-45", event: "Assessment Submitted",  eventAr: "تم تقديم التقييم",     date: "Jun 10, 2026", type: "assessment"   },
@@ -796,8 +797,8 @@ export const MOCK_CLIENTS: Client[] = [
       notesAr: "مرحلة FODMAP المنخفض 1 (6 أسابيع)، ثم مرحلة إعادة التقديم. مرق العظام يومياً.",
     },
     files: [
-      { id: "f-18", name: "Gut Health Panel.pdf",  type: "Lab Report", size: "1.2 MB", uploadedAt: "Apr 18, 2026" },
-      { id: "f-19", name: "Vitamin D Results.pdf",  type: "Lab Report", size: "0.7 MB", uploadedAt: "Jun 25, 2026" },
+      { id: "f-18", name: "Gut Health Panel.pdf",  type: "Lab Report", size: "1.2 MB", uploadedAt: "Apr 18, 2026", url: null },
+      { id: "f-19", name: "Vitamin D Results.pdf",  type: "Lab Report", size: "0.7 MB", uploadedAt: "Jun 25, 2026", url: null },
     ],
     timeline: [
       { id: "t-49", event: "Assessment Submitted",  eventAr: "تم تقديم التقييم",     date: "Apr 15, 2026", type: "assessment"   },

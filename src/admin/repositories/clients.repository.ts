@@ -78,6 +78,7 @@ function mapRowToClient(row: any): Client {
       type:       (f.type ?? "PDF") as FileType,
       size:       f.size ? `${(Number(f.size) / 1_048_576).toFixed(1)} MB` : "",
       uploadedAt: f.uploaded_at ?? "",
+      url:        f.url ?? null,
     })),
 
     timeline: [...timelineRows]
@@ -111,7 +112,7 @@ const FULL_SELECT = `
   assessments(id, score, risk_level, risk_percentage, diagnosis_category, diagnosis_category_ar, submitted_at),
   timeline_events(id, event, event_ar, type, date),
   nutrition_plans(id, name, status),
-  uploaded_files(id, filename, type, size, uploaded_at)
+  uploaded_files(id, filename, type, size, url, uploaded_at)
 `.trim();
 
 // ─── Read operations ───────────────────────────────────────────────────────────

@@ -1,15 +1,14 @@
 /**
  * Portal — My Files
  * Lists files shared with the client by the admin.
- *
- * Note: the uploaded_files table stores filename/type/size but does not include
- * a storage URL. Download links are therefore not available until the admin
- * uploads files through a flow that persists the storage path. Files are shown
- * as a read-only list so clients can see what has been shared with them.
+ * Files with a stored URL get a functional Download button.
+ * Files without a URL (legacy rows) show a "Contact your nutritionist" note.
  */
 
 import { useState, useEffect } from "react";
-import { Folder, FileText, FileImage, File, AlertCircle, Info } from "lucide-react";
+import {
+  Folder, FileText, FileImage, File, Download as DownloadIcon, Info,
+} from "lucide-react";
 import { useClientProfile } from "@/hooks/useClientProfile";
 import { useLanguage } from "@/context/LanguageContext";
 import {
@@ -19,8 +18,8 @@ import {
 
 function FileTypeIcon({ type }: { type: string | null }) {
   const t = (type ?? "").toLowerCase();
-  if (t.includes("image"))    return <FileImage size={16} className="text-blue-400" />;
-  if (t === "pdf")            return <FileText  size={16} className="text-red-400"  />;
+  if (t.includes("image")) return <FileImage size={16} className="text-blue-400" />;
+  if (t === "pdf")         return <FileText  size={16} className="text-red-400"  />;
   return <File size={16} className="text-ivory/40" />;
 }
 
@@ -30,6 +29,32 @@ function TypeBadge({ type }: { type: string | null }) {
     <span className="text-[10px] font-semibold text-ivory/40 bg-white/8 px-2 py-0.5 rounded-full border border-white/8 uppercase">
       {t}
     </span>
+  );
+}
+
+function DownloadButton({ file, isAr }: { file: PortalFile; isAr: boolean }) {
+  if (!file.url) {
+    return (
+      <span className="text-[11px] text-ivory/30 italic">
+        {isAr ? "تواصل مع أخصائي التغذية" : "Contact nutritionist"}
+      </span>
+    );
+  }
+  return (
+    <a
+      href={file.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      download={file.filename}
+      title={isAr ? "تنزيل" : "Download"}
+      className="
+        inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11.5px] font-semibold
+        bg-primary-pink/15 text-primary-pink hover:bg-primary-pink/25 transition-colors
+      "
+    >
+      <DownloadIcon size={12} strokeWidth={2.5} />
+      {isAr ? "تنزيل" : "Download"}
+    </a>
   );
 }
 
@@ -65,16 +90,6 @@ export default function FilesPage() {
         {isAr ? "ملفاتي" : "My Files"}
       </h1>
 
-      {/* Info notice */}
-      <div className="flex items-start gap-3 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-ivory/60">
-        <Info size={15} className="text-ivory/30 shrink-0 mt-0.5" />
-        <span>
-          {isAr
-            ? "الملفات المدرجة هنا تمت مشاركتها من قِبل أخصائي التغذية. تواصل معهم مباشرةً للحصول على أحدث النسخ أو الروابط."
-            : "Files listed here were shared by your nutritionist. Contact them directly to receive the latest copies or links."}
-        </span>
-      </div>
-
       {files.length === 0 ? (
         <div className="py-16 flex flex-col items-center text-center bg-white/3 border border-white/8 rounded-2xl px-6">
           <div className="w-14 h-14 rounded-2xl bg-white/8 flex items-center justify-center mb-4">
@@ -108,6 +123,9 @@ export default function FilesPage() {
                   <th className="px-5 py-3 text-start text-xs font-semibold text-ivory/40 uppercase tracking-wide">
                     {isAr ? "تاريخ المشاركة" : "Shared"}
                   </th>
+                  <th className="px-5 py-3 text-start text-xs font-semibold text-ivory/40 uppercase tracking-wide">
+                    {isAr ? "التنزيل" : "Download"}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -125,6 +143,9 @@ export default function FilesPage() {
                       {new Date(file.uploaded_at).toLocaleDateString(isAr ? "ar-KW" : "en-US", {
                         month: "short", day: "numeric", year: "numeric",
                       })}
+                    </td>
+                    <td className="px-5 py-4">
+                      <DownloadButton file={file} isAr={isAr} />
                     </td>
                   </tr>
                 ))}
@@ -144,19 +165,22 @@ export default function FilesPage() {
                     {file.sizeLabel && <span className="text-xs text-ivory/30">{file.sizeLabel}</span>}
                   </div>
                 </div>
+                <DownloadButton file={file} isAr={isAr} />
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Footer notice */}
+      {/* Info notice */}
       {files.length > 0 && (
-        <div className="flex items-center gap-2 text-xs text-ivory/30">
-          <AlertCircle size={11} />
-          {isAr
-            ? "لتنزيل ملف، يرجى التواصل مع أخصائي التغذية مباشرةً."
-            : "To download a file, please contact your nutritionist directly."}
+        <div className="flex items-start gap-3 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-ivory/60">
+          <Info size={15} className="text-ivory/30 shrink-0 mt-0.5" />
+          <span>
+            {isAr
+              ? "الملفات المدرجة هنا تمت مشاركتها من قِبل أخصائي التغذية. تواصل معهم مباشرةً للحصول على أحدث النسخ."
+              : "Files listed here were shared by your nutritionist. Contact them directly for the latest copies."}
+          </span>
         </div>
       )}
     </div>
