@@ -119,6 +119,14 @@ export const NAV_ITEMS: NavItem[] = [
     iconName: "ClipboardList",
     group: "content",
   },
+  {
+    id: "question-library",
+    label: "Question Library",
+    labelAr: "مكتبة الأسئلة",
+    href: "/admin/question-library",
+    iconName: "BookOpen",
+    group: "content",
+  },
 
   // ── Business ───────────────────────────────────────────────────────────────
   {
@@ -294,6 +302,13 @@ export const PAGE_META: Record<string, PageMeta> = {
     description: "Read and respond to client messages, contact form submissions, and inquiries.",
     descriptionAr: "قراءة والرد على رسائل العملاء وإرسالات نموذج الاتصال والاستفسارات.",
     illustrationVariant: "messages",
+  },
+  "question-library": {
+    title: "Question Library",
+    titleAr: "مكتبة الأسئلة",
+    description: "Manage reusable bilingual questions shared across all assessment templates.",
+    descriptionAr: "إدارة الأسئلة ثنائية اللغة القابلة لإعادة الاستخدام عبر جميع قوالب التقييم.",
+    illustrationVariant: "assessment",
   },
   analytics: {
     title: "Analytics",

@@ -40,6 +40,7 @@ import MessagesAdminPage from "../pages/MessagesAdminPage";
 import BookingsAdminPage from "../pages/BookingsAdminPage";
 import SEOPage from "../pages/SEOPage";
 import AssessmentTemplatesPage from "../pages/AssessmentTemplatesPage";
+import QuestionLibraryPage from "../pages/QuestionLibraryPage";
 
 export default function AdminLayout() {
   return (
@@ -71,6 +72,7 @@ export default function AdminLayout() {
 
               {/* Assessment Templates — live */}
               <Route path="assessment-templates"  element={<AssessmentTemplatesPage />} />
+              <Route path="question-library"      element={<QuestionLibraryPage />} />
 
               {/* Business */}
               <Route path="bookings"              element={<BookingsAdminPage />} />

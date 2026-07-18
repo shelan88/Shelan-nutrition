@@ -16,8 +16,15 @@ import {
   GripVertical, ChevronDown, ChevronUp, Check, ToggleLeft, ToggleRight,
   AlertCircle, Type, AlignLeft, ToggleRight as YesNoIcon, List,
   CheckSquare, ChevronDown as DropdownIcon, Hash, Calendar as CalendarIcon,
-  Paperclip, Image as ImageIcon, ClipboardList,
+  Paperclip, Image as ImageIcon, ClipboardList, BookOpen, Bookmark,
 } from "lucide-react";
+import QuestionLibraryDrawer from "../components/QuestionLibraryDrawer";
+import type { LibraryQuestion } from "../components/QuestionLibraryDrawer";
+import {
+  saveQuestionToLibrary,
+  LIBRARY_CATEGORIES,
+} from "@/admin/repositories/question-library.repository";
+import type { LibraryCategory } from "@/admin/repositories/question-library.repository";
 import { useLanguage } from "@/context/LanguageContext";
 import PageHeader from "../components/PageHeader";
 import { supabase } from "@/lib/supabase";
@@ -684,6 +691,12 @@ function QuestionBuilder({
   const dragItem = useRef<number | null>(null);
   const dragOver = useRef<number | null>(null);
 
+  // ── Library ────────────────────────────────────────────────────────────
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [saveToLibraryQ, setSaveToLibraryQ] = useState<QuestionWithOptions | null>(null);
+  const [saveToLibCat, setSaveToLibCat] = useState<LibraryCategory>("basic_info");
+  const [savingToLib, setSavingToLib] = useState(false);
+
   // ── Drag-to-reorder ────────────────────────────────────────────────────
 
   function handleDragStart(idx: number) { dragItem.current = idx; }
@@ -745,6 +758,62 @@ function QuestionBuilder({
     setAddingNew(false);
   }
 
+  // ── Insert from Library ────────────────────────────────────────────────
+
+  async function handleInsertFromLibrary(libraryQuestions: LibraryQuestion[]) {
+    if (!libraryQuestions.length) return;
+    setSavingId("__library__");
+    const startLen = questions.length;
+    for (let i = 0; i < libraryQuestions.length; i++) {
+      const lq = libraryQuestions[i];
+      const saved = await upsertQuestion({
+        template_id: templateId,
+        type: lq.type,
+        label_en: lq.label_en,
+        label_ar: lq.label_ar || null,
+        placeholder_en: lq.placeholder_en || null,
+        placeholder_ar: lq.placeholder_ar || null,
+        help_en: lq.help_en || null,
+        help_ar: lq.help_ar || null,
+        required: lq.required,
+        sort_order: startLen + i,
+        conditional_question_id: null,
+        conditional_value: null,
+      });
+      if (saved && NEEDS_OPTIONS.includes(lq.type) && lq.options?.length) {
+        await replaceOptions(saved.id, lq.options.map((o, idx) => ({ ...o, sort_order: idx })));
+      }
+    }
+    await onReload();
+    setSavingId(null);
+  }
+
+  // ── Save to Library ────────────────────────────────────────────────────
+
+  async function handleConfirmSaveToLibrary() {
+    if (!saveToLibraryQ) return;
+    setSavingToLib(true);
+    await saveQuestionToLibrary({
+      category: saveToLibCat,
+      type: saveToLibraryQ.type,
+      label_en: saveToLibraryQ.label_en,
+      label_ar: saveToLibraryQ.label_ar ?? "",
+      placeholder_en: saveToLibraryQ.placeholder_en ?? "",
+      placeholder_ar: saveToLibraryQ.placeholder_ar ?? "",
+      help_en: saveToLibraryQ.help_en ?? "",
+      help_ar: saveToLibraryQ.help_ar ?? "",
+      required: saveToLibraryQ.required,
+      validation_note: "",
+      options: saveToLibraryQ.options.map((o) => ({
+        label_en: o.label_en,
+        label_ar: o.label_ar ?? "",
+        value: o.value,
+      })),
+    });
+    setSavingToLib(false);
+    setSaveToLibraryQ(null);
+  }
+
   return (
     <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
       {/* Header */}
@@ -757,12 +826,20 @@ function QuestionBuilder({
             {isAr ? "اسحب للترتيب • اضغط لتعديل" : "Drag to reorder • Click to edit"}
           </p>
         </div>
-        <button
-          onClick={() => { setAddingNew(true); setExpandedId(null); }}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[12px] font-semibold"
-        >
-          <Plus size={13} /> {isAr ? "إضافة سؤال" : "Add Question"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowLibrary(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] hover:text-[var(--admin-text)] transition-colors"
+          >
+            <BookOpen size={13} /> {isAr ? "من المكتبة" : "From Library"}
+          </button>
+          <button
+            onClick={() => { setAddingNew(true); setExpandedId(null); }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[12px] font-semibold"
+          >
+            <Plus size={13} /> {isAr ? "إضافة سؤال" : "Add Question"}
+          </button>
+        </div>
       </div>
 
       <div className="divide-y divide-[var(--admin-border)]">
@@ -783,6 +860,7 @@ function QuestionBuilder({
             onDragStart={() => handleDragStart(idx)}
             onDragEnter={() => handleDragEnter(idx)}
             onDragEnd={handleDragEnd}
+            onSaveToLibrary={() => { setSaveToLibraryQ(q); setSaveToLibCat("basic_info"); }}
           />
         ))}
 
@@ -808,9 +886,82 @@ function QuestionBuilder({
             <p className="text-[13px] text-[var(--admin-text-muted)]">
               {isAr ? "لا توجد أسئلة بعد. أضف سؤالاً للبدء." : "No questions yet. Add a question to get started."}
             </p>
+            <button
+              onClick={() => setShowLibrary(true)}
+              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors"
+            >
+              <BookOpen size={13} /> {isAr ? "استعرضي مكتبة الأسئلة" : "Browse the question library"}
+            </button>
           </div>
         )}
       </div>
+
+      {/* ── Library Drawer ──────────────────────────────────────────────────── */}
+      <QuestionLibraryDrawer
+        open={showLibrary}
+        onClose={() => setShowLibrary(false)}
+        onInsert={handleInsertFromLibrary}
+        isAr={isAr}
+      />
+
+      {/* ── Save to Library modal ───────────────────────────────────────────── */}
+      <AnimatePresence>
+        {saveToLibraryQ && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setSaveToLibraryQ(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] shadow-2xl p-6 w-full max-w-sm"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Bookmark size={15} className="text-primary-pink" />
+                <h3 className="text-[14px] font-bold text-[var(--admin-text)]">
+                  {isAr ? "حفظ في المكتبة" : "Save to Library"}
+                </h3>
+              </div>
+              <p className="text-[12px] text-[var(--admin-text-muted)] mb-4 line-clamp-2 ml-5">
+                {saveToLibraryQ.label_en}
+              </p>
+              <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
+                {isAr ? "الفئة" : "Category"}
+              </label>
+              <select
+                value={saveToLibCat}
+                onChange={(e) => setSaveToLibCat(e.target.value as LibraryCategory)}
+                className="w-full px-3 py-2 mb-5 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
+              >
+                {LIBRARY_CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value}>{isAr ? c.labelAr : c.labelEn}</option>
+                ))}
+              </select>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSaveToLibraryQ(null)}
+                  className="flex-1 py-2 rounded-lg border border-[var(--admin-border)] text-[13px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors"
+                >
+                  {isAr ? "إلغاء" : "Cancel"}
+                </button>
+                <button
+                  onClick={handleConfirmSaveToLibrary}
+                  disabled={savingToLib}
+                  className="flex-1 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold disabled:opacity-60 transition-all"
+                >
+                  {savingToLib ? "…" : (isAr ? "حفظ" : "Save to Library")}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -819,7 +970,7 @@ function QuestionBuilder({
 
 function QuestionRow({
   isAr, question, idx, expanded, allQuestions, saving, deleting,
-  onToggle, onDelete, onSave, onDragStart, onDragEnter, onDragEnd,
+  onToggle, onDelete, onSave, onDragStart, onDragEnter, onDragEnd, onSaveToLibrary,
 }: {
   isAr: boolean;
   question: QuestionWithOptions;
@@ -834,6 +985,7 @@ function QuestionRow({
   onDragStart: () => void;
   onDragEnter: () => void;
   onDragEnd: () => void;
+  onSaveToLibrary?: () => void;
 }) {
   const typeInfo = QUESTION_TYPES.find((t) => t.value === question.type);
 
@@ -878,6 +1030,15 @@ function QuestionRow({
           </p>
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {onSaveToLibrary && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onSaveToLibrary(); }}
+              title={isAr ? "حفظ في المكتبة" : "Save to Library"}
+              className="p-1.5 rounded-lg text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] hover:text-primary-pink transition-colors"
+            >
+              <Bookmark size={12} />
+            </button>
+          )}
           <button
             onClick={onDelete}
             disabled={deleting}
