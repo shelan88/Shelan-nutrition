@@ -65,9 +65,9 @@ export default function AuthModal({ onClose, onSuccess, initialView = "login" }:
       return;
     }
     if (data.user) {
-      // Ensure a client record exists for this user (handles accounts created
-      // before this feature was added, or users who never completed assessment).
-      upsertClientFromAuth(data.user).catch(() => {/* non-blocking */});
+      // Ensure a client record exists before navigating — awaited so that
+      // useClientProfile finds the row immediately on mount.
+      await upsertClientFromAuth(data.user).catch(() => {/* swallow — hook auto-recovers */});
       onSuccess?.(data.user);
       onClose();
     }
@@ -101,9 +101,8 @@ export default function AuthModal({ onClose, onSuccess, initialView = "login" }:
     }
     if (data.user && data.session) {
       // Email confirmation is disabled — user is immediately active.
-      // Create a client record so the user appears in the admin Clients list
-      // even before they complete the health assessment.
-      upsertClientFromAuth(data.user).catch(() => {/* non-blocking */});
+      // Await the upsert so useClientProfile finds the row immediately.
+      await upsertClientFromAuth(data.user).catch(() => {/* swallow — hook auto-recovers */});
       onSuccess?.(data.user);
       onClose();
     }

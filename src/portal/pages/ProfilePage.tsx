@@ -39,7 +39,7 @@ const LANGUAGES = [
 
 export default function ProfilePage() {
   const { user } = useAuth();
-  const { profile, loading, refresh } = useClientProfile();
+  const { profile, loading, error, refresh } = useClientProfile();
   const { lang } = useLanguage();
   const isAr = lang === "ar";
 
@@ -105,18 +105,36 @@ export default function ProfilePage() {
     }
   };
 
-  if (loading) {
+  // Show spinner while loading OR while auto-recovery is in progress.
+  // useClientProfile auto-creates the row if it doesn't exist yet,
+  // so we stay in the loading state until it either succeeds or fails.
+  if (loading || (!profile && !error)) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
         <div className="w-8 h-8 rounded-full border-2 border-primary-pink border-t-transparent animate-spin" />
+        <p className="text-sm text-ivory/40">
+          {isAr ? "جارٍ تحميل ملفك الشخصي…" : "Loading your profile…"}
+        </p>
       </div>
     );
   }
 
+  // Only reached if the DB returned an error even after the auto-recovery attempt.
   if (!profile) {
     return (
-      <div className="py-16 text-center text-ivory/50">
-        {isAr ? "لم يُعثر على ملف شخصي. يرجى التواصل مع الدعم." : "No profile found. Please contact support."}
+      <div className="py-16 flex flex-col items-center text-center gap-4">
+        <p className="text-ivory/50 text-sm max-w-xs">
+          {isAr
+            ? "تعذّر تحميل ملفك الشخصي. يرجى تحديث الصفحة أو التواصل مع الدعم."
+            : "Could not load your profile. Please refresh the page or contact support."}
+        </p>
+        <button
+          type="button"
+          onClick={refresh}
+          className="px-5 py-2 rounded-full border border-white/15 text-sm text-ivory/60 hover:text-ivory hover:border-white/30 transition-colors"
+        >
+          {isAr ? "إعادة المحاولة" : "Try again"}
+        </button>
       </div>
     );
   }
