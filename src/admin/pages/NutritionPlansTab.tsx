@@ -994,10 +994,14 @@ interface NutritionPlansTabProps {
   clientId: string;
   isAr: boolean;
   onCountChange?: (activePlans: number) => void;
+  /** When true on mount, immediately opens the Create Plan editor. */
+  autoOpenCreate?: boolean;
+  /** Called after autoOpenCreate has been consumed so the parent can reset its flag. */
+  onAutoOpenConsumed?: () => void;
 }
 
 export default function NutritionPlansTab({
-  clientId, isAr, onCountChange,
+  clientId, isAr, onCountChange, autoOpenCreate, onAutoOpenConsumed,
 }: NutritionPlansTabProps) {
   const [plans, setPlans]         = useState<NutritionPlanRow[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -1023,6 +1027,18 @@ export default function NutritionPlansTab({
   }
 
   useEffect(() => { loadPlans(); }, [clientId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Whenever autoOpenCreate flips to true (from the action bar or overview
+  // empty-state), open the plan editor and immediately consume the flag so
+  // the parent resets it. Reacts to prop changes, so it works whether the
+  // tab was just mounted or was already active when the button was clicked.
+  useEffect(() => {
+    if (autoOpenCreate) {
+      setSelectedPlan(null);
+      setModal("editor");
+      onAutoOpenConsumed?.();
+    }
+  }, [autoOpenCreate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function openCreate() {
     setSelectedPlan(null);

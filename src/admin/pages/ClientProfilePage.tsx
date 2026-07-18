@@ -1,28 +1,30 @@
 /**
  * ClientProfilePage — /admin/clients/:id
  *
- * Central hub for everything related to a single client.
- * Sections:
- *   1. Profile Header   — avatar, name, contact, status, last/next appointment
- *   2. Quick Stats      — 5 summary cards
- *   3. Navigation Tabs  — Overview | Appointments | Assessments | Nutrition Plans
- *                         | Payments | Files | Progress | Notes
- *   4. Tab Content      — live data for Overview, Appointments, Assessments,
- *                         Files, Notes; placeholders for the rest
+ * Clinical workspace for a single client.
+ *   1. Primary Action Bar  — Create Plan · Assess · Book · Upload · Message · More
+ *   2. Profile Header      — avatar, name, contact, status, next appointment
+ *   3. Quick Stats         — 4 summary cards (Appts / Assessments / Plans / Files)
+ *   4. Navigation Tabs     — Overview | Appointments | Assessments | Nutrition Plans
+ *                            | Payments | Files | Progress | Notes
+ *   5. Tab Content         — live data for all implemented tabs
  */
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, Calendar, FileText, BookOpen, CreditCard, TrendingUp,
+  ArrowLeft, Calendar, FileText, BookOpen, CreditCard,
   Phone, Mail, MapPin, Clock, Edit2, Download as DownloadIcon,
   ClipboardList, Users, MessageSquare, Info, RefreshCw,
   CalendarCheck, UserCircle, Star, File as FileIcon, Image as ImageIcon,
+  Plus, MoreHorizontal, Upload, Send, ChevronDown, ChevronUp, Trash2, Archive,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import PageHeader from "@/admin/components/PageHeader";
 import ClientDrawer from "@/admin/pages/ClientDrawer";
-import { getClient } from "@/admin/repositories/clients.repository";
+import {
+  getClient, archiveClient, deleteClient,
+} from "@/admin/repositories/clients.repository";
 import { uploadClientFile, deleteClientFile } from "@/admin/repositories/client-files.repository";
 import {
   getClientAppointments,
@@ -52,7 +54,7 @@ type TabId =
   | "progress"
   | "notes";
 
-const TABS: { id: TabId; en: string; ar: string; count?: number }[] = [
+const TABS: { id: TabId; en: string; ar: string }[] = [
   { id: "overview",     en: "Overview",        ar: "نظرة عامة"     },
   { id: "appointments", en: "Appointments",    ar: "المواعيد"       },
   { id: "assessments",  en: "Assessments",     ar: "التقييمات"      },
@@ -143,14 +145,53 @@ function timelineMeta(type: string | null): {
 // ─── Shared sub-components ────────────────────────────────────────────────────
 
 function EmptyState({
-  icon: Icon, label,
-}: { icon: React.ElementType; label: string }) {
+  icon: Icon, label, action,
+}: {
+  icon: React.ElementType;
+  label: string;
+  action?: { label: string; onClick: () => void };
+}) {
   return (
     <div className="flex flex-col items-center gap-3 py-14 text-center">
       <div className="w-12 h-12 rounded-2xl bg-[var(--admin-hover-bg)] flex items-center justify-center">
         <Icon size={22} strokeWidth={1.3} className="text-[var(--admin-text-faint)]" />
       </div>
       <p className="text-[13px] text-[var(--admin-text-muted)]">{label}</p>
+      {action && (
+        <button
+          onClick={action.onClick}
+          className="flex items-center gap-1.5 h-10 px-4 rounded-xl bg-primary-pink text-white text-[12.5px] font-semibold hover:opacity-90 transition-opacity"
+        >
+          <Plus size={12} strokeWidth={2.5} />
+          {action.label}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Simple collapsible section — collapsed by default. */
+function CollapsibleSection({
+  title, children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="bg-[var(--admin-hover-bg)] rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-black/[0.02] transition-colors"
+      >
+        <span className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider">
+          {title}
+        </span>
+        {open
+          ? <ChevronUp   size={13} strokeWidth={2} className="text-[var(--admin-text-faint)]" />
+          : <ChevronDown size={13} strokeWidth={2} className="text-[var(--admin-text-faint)]" />}
+      </button>
+      {open && <div className="px-4 pb-4">{children}</div>}
     </div>
   );
 }
@@ -184,9 +225,10 @@ function LoadingSkeleton() {
   return (
     <div className="animate-pulse space-y-6">
       <div className="h-6 w-40 bg-[var(--admin-hover-bg)] rounded-lg" />
+      <div className="h-10 bg-[var(--admin-hover-bg)] rounded-2xl" />
       <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] h-36" />
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-4">
-        {Array.from({ length: 5 }).map((_, i) => (
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] h-24" />
         ))}
       </div>
@@ -259,52 +301,54 @@ function InfoRow({
   );
 }
 
-function OverviewTab({ client, isAr }: { client: Client; isAr: boolean }) {
+// ─── Overview Tab (fully rewritten as clinic-first layout) ────────────────────
+
+function OverviewTab({
+  client, assessments, nutritionCount, isAr, onNavigate,
+}: {
+  client: Client;
+  assessments: ClientAssessmentResponse[];
+  nutritionCount: number;
+  isAr: boolean;
+  onNavigate: (tab: TabId, action?: "createPlan" | "upload") => void;
+}) {
+  const latestAssessment =
+    assessments.find((a) => a.status === "submitted") ?? assessments[0] ?? null;
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-      {/* Timeline — left 2 columns */}
-      <div className="lg:col-span-2">
-        <h3 className="text-[12px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider mb-4">
-          {isAr ? "السجل الزمني" : "Activity Timeline"}
-        </h3>
-        {client.timeline.length === 0 ? (
-          <EmptyState icon={Clock} label={isAr ? "لا توجد أنشطة مسجلة بعد" : "No activity recorded yet"} />
-        ) : (
-          <div>
-            {client.timeline.map((ev, i) => (
-              <TimelineRow
-                key={ev.id}
-                event={ev}
-                isAr={isAr}
-                isLast={i === client.timeline.length - 1}
-              />
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Sidebar — health snapshot */}
-      <div className="space-y-4">
-        {/* Risk / Health snapshot */}
+      {/* ── LEFT COLUMN: primary clinical info ─────────────────────────── */}
+      <div className="lg:col-span-2 space-y-4">
+
+        {/* 1. Personal Information */}
         <div className="bg-[var(--admin-hover-bg)] rounded-xl p-4">
           <p className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider mb-3">
-            {isAr ? "لمحة صحية" : "Health Snapshot"}
+            {isAr ? "المعلومات الشخصية" : "Personal Information"}
           </p>
           <div>
-            <InfoRow
-              label={isAr ? "مستوى الخطر" : "Risk Level"}
-              value={
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                  client.riskLevel === "High"   ? "bg-red-50 text-red-600" :
-                  client.riskLevel === "Medium" ? "bg-amber-50 text-amber-700" :
-                                                  "bg-emerald-50 text-emerald-700"
-                }`}>
-                  {isAr
-                    ? { Low: "منخفض", Medium: "متوسط", High: "مرتفع" }[client.riskLevel]
-                    : client.riskLevel}
-                </span>
-              }
-            />
+            {client.email && (
+              <InfoRow
+                label={isAr ? "البريد الإلكتروني" : "Email"}
+                value={
+                  <a href={`mailto:${client.email}`} className="hover:text-primary-pink transition-colors">
+                    {client.email}
+                  </a>
+                }
+              />
+            )}
+            {client.phone && (
+              <InfoRow
+                label={isAr ? "الهاتف" : "Phone"}
+                value={<a href={`tel:${client.phone}`} className="hover:text-primary-pink transition-colors">{client.phone}</a>}
+              />
+            )}
+            {client.country && (
+              <InfoRow
+                label={isAr ? "الموقع" : "Location"}
+                value={isAr ? client.countryAr : client.country}
+              />
+            )}
             {client.age > 0 && (
               <InfoRow
                 label={isAr ? "العمر" : "Age"}
@@ -317,69 +361,204 @@ function OverviewTab({ client, isAr }: { client: Client; isAr: boolean }) {
                 value={isAr ? (client.gender === "Female" ? "أنثى" : "ذكر") : client.gender}
               />
             )}
-            {client.assessment && (
-              <>
-                <InfoRow
-                  label={isAr ? "نقاط التقييم" : "Assessment Score"}
-                  value={`${client.assessment.score}/100`}
-                />
-                <InfoRow
-                  label={isAr ? "نسبة الخطر" : "Risk %"}
-                  value={`${client.assessment.riskPercentage}%`}
-                />
-              </>
+            {client.joinedDate && (
+              <InfoRow
+                label={isAr ? "تاريخ الانضمام" : "Joined"}
+                value={fmtDate(client.joinedDate, isAr)}
+              />
+            )}
+            <InfoRow
+              label={isAr ? "الحالة" : "Status"}
+              value={
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${CLIENT_STATUS_BADGE[client.status] ?? ""}`}>
+                  {isAr ? CLIENT_STATUS_LABEL_AR[client.status] : CLIENT_STATUS_LABEL_EN[client.status]}
+                </span>
+              }
+            />
+          </div>
+        </div>
+
+        {/* 2. Latest Assessment */}
+        <div className="bg-[var(--admin-hover-bg)] rounded-xl p-4">
+          <p className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider mb-3">
+            {isAr ? "آخر تقييم" : "Latest Assessment"}
+          </p>
+          {latestAssessment ? (
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">
+                  <ClipboardList size={14} strokeWidth={1.8} className="text-purple-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-[var(--admin-text)] leading-tight">
+                    {(isAr ? latestAssessment.template_name_ar : latestAssessment.template_name_en)
+                      ?? (isAr ? "تقييم" : "Assessment")}
+                  </p>
+                  <p className="text-[11px] text-[var(--admin-text-faint)]">
+                    {latestAssessment.submitted_at
+                      ? fmtDate(latestAssessment.submitted_at, isAr)
+                      : latestAssessment.created_at
+                      ? fmtDate(latestAssessment.created_at, isAr)
+                      : "—"}
+                  </p>
+                </div>
+                <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                  latestAssessment.status === "submitted"
+                    ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
+                    : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
+                }`}>
+                  {latestAssessment.status === "submitted"
+                    ? (isAr ? "مقدَّم" : "Submitted")
+                    : (isAr ? "قيد التقديم" : "In Progress")}
+                </span>
+              </div>
+
+              {/* Score mini-stats */}
+              {latestAssessment.score != null && (
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <div className="bg-[var(--admin-surface)] rounded-lg p-2.5 text-center ring-1 ring-[var(--admin-border)]">
+                    <p className="text-[20px] font-bold text-[var(--admin-text)] tabular-nums leading-none">
+                      {latestAssessment.score}
+                    </p>
+                    <p className="text-[10px] text-[var(--admin-text-faint)] mt-0.5">{isAr ? "النقاط" : "Score"}</p>
+                  </div>
+                  <div className="bg-[var(--admin-surface)] rounded-lg p-2.5 text-center ring-1 ring-[var(--admin-border)]">
+                    <p className={`text-[14px] font-bold tabular-nums leading-none ${
+                      latestAssessment.risk_level === "High"   ? "text-red-600"    :
+                      latestAssessment.risk_level === "Medium" ? "text-amber-600"  : "text-emerald-600"
+                    }`}>
+                      {latestAssessment.risk_level
+                        ? (isAr
+                            ? { Low: "منخفض", Medium: "متوسط", High: "مرتفع" }[latestAssessment.risk_level as "Low"|"Medium"|"High"] ?? latestAssessment.risk_level
+                            : latestAssessment.risk_level)
+                        : "—"}
+                    </p>
+                    <p className="text-[10px] text-[var(--admin-text-faint)] mt-0.5">{isAr ? "الخطر" : "Risk"}</p>
+                  </div>
+                  <div className="bg-[var(--admin-surface)] rounded-lg p-2.5 text-center ring-1 ring-[var(--admin-border)]">
+                    <p className="text-[20px] font-bold text-[var(--admin-text)] tabular-nums leading-none">
+                      {latestAssessment.risk_percentage != null ? `${latestAssessment.risk_percentage}%` : "—"}
+                    </p>
+                    <p className="text-[10px] text-[var(--admin-text-faint)] mt-0.5">{isAr ? "نسبة %" : "Risk %"}</p>
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={() => onNavigate("assessments")}
+                className={`text-[11.5px] font-semibold text-primary-pink hover:underline ${isAr ? "float-left" : "float-right"}`}
+              >
+                {isAr ? "← عرض كل التقييمات" : "View all assessments →"}
+              </button>
+              <div className="clear-both" />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <ClipboardList size={22} strokeWidth={1.3} className="text-[var(--admin-text-faint)]" />
+              <p className="text-[12.5px] text-[var(--admin-text-muted)]">
+                {isAr ? "لا توجد تقييمات بعد" : "No assessments submitted yet"}
+              </p>
+              <button
+                onClick={() => onNavigate("assessments")}
+                className="flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-purple-500 text-white text-[12px] font-semibold hover:opacity-90 transition-opacity"
+              >
+                <Plus size={11} strokeWidth={2.5} />
+                {isAr ? "إنشاء تقييم" : "Create Assessment"}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* 3. Nutrition Plan snapshot */}
+        <div className="bg-[var(--admin-hover-bg)] rounded-xl p-4">
+          <p className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider mb-3">
+            {isAr ? "الخطة الغذائية" : "Nutrition Plan"}
+          </p>
+          {nutritionCount > 0 ? (
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                  <BookOpen size={14} strokeWidth={1.8} className="text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-[13px] font-semibold text-[var(--admin-text)]">
+                    {nutritionCount === 1
+                      ? (isAr ? "خطة غذائية نشطة" : "1 active plan")
+                      : (isAr ? `${nutritionCount} خطط غذائية نشطة` : `${nutritionCount} active plans`)}
+                  </p>
+                  <p className="text-[11px] text-[var(--admin-text-faint)]">
+                    {isAr ? "برنامج التغذية" : "Nutrition program"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => onNavigate("nutrition")}
+                className="text-[11.5px] font-semibold text-emerald-600 hover:underline shrink-0"
+              >
+                {isAr ? "← عرض" : "View →"}
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <BookOpen size={22} strokeWidth={1.3} className="text-[var(--admin-text-faint)]" />
+              <p className="text-[12.5px] text-[var(--admin-text-muted)]">
+                {isAr ? "لا توجد خطة غذائية نشطة بعد" : "No nutrition plan yet"}
+              </p>
+              <button
+                onClick={() => onNavigate("nutrition", "createPlan")}
+                className="flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-emerald-500 text-white text-[12px] font-semibold hover:opacity-90 transition-opacity"
+              >
+                <Plus size={11} strokeWidth={2.5} />
+                {isAr ? "إنشاء خطة" : "Create Plan"}
+              </button>
+            </div>
+          )}
+        </div>
+
+      </div>
+
+      {/* ── RIGHT COLUMN: secondary info + collapsibles ─────────────────── */}
+      <div className="space-y-3">
+
+        {/* Health Snapshot */}
+        <div className="bg-[var(--admin-hover-bg)] rounded-xl p-4">
+          <p className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider mb-3">
+            {isAr ? "لمحة صحية" : "Health Snapshot"}
+          </p>
+          <div>
+            <InfoRow
+              label={isAr ? "مستوى الخطر" : "Risk Level"}
+              value={
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                  client.riskLevel === "High"   ? "bg-red-50 text-red-600"       :
+                  client.riskLevel === "Medium" ? "bg-amber-50 text-amber-700"   :
+                                                  "bg-emerald-50 text-emerald-700"
+                }`}>
+                  {isAr
+                    ? ({ Low: "منخفض", Medium: "متوسط", High: "مرتفع" } as Record<string,string>)[client.riskLevel] ?? client.riskLevel
+                    : client.riskLevel}
+                </span>
+              }
+            />
+            {client.age > 0 && (
+              <InfoRow label={isAr ? "العمر" : "Age"} value={`${client.age} ${isAr ? "سنة" : "yrs"}`} />
+            )}
+            {client.gender && (
+              <InfoRow
+                label={isAr ? "الجنس" : "Gender"}
+                value={isAr ? (client.gender === "Female" ? "أنثى" : "ذكر") : client.gender}
+              />
+            )}
+            {latestAssessment?.score != null && (
+              <InfoRow
+                label={isAr ? "آخر نقاط" : "Latest Score"}
+                value={`${latestAssessment.score}/100`}
+              />
             )}
           </div>
         </div>
 
-        {/* Diagnoses */}
-        {client.diagnoses.length > 0 && (
-          <div className="bg-[var(--admin-hover-bg)] rounded-xl p-4">
-            <p className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider mb-3">
-              {isAr ? "التشخيصات" : "Diagnoses"}
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {(isAr ? client.diagnosesAr : client.diagnoses).map((d, i) => (
-                <span
-                  key={i}
-                  className="text-[11.5px] font-medium px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 ring-1 ring-purple-100"
-                >
-                  {d}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Risk indicators */}
-        {client.riskIndicators.length > 0 && (
-          <div className="bg-[var(--admin-hover-bg)] rounded-xl p-4">
-            <p className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider mb-3">
-              {isAr ? "مؤشرات الخطر" : "Risk Indicators"}
-            </p>
-            <div>
-              {client.riskIndicators.map((ri, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between py-1.5 border-b border-[var(--admin-border)] last:border-0 gap-3"
-                >
-                  <span className="text-[12px] text-[var(--admin-text-muted)] shrink-0">
-                    {isAr ? ri.labelAr : ri.label}
-                  </span>
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                    ri.level === "critical" ? "bg-red-50 text-red-600" :
-                    ri.level === "warning"  ? "bg-amber-50 text-amber-700" :
-                                              "bg-emerald-50 text-emerald-700"
-                  }`}>
-                    {ri.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Medical notes */}
+        {/* Medical Notes */}
         {(client.medicalNotes || client.medicalNotesAr) && (
           <div className="bg-[var(--admin-hover-bg)] rounded-xl p-4">
             <p className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider mb-2">
@@ -390,16 +569,98 @@ function OverviewTab({ client, isAr }: { client: Client; isAr: boolean }) {
             </p>
           </div>
         )}
+
+        {/* Private Notes */}
+        {(client.privateNotes || client.privateNotesAr) && (
+          <div className="bg-[var(--admin-hover-bg)] rounded-xl p-4">
+            <p className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider mb-2">
+              {isAr ? "ملاحظات خاصة" : "Private Notes"}
+            </p>
+            <p className="text-[12.5px] text-[var(--admin-text)] leading-relaxed line-clamp-4">
+              {isAr ? client.privateNotesAr : client.privateNotes}
+            </p>
+          </div>
+        )}
+
+        {/* Diagnoses — collapsible */}
+        {client.diagnoses.length > 0 && (
+          <CollapsibleSection title={isAr ? "التشخيصات" : "Diagnoses"}>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {(isAr ? client.diagnosesAr : client.diagnoses).map((d, i) => (
+                <span
+                  key={i}
+                  className="text-[11.5px] font-medium px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 ring-1 ring-purple-100"
+                >
+                  {d}
+                </span>
+              ))}
+            </div>
+          </CollapsibleSection>
+        )}
+
+        {/* Risk Indicators — collapsible */}
+        {client.riskIndicators.length > 0 && (
+          <CollapsibleSection title={isAr ? "مؤشرات الخطر" : "Risk Indicators"}>
+            <div className="pt-1">
+              {client.riskIndicators.map((ri, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between py-1.5 border-b border-[var(--admin-border)] last:border-0 gap-3"
+                >
+                  <span className="text-[12px] text-[var(--admin-text-muted)] shrink-0">
+                    {isAr ? ri.labelAr : ri.label}
+                  </span>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                    ri.level === "critical" ? "bg-red-50 text-red-600"       :
+                    ri.level === "warning"  ? "bg-amber-50 text-amber-700"   :
+                                              "bg-emerald-50 text-emerald-700"
+                  }`}>
+                    {ri.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CollapsibleSection>
+        )}
+
+        {/* Timeline — collapsible, last */}
+        <CollapsibleSection title={isAr ? "السجل الزمني" : "Activity Timeline"}>
+          {client.timeline.length === 0 ? (
+            <p className="text-[12px] text-[var(--admin-text-faint)] py-3 text-center">
+              {isAr ? "لا توجد أنشطة بعد" : "No activity yet"}
+            </p>
+          ) : (
+            <div className="pt-2">
+              {client.timeline.map((ev, i) => (
+                <TimelineRow
+                  key={ev.id}
+                  event={ev}
+                  isAr={isAr}
+                  isLast={i === client.timeline.length - 1}
+                />
+              ))}
+            </div>
+          )}
+        </CollapsibleSection>
+
       </div>
     </div>
   );
 }
 
+// ─── Appointments Tab ─────────────────────────────────────────────────────────
+
 function AppointmentsTab({
-  appointments, isAr,
-}: { appointments: AppointmentRow[]; isAr: boolean }) {
+  appointments, isAr, onBook,
+}: { appointments: AppointmentRow[]; isAr: boolean; onBook: () => void }) {
   if (appointments.length === 0) {
-    return <EmptyState icon={Calendar} label={isAr ? "لا توجد مواعيد مسجلة" : "No appointments yet"} />;
+    return (
+      <EmptyState
+        icon={Calendar}
+        label={isAr ? "لا توجد مواعيد مسجلة" : "No appointments yet"}
+        action={{ label: isAr ? "حجز موعد" : "Book Appointment", onClick: onBook }}
+      />
+    );
   }
 
   return (
@@ -414,24 +675,19 @@ function AppointmentsTab({
               border border-[var(--admin-border)] hover:bg-[var(--admin-hover-bg)] transition-colors
             "
           >
-            {/* Icon */}
             <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
               <Calendar size={15} strokeWidth={1.8} className="text-blue-600" />
             </div>
-
-            {/* Details */}
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-semibold text-[var(--admin-text)] leading-tight">
                 {appt.type ?? (isAr ? "استشارة" : "Consultation")}
               </p>
               <p className="text-[11.5px] text-[var(--admin-text-faint)] mt-0.5">
                 {fmtDateLong(appt.date, isAr)}
-                {appt.time ? ` · ${appt.time}` : ""}
+                {appt.time  ? ` · ${appt.time}`  : ""}
                 {appt.notes ? ` · ${appt.notes}` : ""}
               </p>
             </div>
-
-            {/* Badges */}
             <div className="flex items-center gap-2 flex-wrap">
               {appt.assessment_status && appt.assessment_status !== "none" && (
                 <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full ${
@@ -456,14 +712,21 @@ function AppointmentsTab({
   );
 }
 
+// ─── Assessments Tab ──────────────────────────────────────────────────────────
+
 function AssessmentsTab({
-  assessments, isAr,
-}: { assessments: ClientAssessmentResponse[]; isAr: boolean }) {
+  assessments, isAr, onCreateAssessment,
+}: {
+  assessments: ClientAssessmentResponse[];
+  isAr: boolean;
+  onCreateAssessment: () => void;
+}) {
   if (assessments.length === 0) {
     return (
       <EmptyState
         icon={ClipboardList}
         label={isAr ? "لا توجد تقييمات مقدمة بعد" : "No assessments submitted yet"}
+        action={{ label: isAr ? "إنشاء تقييم" : "Create Assessment", onClick: onCreateAssessment }}
       />
     );
   }
@@ -511,17 +774,35 @@ function AssessmentsTab({
   );
 }
 
+// ─── Files Tab ────────────────────────────────────────────────────────────────
+
 function FilesTab({
-  initialFiles, clientId, isAr,
-}: { initialFiles: Client["files"]; clientId: string; isAr: boolean }) {
+  initialFiles, clientId, isAr, triggerUpload, onTriggerConsumed,
+}: {
+  initialFiles: Client["files"];
+  clientId: string;
+  isAr: boolean;
+  triggerUpload?: boolean;
+  onTriggerConsumed?: () => void;
+}) {
   const [files,     setFiles]     = useState(initialFiles);
   const [uploading, setUploading] = useState(false);
   const [deleting,  setDeleting]  = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Whenever triggerUpload flips to true (from the action bar or overview empty-state),
+  // programmatically open the file picker and immediately consume the flag so the
+  // parent resets it. Works both when the tab first mounts and when already mounted.
+  useEffect(() => {
+    if (triggerUpload && !uploading) {
+      fileInputRef.current?.click();
+      onTriggerConsumed?.();
+    }
+  }, [triggerUpload]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Reset the input so the same file can be re-selected
     e.target.value = "";
     setUploading(true);
     const row = await uploadClientFile(clientId, file);
@@ -562,6 +843,7 @@ function FilesTab({
           )}
           {isAr ? (uploading ? "جارٍ الرفع…" : "رفع ملف") : (uploading ? "Uploading…" : "Upload File")}
           <input
+            ref={fileInputRef}
             type="file"
             className="hidden"
             disabled={uploading}
@@ -574,6 +856,10 @@ function FilesTab({
         <EmptyState
           icon={FileIcon}
           label={isAr ? "لا توجد ملفات مرفوعة بعد" : "No files uploaded yet"}
+          action={{
+            label: isAr ? "رفع ملف" : "Upload File",
+            onClick: () => fileInputRef.current?.click(),
+          }}
         />
       ) : (
         <div className="space-y-2">
@@ -638,6 +924,8 @@ function FilesTab({
   );
 }
 
+// ─── Notes Tab ────────────────────────────────────────────────────────────────
+
 function NotesTab({ client, isAr }: { client: Client; isAr: boolean }) {
   const medicalNotes = isAr ? client.medicalNotesAr : client.medicalNotes;
   const privateNotes = isAr ? client.privateNotesAr : client.privateNotes;
@@ -683,6 +971,158 @@ function NotesTab({ client, isAr }: { client: Client; isAr: boolean }) {
   );
 }
 
+// ─── Primary Action Bar ───────────────────────────────────────────────────────
+
+function ActionBar({
+  isAr,
+  onCreatePlan,
+  onCreateAssessment,
+  onBookAppointment,
+  onUploadFile,
+  onEditProfile,
+  onArchive,
+  onDelete,
+}: {
+  isAr: boolean;
+  onCreatePlan: () => void;
+  onCreateAssessment: () => void;
+  onBookAppointment: () => void;
+  onUploadFile: () => void;
+  onEditProfile: () => void;
+  onArchive: () => void;
+  onDelete: () => void;
+}) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    function handleOutside(e: MouseEvent) {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setMoreOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [moreOpen]);
+
+  const btnBase = "inline-flex items-center gap-2 h-11 px-4 rounded-xl text-[12.5px] font-semibold transition-all whitespace-nowrap min-w-0";
+
+  return (
+    <motion.div
+      {...fadeUp(0.02)}
+      className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] px-4 py-3 mb-5"
+    >
+      <div className="flex flex-wrap gap-2 items-center">
+
+        {/* Create Nutrition Plan */}
+        <button
+          onClick={onCreatePlan}
+          className={`${btnBase} bg-emerald-500 text-white hover:bg-emerald-600`}
+        >
+          <Plus size={13} strokeWidth={2.5} />
+          {isAr ? "خطة غذائية" : "Create Plan"}
+        </button>
+
+        {/* Create Assessment */}
+        <button
+          onClick={onCreateAssessment}
+          className={`${btnBase} bg-purple-500 text-white hover:bg-purple-600`}
+        >
+          <ClipboardList size={13} strokeWidth={2} />
+          {isAr ? "تقييم" : "Assessment"}
+        </button>
+
+        {/* Book Appointment */}
+        <button
+          onClick={onBookAppointment}
+          className={`${btnBase} bg-blue-500 text-white hover:bg-blue-600`}
+        >
+          <Calendar size={13} strokeWidth={2} />
+          {isAr ? "موعد" : "Book Appt"}
+        </button>
+
+        {/* Upload File */}
+        <button
+          onClick={onUploadFile}
+          className={`${btnBase} bg-primary-pink text-white hover:opacity-90`}
+        >
+          <Upload size={13} strokeWidth={2} />
+          {isAr ? "رفع ملف" : "Upload File"}
+        </button>
+
+        {/* Send Message — disabled */}
+        <button
+          disabled
+          title={isAr ? "قريباً" : "Coming Soon"}
+          className={`${btnBase} bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)] opacity-50 cursor-not-allowed`}
+        >
+          <Send size={13} strokeWidth={2} />
+          {isAr ? "رسالة" : "Message"}
+        </button>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Edit Profile */}
+        <button
+          onClick={onEditProfile}
+          className={`${btnBase} border border-[var(--admin-border)] text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)]`}
+        >
+          <Edit2 size={13} strokeWidth={2} />
+          {isAr ? "تعديل الملف" : "Edit Profile"}
+        </button>
+
+        {/* More (⋯) */}
+        <div ref={moreRef} className="relative">
+          <button
+            onClick={() => setMoreOpen((o) => !o)}
+            className={`${btnBase} px-3 border border-[var(--admin-border)] text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)]`}
+            title={isAr ? "المزيد" : "More options"}
+          >
+            <MoreHorizontal size={16} strokeWidth={2} />
+          </button>
+
+          {/* Dropdown */}
+          <AnimatePresence>
+            {moreOpen && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                transition={{ duration: 0.12 }}
+                className={`
+                  absolute top-full mt-1.5 z-50 min-w-[160px]
+                  bg-[var(--admin-surface)] rounded-xl border border-[var(--admin-border)]
+                  shadow-lg shadow-black/[0.08] overflow-hidden py-1
+                  ${isAr ? "left-0" : "right-0"}
+                `}
+              >
+                <button
+                  onClick={() => { setMoreOpen(false); onArchive(); }}
+                  className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-[12.5px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] hover:text-[var(--admin-text)] transition-colors"
+                >
+                  <Archive size={13} strokeWidth={2} />
+                  {isAr ? "أرشفة العميلة" : "Archive Client"}
+                </button>
+                <div className="border-t border-[var(--admin-border)] my-1" />
+                <button
+                  onClick={() => { setMoreOpen(false); onDelete(); }}
+                  className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-[12.5px] font-medium text-red-500 hover:bg-red-50 transition-colors"
+                >
+                  <Trash2 size={13} strokeWidth={2} />
+                  {isAr ? "حذف العميلة" : "Delete Client"}
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ClientProfilePage() {
@@ -691,14 +1131,17 @@ export default function ClientProfilePage() {
   const { lang } = useLanguage();
   const isAr = lang === "ar";
 
-  const [client,          setClient]          = useState<Client | null>(null);
-  const [appointments,    setAppointments]    = useState<AppointmentRow[]>([]);
-  const [assessments,     setAssessments]     = useState<ClientAssessmentResponse[]>([]);
-  const [loading,         setLoading]         = useState(true);
-  const [activeTab,       setActiveTab]       = useState<TabId>("overview");
-  const [drawerOpen,      setDrawerOpen]      = useState(false);
-  const [nutritionCount,  setNutritionCount]  = useState(0);
-  const [progressCount,   setProgressCount]   = useState(0);
+  const [client,               setClient]               = useState<Client | null>(null);
+  const [appointments,         setAppointments]         = useState<AppointmentRow[]>([]);
+  const [assessments,          setAssessments]          = useState<ClientAssessmentResponse[]>([]);
+  const [loading,              setLoading]              = useState(true);
+  const [activeTab,            setActiveTab]            = useState<TabId>("overview");
+  const [drawerOpen,           setDrawerOpen]           = useState(false);
+  const [nutritionCount,       setNutritionCount]       = useState(0);
+  const [progressCount,        setProgressCount]        = useState(0);
+  // Pending remote-trigger flags for NutritionPlansTab and FilesTab
+  const [pendingNutritionOpen, setPendingNutritionOpen] = useState(false);
+  const [pendingUpload,        setPendingUpload]        = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -735,6 +1178,39 @@ export default function ClientProfilePage() {
     getClient(id).then(setClient);
   }
 
+  // Navigation handler wired to action bar buttons + overview tab buttons
+  function handleNavigate(tab: TabId, action?: "createPlan" | "upload") {
+    setActiveTab(tab);
+    if (action === "createPlan") setPendingNutritionOpen(true);
+    if (action === "upload")     setPendingUpload(true);
+  }
+
+  // Archive client — sets status to Inactive
+  async function handleArchive() {
+    if (!id) return;
+    const confirmed = window.confirm(
+      isAr
+        ? "هل تريدين أرشفة هذه العميلة؟ سيتم تغيير حالتها إلى غير نشطة."
+        : "Archive this client? Their status will be set to Inactive.",
+    );
+    if (!confirmed) return;
+    await archiveClient(id);
+    handleRefresh();
+  }
+
+  // Delete client — permanent
+  async function handleDelete() {
+    if (!id) return;
+    const confirmed = window.confirm(
+      isAr
+        ? "هل أنتِ متأكدة من حذف هذه العميلة نهائياً؟ لا يمكن التراجع عن هذا الإجراء."
+        : "Permanently delete this client? This cannot be undone.",
+    );
+    if (!confirmed) return;
+    const ok = await deleteClient(id);
+    if (ok) navigate("/admin/clients");
+  }
+
   if (loading) return <LoadingSkeleton />;
 
   if (!client) {
@@ -764,41 +1240,35 @@ export default function ClientProfilePage() {
 
   const submittedCount = assessments.filter((a) => a.status === "submitted").length;
 
+  // 4-card quick stats
   const quickStats = [
     {
-      label: isAr ? "إجمالي المواعيد"    : "Total Appointments",
-      value: appointments.length,
-      icon: Calendar,
+      label:    isAr ? "إجمالي المواعيد"    : "Appointments",
+      value:    appointments.length,
+      icon:     Calendar,
       gradient: "bg-gradient-to-br from-blue-500 to-blue-600",
-      delay: 0.05,
+      delay:    0.05,
     },
     {
-      label: isAr ? "التقييمات المكتملة" : "Completed Assessments",
-      value: submittedCount,
-      icon: FileText,
+      label:    isAr ? "التقييمات المكتملة" : "Assessments",
+      value:    submittedCount,
+      icon:     FileText,
       gradient: "bg-gradient-to-br from-primary-pink to-soft-pink",
-      delay: 0.10,
+      delay:    0.10,
     },
     {
-      label: isAr ? "خطط غذائية نشطة"   : "Active Nutrition Plans",
-      value: nutritionCount,
-      icon: BookOpen,
+      label:    isAr ? "خطط غذائية نشطة"   : "Nutrition Plans",
+      value:    nutritionCount,
+      icon:     BookOpen,
       gradient: "bg-gradient-to-br from-emerald-500 to-emerald-600",
-      delay: 0.15,
+      delay:    0.15,
     },
     {
-      label: isAr ? "إجمالي المدفوعات"  : "Total Payments",
-      value: 0, placeholder: "—",
-      icon: CreditCard,
+      label:    isAr ? "الملفات المرفوعة"   : "Files",
+      value:    client.files.length,
+      icon:     FileIcon,
       gradient: "bg-gradient-to-br from-violet-500 to-purple-600",
-      delay: 0.20,
-    },
-    {
-      label: isAr ? "إدخالات التقدم"     : "Progress Entries",
-      value: progressCount,
-      icon: TrendingUp,
-      gradient: "bg-gradient-to-br from-amber-500 to-orange-400",
-      delay: 0.25,
+      delay:    0.20,
     },
   ];
 
@@ -813,7 +1283,7 @@ export default function ClientProfilePage() {
 
   return (
     <>
-      {/* Edit drawer — shown only when open */}
+      {/* Edit / delete drawer — shown only when open */}
       <ClientDrawer
         client={drawerOpen ? client : null}
         isAr={isAr}
@@ -831,19 +1301,18 @@ export default function ClientProfilePage() {
             { label: isAr ? "العملاء" : "Clients", href: "/admin/clients" },
             { label: isAr ? client.fullNameAr : client.fullName },
           ]}
-          actions={
-            <button
-              onClick={() => setDrawerOpen(true)}
-              className="
-                flex items-center gap-2 h-9 px-4 rounded-xl
-                bg-primary-pink text-white text-[12.5px] font-semibold
-                hover:opacity-90 transition-opacity
-              "
-            >
-              <Edit2 size={13} strokeWidth={2} />
-              {isAr ? "تعديل الملف" : "Edit Profile"}
-            </button>
-          }
+        />
+
+        {/* ── Primary Action Bar ──────────────────────────────────────────── */}
+        <ActionBar
+          isAr={isAr}
+          onCreatePlan={() => handleNavigate("nutrition", "createPlan")}
+          onCreateAssessment={() => handleNavigate("assessments")}
+          onBookAppointment={() => handleNavigate("appointments")}
+          onUploadFile={() => handleNavigate("files", "upload")}
+          onEditProfile={() => setDrawerOpen(true)}
+          onArchive={handleArchive}
+          onDelete={handleDelete}
         />
 
         {/* ── Profile Header Card ─────────────────────────────────────────── */}
@@ -865,41 +1334,28 @@ export default function ClientProfilePage() {
 
             {/* Name + contact + meta */}
             <div className="flex-1 min-w-0">
-              {/* Name + status */}
               <div className="flex flex-wrap items-center gap-2.5 mb-2">
                 <h2 className="text-[20px] font-bold text-[var(--admin-text)] leading-tight">
                   {isAr ? client.fullNameAr : client.fullName}
                 </h2>
-                <span
-                  className={`
-                    inline-flex items-center gap-1.5 text-[11px] font-bold
-                    px-2.5 py-0.5 rounded-full
-                    ${CLIENT_STATUS_BADGE[client.status] ?? ""}
-                  `}
-                >
+                <span className={`
+                  inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full
+                  ${CLIENT_STATUS_BADGE[client.status] ?? ""}
+                `}>
                   <span className={`w-1.5 h-1.5 rounded-full ${CLIENT_STATUS_DOT[client.status] ?? ""}`} />
-                  {isAr
-                    ? CLIENT_STATUS_LABEL_AR[client.status]
-                    : CLIENT_STATUS_LABEL_EN[client.status]}
+                  {isAr ? CLIENT_STATUS_LABEL_AR[client.status] : CLIENT_STATUS_LABEL_EN[client.status]}
                 </span>
               </div>
 
-              {/* Contact row */}
               <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[12.5px] text-[var(--admin-text-muted)]">
                 {client.email && (
-                  <a
-                    href={`mailto:${client.email}`}
-                    className="flex items-center gap-1.5 hover:text-primary-pink transition-colors"
-                  >
+                  <a href={`mailto:${client.email}`} className="flex items-center gap-1.5 hover:text-primary-pink transition-colors">
                     <Mail size={12} strokeWidth={2} />
                     {client.email}
                   </a>
                 )}
                 {client.phone && (
-                  <a
-                    href={`tel:${client.phone}`}
-                    className="flex items-center gap-1.5 hover:text-primary-pink transition-colors"
-                  >
+                  <a href={`tel:${client.phone}`} className="flex items-center gap-1.5 hover:text-primary-pink transition-colors">
                     <Phone size={12} strokeWidth={2} />
                     {client.phone}
                   </a>
@@ -912,7 +1368,6 @@ export default function ClientProfilePage() {
                 )}
               </div>
 
-              {/* Meta row: join date / last appt / next appt */}
               <div className="flex flex-wrap gap-x-5 gap-y-1.5 mt-2.5 text-[12px]">
                 {client.joinedDate && (
                   <span className="flex items-center gap-1.5 text-[var(--admin-text-faint)]">
@@ -928,15 +1383,14 @@ export default function ClientProfilePage() {
                     {client.lastAppointment}
                   </span>
                 )}
-                {nextAppt && (
+                {nextAppt ? (
                   <span className="flex items-center gap-1.5 text-emerald-600 font-semibold">
                     <CalendarCheck size={11} strokeWidth={2} />
                     {isAr ? "القادم: " : "Next: "}
                     {fmtDateLong(nextAppt.date, isAr)}
                     {nextAppt.time ? ` · ${nextAppt.time}` : ""}
                   </span>
-                )}
-                {!nextAppt && (
+                ) : (
                   <span className="flex items-center gap-1.5 text-[var(--admin-text-faint)]">
                     <CalendarCheck size={11} strokeWidth={2} />
                     {isAr ? "لا مواعيد قادمة" : "No upcoming appointments"}
@@ -947,8 +1401,8 @@ export default function ClientProfilePage() {
           </div>
         </motion.div>
 
-        {/* ── Quick Stats ─────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
+        {/* ── Quick Stats (4 cards) ───────────────────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           {quickStats.map((s, i) => (
             <StatCard key={i} {...s} />
           ))}
@@ -962,7 +1416,7 @@ export default function ClientProfilePage() {
           {/* Tab bar — horizontal scroll on mobile */}
           <div className="flex overflow-x-auto border-b border-[var(--admin-border)] scrollbar-none">
             {TABS.map((tab) => {
-              const count = tabCounts[tab.id];
+              const count    = tabCounts[tab.id];
               const isActive = activeTab === tab.id;
               return (
                 <button
@@ -978,14 +1432,12 @@ export default function ClientProfilePage() {
                 >
                   {isAr ? tab.ar : tab.en}
                   {count !== undefined && count > 0 && (
-                    <span
-                      className={`
-                        text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center
-                        ${isActive
-                          ? "bg-primary-pink/15 text-primary-pink"
-                          : "bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)]"}
-                      `}
-                    >
+                    <span className={`
+                      text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center
+                      ${isActive
+                        ? "bg-primary-pink/15 text-primary-pink"
+                        : "bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)]"}
+                    `}>
                       {count}
                     </span>
                   )}
@@ -1005,32 +1457,54 @@ export default function ClientProfilePage() {
                 transition={{ duration: 0.18 }}
               >
                 {activeTab === "overview" && (
-                  <OverviewTab client={client} isAr={isAr} />
+                  <OverviewTab
+                    client={client}
+                    assessments={assessments}
+                    nutritionCount={nutritionCount}
+                    isAr={isAr}
+                    onNavigate={handleNavigate}
+                  />
                 )}
                 {activeTab === "appointments" && (
-                  <AppointmentsTab appointments={appointments} isAr={isAr} />
+                  <AppointmentsTab
+                    appointments={appointments}
+                    isAr={isAr}
+                    onBook={() => setActiveTab("appointments")}
+                  />
                 )}
                 {activeTab === "assessments" && (
-                  <AssessmentsTab assessments={assessments} isAr={isAr} />
+                  <AssessmentsTab
+                    assessments={assessments}
+                    isAr={isAr}
+                    onCreateAssessment={() => {/* future: open assessment wizard */}}
+                  />
                 )}
                 {activeTab === "nutrition" && (
                   <NutritionPlansTab
                     clientId={client.id}
                     isAr={isAr}
                     onCountChange={setNutritionCount}
+                    autoOpenCreate={pendingNutritionOpen}
+                    onAutoOpenConsumed={() => setPendingNutritionOpen(false)}
                   />
                 )}
                 {activeTab === "payments" && (
                   <PlaceholderTab
                     icon={CreditCard}
-                    title="Payments"               titleAr="المدفوعات"
+                    title="Payments"         titleAr="المدفوعات"
                     desc="Payment history and invoices will appear here."
                     descAr="سجل المدفوعات والفواتير سيظهر هنا."
                     isAr={isAr}
                   />
                 )}
                 {activeTab === "files" && (
-                  <FilesTab initialFiles={client.files} clientId={client.id} isAr={isAr} />
+                  <FilesTab
+                    initialFiles={client.files}
+                    clientId={client.id}
+                    isAr={isAr}
+                    triggerUpload={pendingUpload}
+                    onTriggerConsumed={() => setPendingUpload(false)}
+                  />
                 )}
                 {activeTab === "progress" && (
                   <ProgressTab
