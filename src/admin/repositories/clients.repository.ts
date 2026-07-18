@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import type {
   Client, RiskLevel, TimelineEvent, TimelineType,
-  ClientStatus, Gender, FileType, NutritionPlan,
+  ClientStatus, Gender, FileType,
 } from "@/admin/data/clients";
 import type { AssessmentResult } from "@/admin/services/assessment.service";
 
@@ -30,7 +30,6 @@ const COUNTRY_AR: Record<string, string> = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapRowToClient(row: any): Client {
   const latestAssessment  = (row.assessments   as any[])?.[0] ?? null;
-  const nutritionPlanRow  = (row.nutrition_plans as any[])?.[0] ?? null;
   const timelineRows      = (row.timeline_events as any[]) ?? [];
   const fileRows          = (row.uploaded_files  as any[]) ?? [];
 
@@ -69,9 +68,9 @@ function mapRowToClient(row: any): Client {
     privateNotesAr:  "",
     consultations:   Array.isArray(row.consultations) ? row.consultations : [],
 
-    nutritionPlan: nutritionPlanRow
-      ? (nutritionPlanRow.plan_data as NutritionPlan)
-      : null,
+    // plan_data no longer exists in the new nutrition_plans schema;
+    // full plan details are loaded by NutritionTab via the nutrition repository.
+    nutritionPlan: null,
 
     files: fileRows.map((f: any) => ({
       id:         f.id,
@@ -103,12 +102,15 @@ function mapRowToClient(row: any): Client {
   };
 }
 
-// Nested select reused across read operations
+// Nested select reused across read operations.
+// Note: nutrition_plans no longer has a plan_data column (schema was replaced by the
+// Nutrition Plans module).  We only fetch id + name so PostgREST doesn't error out;
+// full plan data is loaded by NutritionTab via the nutrition repository.
 const FULL_SELECT = `
   *,
   assessments(id, score, risk_level, risk_percentage, diagnosis_category, diagnosis_category_ar, submitted_at),
   timeline_events(id, event, event_ar, type, date),
-  nutrition_plans(id, plan_data),
+  nutrition_plans(id, name, status),
   uploaded_files(id, filename, type, size, uploaded_at)
 `.trim();
 
