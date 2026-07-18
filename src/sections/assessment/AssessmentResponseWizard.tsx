@@ -282,6 +282,52 @@ function QuestionInput({
   void placeholder;
 }
 
+// ─── Diff helpers ────────────────────────────────────────────────────────────
+/** Returns true when two answers are semantically equal (order-insensitive for arrays). */
+function answersEqual(a: string | string[] | undefined, b: string | string[] | undefined): boolean {
+  if (a === undefined && b === undefined) return true;
+  if (a === undefined || b === undefined) return false;
+  const aArr = Array.isArray(a) ? [...a].sort() : [a];
+  const bArr = Array.isArray(b) ? [...b].sort() : [b];
+  return aArr.length === bArr.length && aArr.every((v, i) => v === bArr[i]);
+}
+
+/**
+ * Formats a raw answer value into a human-readable display string.
+ * For choice questions, looks up the option label; for yes/no maps to words.
+ */
+function formatAnswerForDisplay(
+  question: QuestionWithOptions,
+  value: string | string[],
+  isAr: boolean,
+): string {
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "";
+    // For multiple_choice, resolve each value to its label
+    const labels = value.map((v) => {
+      const opt = question.options.find((o) => o.value === v);
+      return opt ? (isAr && opt.label_ar ? opt.label_ar : opt.label_en) : v;
+    });
+    return labels.join("، ");
+  }
+
+  if (!value) return "";
+
+  switch (question.type) {
+    case "yes_no":
+      if (value === "yes") return isAr ? "نعم" : "Yes";
+      if (value === "no")  return isAr ? "لا"  : "No";
+      return value;
+    case "single_choice":
+    case "dropdown": {
+      const opt = question.options.find((o) => o.value === value);
+      return opt ? (isAr && opt.label_ar ? opt.label_ar : opt.label_en) : value;
+    }
+    default:
+      return value;
+  }
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 /**
  * Strip answers whose question IDs are no longer enabled.
@@ -538,6 +584,26 @@ export default function AssessmentResponseWizard({
                   isAr={isAr}
                 />
               </div>
+
+              {/* Changed-from hint — only shown when pre-filled and the answer was modified */}
+              {(() => {
+                if (!initialAnswers) return null;
+                const initialVal = initialAnswers[currentQuestion.id];
+                if (initialVal === undefined) return null;
+                const current = currentValue();
+                if (answersEqual(current, initialVal)) return null;
+                const displayOriginal = formatAnswerForDisplay(currentQuestion, initialVal, isAr);
+                if (!displayOriginal) return null;
+                return (
+                  <div className="mt-3 flex items-start gap-2 text-xs text-amber-700/80 bg-amber-50 border border-amber-200/60 rounded-xl px-3 py-2">
+                    <span className="shrink-0 mt-0.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-200/70 text-amber-800 font-bold text-[9px]">✎</span>
+                    <span>
+                      <span className="font-semibold">{isAr ? "تم التغيير من: " : "Changed from: "}</span>
+                      <span className="opacity-80">{displayOriginal}</span>
+                    </span>
+                  </div>
+                );
+              })()}
             </motion.div>
           )}
         </AnimatePresence>
