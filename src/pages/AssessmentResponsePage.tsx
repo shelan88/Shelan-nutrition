@@ -15,7 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
 import { getAppointmentById } from "@/admin/repositories/appointments.repository";
 import { getTemplateWithDetails } from "@/admin/repositories/assessment-templates.repository";
-import { getResponseByAppointment, createResponse } from "@/admin/repositories/assessment-responses.repository";
+import { getResponseByAppointment, createResponse, getPreviousSubmittedResponse, answersToMap } from "@/admin/repositories/assessment-responses.repository";
 import type { AppointmentRow } from "@/types/database.types";
 import type { TemplateWithDetails } from "@/admin/repositories/assessment-templates.repository";
 import type { ResponseWithAnswers } from "@/admin/repositories/assessment-responses.repository";
@@ -29,11 +29,12 @@ export default function AssessmentResponsePage() {
   const { lang } = useLanguage();
   const isAr = lang === "ar";
 
-  const [appt,       setAppt]       = useState<AppointmentRow | null>(null);
-  const [template,   setTemplate]   = useState<TemplateWithDetails | null>(null);
-  const [response,   setResponse]   = useState<ResponseWithAnswers | null>(null);
-  const [pageState,  setPageState]  = useState<"loading" | "ready" | "submitted" | "no_template" | "error">("loading");
-  const [submitted,  setSubmitted]  = useState(false);
+  const [appt,           setAppt]           = useState<AppointmentRow | null>(null);
+  const [template,       setTemplate]       = useState<TemplateWithDetails | null>(null);
+  const [response,       setResponse]       = useState<ResponseWithAnswers | null>(null);
+  const [pageState,      setPageState]      = useState<"loading" | "ready" | "offer_prefill" | "submitted" | "no_template" | "error">("loading");
+  const [submitted,      setSubmitted]      = useState(false);
+  const [initialAnswers, setInitialAnswers] = useState<Record<string, string | string[]> | undefined>(undefined);
 
   // Auth guard — redirect to booking if not logged in
   useEffect(() => {
@@ -95,6 +96,27 @@ export default function AssessmentResponsePage() {
       }
 
       setResponse(resp);
+
+      // Check for a previously submitted response for this same template+user.
+      // If one exists and the current draft has no answers yet, offer to pre-fill.
+      const hasLocalDraft = (() => {
+        try {
+          const raw = localStorage.getItem(`shelan_assessment_${appointment.id}`);
+          if (!raw) return false;
+          const parsed = JSON.parse(raw) as Record<string, unknown>;
+          return Object.keys(parsed).length > 0;
+        } catch { return false; }
+      })();
+
+      if (!hasLocalDraft && user?.id) {
+        const prior = await getPreviousSubmittedResponse(tmpl.id, user.id, appointment.id);
+        if (prior && prior.answers.length > 0) {
+          setInitialAnswers(answersToMap(prior.answers));
+          setPageState("offer_prefill");
+          return;
+        }
+      }
+
       setPageState("ready");
     }
 
@@ -157,6 +179,57 @@ export default function AssessmentResponsePage() {
     );
   }
 
+  // ── Offer to pre-fill from prior response ─────────────────────────────────
+  if (pageState === "offer_prefill" && template && response) {
+    return (
+      <AssessmentLayout>
+        <div className="mb-8">
+          <p className="uppercase tracking-[0.18em] text-[10px] font-semibold text-primary-pink mb-2">
+            {isAr ? "استبيان ما قبل الاستشارة" : "Pre-Consultation Questionnaire"}
+          </p>
+          <h1 className="font-heading text-3xl font-bold text-heading">
+            {isAr ? (template.name_ar || template.name_en) : template.name_en}
+          </h1>
+        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-3xl border border-soft-purple/12 shadow-xl shadow-deep-purple/10 px-8 py-10 flex flex-col items-center text-center gap-6"
+        >
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary-pink/15 to-lavender-purple/15 flex items-center justify-center">
+            <ClipboardList size={28} className="text-primary-pink" />
+          </div>
+          <div>
+            <h2 className="font-heading text-xl font-bold text-heading mb-2">
+              {isAr ? "لديكِ إجابات سابقة" : "You have previous answers"}
+            </h2>
+            <p className="text-body opacity-65 max-w-sm">
+              {isAr
+                ? "وجدنا إجاباتكِ من المرة الأخيرة. هل تريدين البدء بها أم تعبئة الاستبيان من جديد؟"
+                : "We found your answers from a previous visit. Would you like to start with those, or fill out the questionnaire fresh?"}
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            <motion.button
+              whileHover={{ scale: 1.03, y: -1 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setPageState("ready")}
+              className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple text-white font-semibold shadow-lg shadow-deep-purple/20 hover:shadow-xl transition-shadow"
+            >
+              {isAr ? "استخدام الإجابات السابقة" : "Use previous answers"}
+            </motion.button>
+            <button
+              onClick={() => { setInitialAnswers(undefined); setPageState("ready"); }}
+              className="w-full sm:w-auto px-8 py-3.5 rounded-full border-2 border-soft-purple/20 text-deep-purple font-semibold hover:bg-light-pink/30 transition-colors"
+            >
+              {isAr ? "البدء من جديد" : "Start fresh"}
+            </button>
+          </div>
+        </motion.div>
+      </AssessmentLayout>
+    );
+  }
+
   // ── No template / error ────────────────────────────────────────────────────
   if (pageState === "no_template" || pageState === "error") {
     return (
@@ -203,6 +276,7 @@ export default function AssessmentResponsePage() {
           responseId={response.id}
           appointmentId={appt!.id}
           isAr={isAr}
+          initialAnswers={initialAnswers}
           onSubmitted={() => setSubmitted(true)}
         />
       </AssessmentLayout>

@@ -113,6 +113,45 @@ export async function markResponseInProgress(responseId: string): Promise<void> 
 }
 
 /**
+ * Get the most recent *submitted* response for a given template + user,
+ * excluding the current appointment. Used to offer "pre-fill from last time".
+ */
+export async function getPreviousSubmittedResponse(
+  templateId: string,
+  userId: string,
+  excludeAppointmentId: string
+): Promise<ResponseWithAnswers | null> {
+  const { data, error } = await supabase
+    .from("assessment_responses")
+    .select("*")
+    .eq("template_id", templateId)
+    .eq("user_id", userId)
+    .eq("status", "submitted")
+    .neq("appointment_id", excludeAppointmentId)
+    .order("submitted_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  return getResponse(data.id);
+}
+
+/**
+ * Convert a ResponseWithAnswers answers array into a plain AnswerMap
+ * (Record<questionId, string | string[]>). Arrays are restored from answer_json.
+ */
+export function answersToMap(answers: AnswerWithQuestion[]): Record<string, string | string[]> {
+  const map: Record<string, string | string[]> = {};
+  for (const a of answers) {
+    if (Array.isArray(a.answer_json)) {
+      map[a.question_id] = a.answer_json as string[];
+    } else if (a.answer_text !== null && a.answer_text !== undefined) {
+      map[a.question_id] = a.answer_text;
+    }
+  }
+  return map;
+}
+
+/**
  * Get all assessment responses for a client by their email address.
  * Used by the admin ClientDrawer which knows the client's email but not their
  * Supabase user_id. Joins via appointments.client_email.

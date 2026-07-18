@@ -29,6 +29,8 @@ interface Props {
   responseId: string;
   appointmentId: string;
   isAr: boolean;
+  /** Pre-filled answers from a previous submission (template-level pre-fill). */
+  initialAnswers?: Record<string, string | string[]>;
   onSubmitted: () => void;
 }
 
@@ -286,9 +288,14 @@ export default function AssessmentResponseWizard({
   responseId,
   appointmentId,
   isAr,
+  initialAnswers,
   onSubmitted,
 }: Props) {
-  const [answers,     setAnswers]     = useState<AnswerMap>(() => loadFromLS(appointmentId));
+  const [answers,     setAnswers]     = useState<AnswerMap>(() => {
+    const ls = loadFromLS(appointmentId);
+    // If localStorage has a draft, prefer it; otherwise seed from initialAnswers (prior response).
+    return Object.keys(ls).length > 0 ? ls : (initialAnswers ?? {});
+  });
   const [currentIdx,  setCurrentIdx]  = useState(0);
   const [direction,   setDirection]   = useState(1);
   const [submitting,  setSubmitting]  = useState(false);
