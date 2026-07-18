@@ -1,8 +1,10 @@
 /**
  * PortalLayout — wraps all client portal pages with:
+ *   • Dark site background (portal always renders on dark)
  *   • Auth guard (shows sign-in prompt if no session)
+ *   • RTL direction when Arabic is active
  *   • Consistent top padding to clear the fixed Navbar
- *   • Centered max-width content container
+ *   • Centred max-width content container
  *
  * Navigation is handled entirely by the Navbar avatar dropdown —
  * no duplicate tab bar is rendered here.
@@ -30,7 +32,10 @@ export default function PortalLayout({ children }: PortalLayoutProps) {
   // ── Still resolving auth ──────────────────────────────────────────────────
   if (authLoading) {
     return (
-      <div className="min-h-screen pt-32 flex items-center justify-center">
+      <div
+        dir={isAr ? "rtl" : "ltr"}
+        className="min-h-screen bg-[#0e0a1e] pt-32 flex items-center justify-center"
+      >
         <div className="w-10 h-10 rounded-full border-2 border-primary-pink border-t-transparent animate-spin" />
       </div>
     );
@@ -39,7 +44,10 @@ export default function PortalLayout({ children }: PortalLayoutProps) {
   // ── Not authenticated ─────────────────────────────────────────────────────
   if (!user) {
     return (
-      <div className="min-h-screen pt-32 pb-20 flex flex-col items-center justify-center px-4">
+      <div
+        dir={isAr ? "rtl" : "ltr"}
+        className="min-h-screen bg-[#0e0a1e] pt-32 pb-20 flex flex-col items-center justify-center px-4"
+      >
         <div className="w-16 h-16 rounded-full bg-primary-pink/20 flex items-center justify-center mb-6">
           <ShieldAlert className="text-primary-pink" size={30} />
         </div>
@@ -67,7 +75,10 @@ export default function PortalLayout({ children }: PortalLayoutProps) {
 
   // ── Authenticated ─────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen pt-28 sm:pt-32 pb-16">
+    <div
+      dir={isAr ? "rtl" : "ltr"}
+      className="min-h-screen bg-[#0e0a1e] pt-28 sm:pt-32 pb-20"
+    >
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6">
         {children}
       </div>
