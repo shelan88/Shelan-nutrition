@@ -28,6 +28,7 @@ import {
   getClientAppointments,
   getClientAssessmentResponses,
 } from "@/admin/repositories/client-profile.repository";
+import NutritionPlansTab from "@/admin/pages/NutritionPlansTab";
 import type { Client, TimelineEvent } from "@/admin/data/clients";
 import type { AppointmentRow } from "@/types/database.types";
 import type { ClientAssessmentResponse } from "@/admin/repositories/client-profile.repository";
@@ -606,12 +607,13 @@ export default function ClientProfilePage() {
   const { lang } = useLanguage();
   const isAr = lang === "ar";
 
-  const [client,       setClient]       = useState<Client | null>(null);
-  const [appointments, setAppointments] = useState<AppointmentRow[]>([]);
-  const [assessments,  setAssessments]  = useState<ClientAssessmentResponse[]>([]);
-  const [loading,      setLoading]      = useState(true);
-  const [activeTab,    setActiveTab]    = useState<TabId>("overview");
-  const [drawerOpen,   setDrawerOpen]   = useState(false);
+  const [client,          setClient]          = useState<Client | null>(null);
+  const [appointments,    setAppointments]    = useState<AppointmentRow[]>([]);
+  const [assessments,     setAssessments]     = useState<ClientAssessmentResponse[]>([]);
+  const [loading,         setLoading]         = useState(true);
+  const [activeTab,       setActiveTab]       = useState<TabId>("overview");
+  const [drawerOpen,      setDrawerOpen]      = useState(false);
+  const [nutritionCount,  setNutritionCount]  = useState(0);
 
   useEffect(() => {
     if (!id) return;
@@ -694,7 +696,7 @@ export default function ClientProfilePage() {
     },
     {
       label: isAr ? "خطط غذائية نشطة"   : "Active Nutrition Plans",
-      value: client.nutritionPlan ? 1 : 0,
+      value: nutritionCount,
       icon: BookOpen,
       gradient: "bg-gradient-to-br from-emerald-500 to-emerald-600",
       delay: 0.15,
@@ -719,6 +721,7 @@ export default function ClientProfilePage() {
   const tabCounts: Partial<Record<TabId, number>> = {
     appointments: appointments.length,
     assessments:  assessments.length,
+    nutrition:    nutritionCount,
     files:        client.files.length,
   };
 
@@ -925,12 +928,10 @@ export default function ClientProfilePage() {
                   <AssessmentsTab assessments={assessments} isAr={isAr} />
                 )}
                 {activeTab === "nutrition" && (
-                  <PlaceholderTab
-                    icon={BookOpen}
-                    title="Nutrition Plans"        titleAr="الخطط الغذائية"
-                    desc="Personalised nutrition plans will appear here."
-                    descAr="الخطط الغذائية المخصصة ستظهر هنا."
+                  <NutritionPlansTab
+                    clientId={client.id}
                     isAr={isAr}
+                    onCountChange={setNutritionCount}
                   />
                 )}
                 {activeTab === "payments" && (

@@ -74,9 +74,41 @@ export interface TimelineEventRow {
 export interface NutritionPlanRow {
   id: string;
   client_id: string;
-  plan_data: Json;
+
+  // Version tracking — all versions of one logical plan share plan_group_id
+  plan_group_id: string;
+  version: number;
+
+  // Metadata
+  name: string;
+  description: string | null;
+  start_date: string | null;   // ISO date "YYYY-MM-DD"
+  end_date: string | null;     // ISO date
+  status: "draft" | "active" | "completed" | "archived";
+
+  // Meals (JSONB keyed by slot name)
+  meals: Json;
+
+  // Additional guidance
+  water_intake_goal: string | null;
+  steps_goal: string | null;
+  exercise_recommendations: string | null;
+  supplement_recommendations: string | null;
+  general_instructions: string | null;
+
   created_at: string;
   updated_at: string;
+}
+
+export interface NutritionPlanFileRow {
+  id: string;
+  plan_id: string;
+  client_id: string;
+  filename: string;
+  url: string;
+  file_type: "pdf" | "image" | "document";
+  size: number | null;
+  created_at: string;
 }
 
 export interface UploadedFileRow {

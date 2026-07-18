@@ -212,6 +212,41 @@ body {
 }
 
 /* Smooth range thumb for assessment + admin inputs */
+/* ─── Admin form field utility ───────────────────────────────────────────────
+   Used by admin modals and editors for consistent input/select/textarea styles. */
+.admin-shell .form-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--admin-border-strong);
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  font-size: 13px;
+  font-family: "Inter", "Almarai", sans-serif;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.admin-shell .form-input:focus {
+  border-color: rgba(243, 94, 152, 0.45);
+  box-shadow: 0 0 0 3px rgba(243, 94, 152, 0.1);
+}
+.admin-shell .form-input::placeholder {
+  color: var(--admin-text-faint);
+  font-weight: 400;
+}
+.admin-shell textarea.form-input {
+  height: auto;
+  padding: 10px 12px;
+  resize: vertical;
+  line-height: 1.55;
+}
+.admin-shell select.form-input {
+  cursor: pointer;
+  appearance: auto;
+}
+
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 20px;
