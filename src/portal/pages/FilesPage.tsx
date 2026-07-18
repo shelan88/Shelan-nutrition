@@ -11,6 +11,7 @@
 import { useState, useEffect } from "react";
 import { Folder, FileText, FileImage, File, AlertCircle, Info } from "lucide-react";
 import { useClientProfile } from "@/hooks/useClientProfile";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   getOwnFiles,
   type PortalFile,
@@ -34,6 +35,8 @@ function TypeBadge({ type }: { type: string | null }) {
 
 export default function FilesPage() {
   const { profile, loading: profileLoading } = useClientProfile();
+  const { lang } = useLanguage();
+  const isAr = lang === "ar";
   const [files,   setFiles]   = useState<PortalFile[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,21 +61,26 @@ export default function FilesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-heading text-2xl font-bold text-ivory">My Files</h1>
+      <h1 className="font-heading text-2xl font-bold text-ivory">
+        {isAr ? "ملفاتي" : "My Files"}
+      </h1>
 
       {/* Info notice */}
       <div className="flex items-start gap-3 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-ivory/60">
         <Info size={15} className="text-ivory/30 shrink-0 mt-0.5" />
         <span>
-          Files listed here were shared by your nutritionist. Contact them directly to
-          receive the latest copies or links.
+          {isAr
+            ? "الملفات المدرجة هنا تمت مشاركتها من قِبل أخصائي التغذية. تواصل معهم مباشرةً للحصول على أحدث النسخ أو الروابط."
+            : "Files listed here were shared by your nutritionist. Contact them directly to receive the latest copies or links."}
         </span>
       </div>
 
       {files.length === 0 ? (
         <div className="py-16 text-center bg-white/3 border border-white/8 rounded-2xl">
           <Folder className="mx-auto text-ivory/20 mb-3" size={32} />
-          <p className="text-ivory/40 text-sm">No files shared yet.</p>
+          <p className="text-ivory/40 text-sm">
+            {isAr ? "لم تتم مشاركة أي ملفات بعد." : "No files shared yet."}
+          </p>
         </div>
       ) : (
         <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
@@ -81,10 +89,18 @@ export default function FilesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/10">
-                  <th className="px-5 py-3 text-start text-xs font-semibold text-ivory/40 uppercase tracking-wide">File</th>
-                  <th className="px-5 py-3 text-start text-xs font-semibold text-ivory/40 uppercase tracking-wide">Type</th>
-                  <th className="px-5 py-3 text-start text-xs font-semibold text-ivory/40 uppercase tracking-wide">Size</th>
-                  <th className="px-5 py-3 text-start text-xs font-semibold text-ivory/40 uppercase tracking-wide">Shared</th>
+                  <th className="px-5 py-3 text-start text-xs font-semibold text-ivory/40 uppercase tracking-wide">
+                    {isAr ? "الملف" : "File"}
+                  </th>
+                  <th className="px-5 py-3 text-start text-xs font-semibold text-ivory/40 uppercase tracking-wide">
+                    {isAr ? "النوع" : "Type"}
+                  </th>
+                  <th className="px-5 py-3 text-start text-xs font-semibold text-ivory/40 uppercase tracking-wide">
+                    {isAr ? "الحجم" : "Size"}
+                  </th>
+                  <th className="px-5 py-3 text-start text-xs font-semibold text-ivory/40 uppercase tracking-wide">
+                    {isAr ? "تاريخ المشاركة" : "Shared"}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -99,7 +115,7 @@ export default function FilesPage() {
                     <td className="px-5 py-4"><TypeBadge type={file.type} /></td>
                     <td className="px-5 py-4 text-ivory/50">{file.sizeLabel || "—"}</td>
                     <td className="px-5 py-4 text-ivory/50">
-                      {new Date(file.uploaded_at).toLocaleDateString("en-US", {
+                      {new Date(file.uploaded_at).toLocaleDateString(isAr ? "ar-KW" : "en-US", {
                         month: "short", day: "numeric", year: "numeric",
                       })}
                     </td>
@@ -131,7 +147,9 @@ export default function FilesPage() {
       {files.length > 0 && (
         <div className="flex items-center gap-2 text-xs text-ivory/30">
           <AlertCircle size={11} />
-          To download a file, please contact your nutritionist directly.
+          {isAr
+            ? "لتنزيل ملف، يرجى التواصل مع أخصائي التغذية مباشرةً."
+            : "To download a file, please contact your nutritionist directly."}
         </div>
       )}
     </div>

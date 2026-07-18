@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useClientProfile } from "@/hooks/useClientProfile";
+import { useLanguage } from "@/context/LanguageContext";
 import AuthModal from "@/components/AuthModal";
 import type { ReactNode } from "react";
 
@@ -34,11 +35,11 @@ interface PortalLayoutProps {
 export default function PortalLayout({ children }: PortalLayoutProps) {
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading } = useClientProfile();
+  const { lang } = useLanguage();
   const [authOpen, setAuthOpen] = useState(false);
   const location = useLocation();
 
-  // Determine language from document direction
-  const isAr = document.documentElement.lang === "ar";
+  const isAr = lang === "ar";
 
   // ── Not authenticated ─────────────────────────────────────────────────────
   if (!authLoading && !user) {

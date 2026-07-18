@@ -9,6 +9,7 @@ import {
   Footprints, Dumbbell, Pill, AlertCircle, ExternalLink,
 } from "lucide-react";
 import { useClientProfile } from "@/hooks/useClientProfile";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   getOwnNutritionPlans,
   MEAL_SLOTS,
@@ -22,15 +23,24 @@ const STATUS_COLORS: Record<string, string> = {
   archived:  "bg-ivory/5 text-ivory/30 border-white/5",
 };
 
-function PlanCard({ plan }: { plan: PortalNutritionPlan }) {
+const STATUS_LABELS_AR: Record<string, string> = {
+  active:    "نشط",
+  draft:     "مسودة",
+  completed: "مكتمل",
+  archived:  "مؤرشف",
+};
+
+function PlanCard({ plan, isAr }: { plan: PortalNutritionPlan; isAr: boolean }) {
   const [open, setOpen] = useState(plan.status === "active");
 
   const statusClass = STATUS_COLORS[plan.status] ?? "bg-white/10 text-ivory/50 border-white/10";
-  const statusLabel = plan.status.charAt(0).toUpperCase() + plan.status.slice(1);
+  const statusLabel = isAr
+    ? (STATUS_LABELS_AR[plan.status] ?? plan.status)
+    : (plan.status.charAt(0).toUpperCase() + plan.status.slice(1));
 
   const dateRange = [plan.start_date, plan.end_date]
     .filter(Boolean)
-    .map((d) => new Date(d!).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }))
+    .map((d) => new Date(d!).toLocaleDateString(isAr ? "ar-KW" : "en-US", { month: "short", day: "numeric", year: "numeric" }))
     .join(" – ");
 
   return (
@@ -63,14 +73,18 @@ function PlanCard({ plan }: { plan: PortalNutritionPlan }) {
         <div className="border-t border-white/10 p-5 space-y-6">
           {/* Meals grid */}
           <div>
-            <h3 className="text-xs font-semibold text-ivory/40 uppercase tracking-wider mb-3">Meals</h3>
+            <h3 className="text-xs font-semibold text-ivory/40 uppercase tracking-wider mb-3">
+              {isAr ? "الوجبات" : "Meals"}
+            </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {MEAL_SLOTS.map(({ key, en: slotLabel }) => {
+              {MEAL_SLOTS.map(({ key, en: slotLabelEn, ar: slotLabelAr }) => {
                 const meal = plan.mealsMap[key];
                 if (!meal?.title && !meal?.description) return null;
                 return (
                   <div key={key} className="bg-white/5 rounded-xl p-4">
-                    <p className="text-xs font-semibold text-primary-pink/80 uppercase tracking-wide mb-2">{slotLabel}</p>
+                    <p className="text-xs font-semibold text-primary-pink/80 uppercase tracking-wide mb-2">
+                      {isAr ? (slotLabelAr ?? slotLabelEn) : slotLabelEn}
+                    </p>
                     {meal.title && <p className="text-sm font-medium text-ivory mb-1">{meal.title}</p>}
                     {meal.description && <p className="text-sm text-ivory/60">{meal.description}</p>}
                     {meal.instructions && (
@@ -88,23 +102,25 @@ function PlanCard({ plan }: { plan: PortalNutritionPlan }) {
           {/* Goals & recommendations */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {plan.water_intake_goal && (
-              <InfoBlock icon={<Droplets size={14} />} label="Water Goal" value={plan.water_intake_goal} />
+              <InfoBlock icon={<Droplets size={14} />} label={isAr ? "هدف شرب الماء" : "Water Goal"} value={plan.water_intake_goal} />
             )}
             {plan.steps_goal && (
-              <InfoBlock icon={<Footprints size={14} />} label="Steps Goal" value={plan.steps_goal} />
+              <InfoBlock icon={<Footprints size={14} />} label={isAr ? "هدف الخطوات" : "Steps Goal"} value={plan.steps_goal} />
             )}
             {plan.exercise_recommendations && (
-              <InfoBlock icon={<Dumbbell size={14} />} label="Exercise" value={plan.exercise_recommendations} />
+              <InfoBlock icon={<Dumbbell size={14} />} label={isAr ? "التمارين" : "Exercise"} value={plan.exercise_recommendations} />
             )}
             {plan.supplement_recommendations && (
-              <InfoBlock icon={<Pill size={14} />} label="Supplements" value={plan.supplement_recommendations} />
+              <InfoBlock icon={<Pill size={14} />} label={isAr ? "المكملات" : "Supplements"} value={plan.supplement_recommendations} />
             )}
           </div>
 
           {/* General instructions */}
           {plan.general_instructions && (
             <div className="bg-white/5 rounded-xl p-4">
-              <p className="text-xs font-semibold text-ivory/40 uppercase tracking-wide mb-2">General Instructions</p>
+              <p className="text-xs font-semibold text-ivory/40 uppercase tracking-wide mb-2">
+                {isAr ? "تعليمات عامة" : "General Instructions"}
+              </p>
               <p className="text-sm text-ivory/70 whitespace-pre-line">{plan.general_instructions}</p>
             </div>
           )}
@@ -112,7 +128,9 @@ function PlanCard({ plan }: { plan: PortalNutritionPlan }) {
           {/* Attached files */}
           {plan.files.length > 0 && (
             <div>
-              <h3 className="text-xs font-semibold text-ivory/40 uppercase tracking-wider mb-3">Attachments</h3>
+              <h3 className="text-xs font-semibold text-ivory/40 uppercase tracking-wider mb-3">
+                {isAr ? "المرفقات" : "Attachments"}
+              </h3>
               <div className="space-y-2">
                 {plan.files.map((file) => (
                   <a
@@ -150,6 +168,8 @@ function InfoBlock({ icon, label, value }: { icon: React.ReactNode; label: strin
 
 export default function NutritionPage() {
   const { profile, loading: profileLoading } = useClientProfile();
+  const { lang } = useLanguage();
+  const isAr = lang === "ar";
   const [plans,   setPlans]   = useState<PortalNutritionPlan[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -174,16 +194,20 @@ export default function NutritionPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-heading text-2xl font-bold text-ivory">My Nutrition Plans</h1>
+      <h1 className="font-heading text-2xl font-bold text-ivory">
+        {isAr ? "خطط التغذية" : "My Nutrition Plans"}
+      </h1>
 
       {plans.length === 0 ? (
         <div className="py-16 text-center bg-white/3 border border-white/8 rounded-2xl">
           <AlertCircle className="mx-auto text-ivory/20 mb-3" size={28} />
-          <p className="text-ivory/40 text-sm">No nutrition plans assigned yet.</p>
+          <p className="text-ivory/40 text-sm">
+            {isAr ? "لم يتم تعيين خطط تغذية بعد." : "No nutrition plans assigned yet."}
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {plans.map((plan) => <PlanCard key={plan.id} plan={plan} />)}
+          {plans.map((plan) => <PlanCard key={plan.id} plan={plan} isAr={isAr} />)}
         </div>
       )}
     </div>

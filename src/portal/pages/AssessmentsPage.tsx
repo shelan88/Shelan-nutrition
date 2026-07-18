@@ -6,6 +6,7 @@
 import { useState, useEffect } from "react";
 import { ClipboardList, ChevronDown, ChevronUp, AlertCircle, Clock, CheckCircle2 } from "lucide-react";
 import { useClientProfile } from "@/hooks/useClientProfile";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   getOwnAssessmentResponses,
   getOwnFullResponse,
@@ -13,14 +14,15 @@ import {
   type FullPortalResponse,
 } from "@/portal/repositories/assessments.repository";
 
-function StatusChip({ status }: { status: PortalAssessmentResponse["status"] }) {
+function StatusChip({ status, isAr }: { status: PortalAssessmentResponse["status"]; isAr: boolean }) {
   const cfg =
     status === "submitted"   ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/20" :
     status === "in_progress" ? "bg-amber-500/15 text-amber-300 border-amber-500/20" :
                                "bg-white/10 text-ivory/50 border-white/10";
   const label =
-    status === "submitted"   ? "Completed" :
-    status === "in_progress" ? "In Progress" : "Pending";
+    status === "submitted"   ? (isAr ? "مكتمل" : "Completed") :
+    status === "in_progress" ? (isAr ? "قيد التنفيذ" : "In Progress") :
+                               (isAr ? "معلق" : "Pending");
 
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${cfg}`}>
@@ -39,7 +41,7 @@ function AnswerRow({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-function ResponseCard({ response }: { response: PortalAssessmentResponse }) {
+function ResponseCard({ response, isAr }: { response: PortalAssessmentResponse; isAr: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const [full,     setFull]     = useState<FullPortalResponse | null>(null);
   const [loading,  setLoading]  = useState(false);
@@ -56,8 +58,11 @@ function ResponseCard({ response }: { response: PortalAssessmentResponse }) {
   };
 
   const date = response.submittedAt
-    ? new Date(response.submittedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-    : new Date(response.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    ? new Date(response.submittedAt).toLocaleDateString(isAr ? "ar-KW" : "en-US", { month: "short", day: "numeric", year: "numeric" })
+    : new Date(response.createdAt).toLocaleDateString(isAr ? "ar-KW" : "en-US", { month: "short", day: "numeric", year: "numeric" });
+
+  const submittedLabel = isAr ? "تاريخ الإرسال" : "Submitted";
+  const createdLabel   = isAr ? "تاريخ الإنشاء" : "Created";
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
@@ -73,13 +78,13 @@ function ResponseCard({ response }: { response: PortalAssessmentResponse }) {
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-0.5">
             <span className="font-semibold text-ivory text-sm truncate">{response.templateName}</span>
-            <StatusChip status={response.status} />
+            <StatusChip status={response.status} isAr={isAr} />
           </div>
           <p className="text-xs text-ivory/40 flex items-center gap-1">
             {response.status === "submitted"
               ? <CheckCircle2 size={11} className="text-emerald-400" />
               : <Clock size={11} />}
-            {response.status === "submitted" ? "Submitted" : "Created"}: {date}
+            {response.status === "submitted" ? submittedLabel : createdLabel}: {date}
           </p>
         </div>
         {response.status === "submitted" && (
@@ -100,13 +105,19 @@ function ResponseCard({ response }: { response: PortalAssessmentResponse }) {
               {full.answers.map((ans) => (
                 <AnswerRow
                   key={ans.id}
-                  label={ans.question?.label_en ?? "Question"}
+                  label={
+                    (isAr && ans.question?.label_ar)
+                      ? ans.question.label_ar
+                      : (ans.question?.label_en ?? (isAr ? "سؤال" : "Question"))
+                  }
                   value={ans.answer_text ?? (ans.answer_json ? JSON.stringify(ans.answer_json) : null)}
                 />
               ))}
             </div>
           ) : (
-            <p className="text-ivory/40 text-sm text-center py-4">No answers recorded.</p>
+            <p className="text-ivory/40 text-sm text-center py-4">
+              {isAr ? "لا توجد إجابات مسجلة." : "No answers recorded."}
+            </p>
           )}
         </div>
       )}
@@ -116,6 +127,8 @@ function ResponseCard({ response }: { response: PortalAssessmentResponse }) {
 
 export default function AssessmentsPage() {
   const { profile, loading: profileLoading } = useClientProfile();
+  const { lang } = useLanguage();
+  const isAr = lang === "ar";
   const [responses, setResponses] = useState<PortalAssessmentResponse[]>([]);
   const [loading,   setLoading]   = useState(true);
 
@@ -150,10 +163,12 @@ export default function AssessmentsPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="font-heading text-2xl font-bold text-ivory">My Assessments</h1>
+      <h1 className="font-heading text-2xl font-bold text-ivory">
+        {isAr ? "تقييماتي" : "My Assessments"}
+      </h1>
 
       {responses.length === 0 ? (
-        <EmptyState label="No assessments found." />
+        <EmptyState label={isAr ? "لا توجد تقييمات." : "No assessments found."} />
       ) : (
         <>
           {completed.length > 0 && (
@@ -161,14 +176,14 @@ export default function AssessmentsPage() {
               <div className="flex items-center gap-2 mb-4">
                 <CheckCircle2 size={16} className="text-emerald-400" />
                 <h2 className="font-heading text-base font-semibold text-ivory">
-                  Completed
+                  {isAr ? "المكتملة" : "Completed"}
                   <span className="ms-2 text-xs font-normal text-ivory/40 bg-white/5 px-2 py-0.5 rounded-full">
                     {completed.length}
                   </span>
                 </h2>
               </div>
               <div className="space-y-3">
-                {completed.map((r) => <ResponseCard key={r.id} response={r} />)}
+                {completed.map((r) => <ResponseCard key={r.id} response={r} isAr={isAr} />)}
               </div>
             </section>
           )}
@@ -178,14 +193,14 @@ export default function AssessmentsPage() {
               <div className="flex items-center gap-2 mb-4">
                 <Clock size={16} className="text-amber-400" />
                 <h2 className="font-heading text-base font-semibold text-ivory">
-                  Pending
+                  {isAr ? "المعلقة" : "Pending"}
                   <span className="ms-2 text-xs font-normal text-ivory/40 bg-white/5 px-2 py-0.5 rounded-full">
                     {pending.length}
                   </span>
                 </h2>
               </div>
               <div className="space-y-3">
-                {pending.map((r) => <ResponseCard key={r.id} response={r} />)}
+                {pending.map((r) => <ResponseCard key={r.id} response={r} isAr={isAr} />)}
               </div>
             </section>
           )}

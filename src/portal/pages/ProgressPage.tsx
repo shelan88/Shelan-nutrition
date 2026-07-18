@@ -6,6 +6,7 @@
 import { useState, useEffect } from "react";
 import { TrendingUp, Scale, Ruler, AlertCircle, ChevronDown, ChevronUp, Image } from "lucide-react";
 import { useClientProfile } from "@/hooks/useClientProfile";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   getOwnProgressEntries,
   type ProgressEntryWithPhotos,
@@ -15,7 +16,7 @@ import {
 
 interface ChartPoint { date: string; weight: number }
 
-function WeightChart({ entries }: { entries: ProgressEntryWithPhotos[] }) {
+function WeightChart({ entries, isAr }: { entries: ProgressEntryWithPhotos[]; isAr: boolean }) {
   const points: ChartPoint[] = entries
     .filter((e) => e.weight_kg !== null)
     .map((e) => ({ date: e.entry_date, weight: Number(e.weight_kg) }))
@@ -51,7 +52,9 @@ function WeightChart({ entries }: { entries: ProgressEntryWithPhotos[] }) {
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-      <p className="text-xs font-semibold text-ivory/40 uppercase tracking-wider mb-3">Weight Over Time (kg)</p>
+      <p className="text-xs font-semibold text-ivory/40 uppercase tracking-wider mb-3">
+        {isAr ? "الوزن عبر الزمن (كغ)" : "Weight Over Time (kg)"}
+      </p>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="w-full h-auto"
@@ -100,7 +103,7 @@ function WeightChart({ entries }: { entries: ProgressEntryWithPhotos[] }) {
         {points.map((p, i) => {
           if (points.length > 6 && i % Math.ceil(points.length / 6) !== 0 && i !== points.length - 1) return null;
           const d = new Date(p.date);
-          const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+          const lbl = d.toLocaleDateString(isAr ? "ar-KW" : "en-US", { month: "short", day: "numeric" });
           return (
             <text
               key={i}
@@ -110,7 +113,7 @@ function WeightChart({ entries }: { entries: ProgressEntryWithPhotos[] }) {
               fill="rgba(255,255,255,0.3)"
               fontSize="9"
             >
-              {label}
+              {lbl}
             </text>
           );
         })}
@@ -142,26 +145,26 @@ function StatCard({ label, value, unit, icon }: {
 
 // ─── Entry card ───────────────────────────────────────────────────────────────
 
-function EntryCard({ entry }: { entry: ProgressEntryWithPhotos }) {
+function EntryCard({ entry, isAr }: { entry: ProgressEntryWithPhotos; isAr: boolean }) {
   const [open, setOpen] = useState(false);
 
-  const date = new Date(entry.entry_date).toLocaleDateString("en-US", {
+  const date = new Date(entry.entry_date).toLocaleDateString(isAr ? "ar-KW" : "en-US", {
     weekday: "short", month: "long", day: "numeric", year: "numeric",
   });
 
   const metrics = [
-    { label: "Weight",     value: entry.weight_kg,      unit: "kg"  },
-    { label: "Height",     value: entry.height_cm,      unit: "cm"  },
-    { label: "BMI",        value: entry.bmi,            unit: ""    },
-    { label: "Waist",      value: entry.waist_cm,       unit: "cm"  },
-    { label: "Hip",        value: entry.hip_cm,         unit: "cm"  },
-    { label: "Thigh",      value: entry.thigh_cm,       unit: "cm"  },
-    { label: "Arm",        value: entry.arm_cm,         unit: "cm"  },
-    { label: "Chest",      value: entry.chest_cm,       unit: "cm"  },
-    { label: "Body Fat",   value: entry.body_fat_pct,   unit: "%"   },
-    { label: "Muscle",     value: entry.muscle_mass_pct,unit: "%"   },
-    { label: "Water",      value: entry.water_pct,      unit: "%"   },
-    { label: "Goal Weight",value: entry.goal_weight_kg, unit: "kg"  },
+    { label: isAr ? "الوزن"      : "Weight",      value: entry.weight_kg,       unit: isAr ? "كغ" : "kg"  },
+    { label: isAr ? "الطول"      : "Height",      value: entry.height_cm,       unit: "cm"  },
+    { label: "BMI",                                value: entry.bmi,             unit: ""    },
+    { label: isAr ? "الخصر"      : "Waist",       value: entry.waist_cm,        unit: "cm"  },
+    { label: isAr ? "الوركان"    : "Hip",         value: entry.hip_cm,          unit: "cm"  },
+    { label: isAr ? "الفخذ"      : "Thigh",       value: entry.thigh_cm,        unit: "cm"  },
+    { label: isAr ? "الذراع"     : "Arm",         value: entry.arm_cm,          unit: "cm"  },
+    { label: isAr ? "الصدر"      : "Chest",       value: entry.chest_cm,        unit: "cm"  },
+    { label: isAr ? "نسبة الدهون": "Body Fat",    value: entry.body_fat_pct,    unit: "%"   },
+    { label: isAr ? "العضلات"    : "Muscle",      value: entry.muscle_mass_pct, unit: "%"   },
+    { label: isAr ? "الماء"      : "Water",       value: entry.water_pct,       unit: "%"   },
+    { label: isAr ? "الوزن المستهدف": "Goal Weight", value: entry.goal_weight_kg, unit: isAr ? "كغ" : "kg" },
   ].filter((m) => m.value !== null);
 
   return (
@@ -177,9 +180,11 @@ function EntryCard({ entry }: { entry: ProgressEntryWithPhotos }) {
         <div className="flex-1">
           <p className="font-semibold text-ivory text-sm">{date}</p>
           <p className="text-xs text-ivory/40 mt-0.5">
-            {entry.weight_kg ? `${entry.weight_kg} kg` : ""}
+            {entry.weight_kg ? `${entry.weight_kg} ${isAr ? "كغ" : "kg"}` : ""}
             {entry.bmi ? ` · BMI ${entry.bmi}` : ""}
-            {entry.photos.length > 0 ? ` · ${entry.photos.length} photo${entry.photos.length > 1 ? "s" : ""}` : ""}
+            {entry.photos.length > 0
+              ? ` · ${entry.photos.length} ${isAr ? (entry.photos.length === 1 ? "صورة" : "صور") : `photo${entry.photos.length > 1 ? "s" : ""}`}`
+              : ""}
           </p>
         </div>
         <span className="text-ivory/30">
@@ -206,13 +211,17 @@ function EntryCard({ entry }: { entry: ProgressEntryWithPhotos }) {
           {/* Notes */}
           {entry.nutritionist_notes && (
             <div className="bg-white/5 rounded-xl p-3">
-              <p className="text-xs text-ivory/40 mb-1">Nutritionist Notes</p>
+              <p className="text-xs text-ivory/40 mb-1">
+                {isAr ? "ملاحظات أخصائي التغذية" : "Nutritionist Notes"}
+              </p>
               <p className="text-sm text-ivory/70">{entry.nutritionist_notes}</p>
             </div>
           )}
           {entry.client_notes && (
             <div className="bg-white/5 rounded-xl p-3">
-              <p className="text-xs text-ivory/40 mb-1">My Notes</p>
+              <p className="text-xs text-ivory/40 mb-1">
+                {isAr ? "ملاحظاتي" : "My Notes"}
+              </p>
               <p className="text-sm text-ivory/70">{entry.client_notes}</p>
             </div>
           )}
@@ -221,7 +230,7 @@ function EntryCard({ entry }: { entry: ProgressEntryWithPhotos }) {
           {entry.photos.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-ivory/40 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                <Image size={11} /> Photos
+                <Image size={11} /> {isAr ? "الصور" : "Photos"}
               </p>
               <div className="grid grid-cols-3 gap-2">
                 {entry.photos.map((photo) => (
@@ -250,6 +259,8 @@ function EntryCard({ entry }: { entry: ProgressEntryWithPhotos }) {
 
 export default function ProgressPage() {
   const { profile, loading: profileLoading } = useClientProfile();
+  const { lang } = useLanguage();
+  const isAr = lang === "ar";
   const [entries,  setEntries]  = useState<ProgressEntryWithPhotos[]>([]);
   const [loading,  setLoading]  = useState(true);
 
@@ -276,30 +287,36 @@ export default function ProgressPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-heading text-2xl font-bold text-ivory">My Progress</h1>
+      <h1 className="font-heading text-2xl font-bold text-ivory">
+        {isAr ? "تقدمي" : "My Progress"}
+      </h1>
 
       {entries.length === 0 ? (
         <div className="py-16 text-center bg-white/3 border border-white/8 rounded-2xl">
           <AlertCircle className="mx-auto text-ivory/20 mb-3" size={28} />
-          <p className="text-ivory/40 text-sm">No progress entries yet.</p>
+          <p className="text-ivory/40 text-sm">
+            {isAr ? "لا توجد إدخالات تقدم بعد." : "No progress entries yet."}
+          </p>
         </div>
       ) : (
         <>
           {/* Stat cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <StatCard label="Weight"    value={latest?.weight_kg ?? null} unit="kg"  icon={<Scale size={13} />} />
-            <StatCard label="BMI"       value={latest?.bmi ?? null}       unit=""    icon={<TrendingUp size={13} />} />
-            <StatCard label="Waist"     value={latest?.waist_cm ?? null}  unit="cm"  icon={<Ruler size={13} />} />
+            <StatCard label={isAr ? "الوزن" : "Weight"} value={latest?.weight_kg ?? null} unit={isAr ? "كغ" : "kg"} icon={<Scale size={13} />} />
+            <StatCard label="BMI"                        value={latest?.bmi ?? null}        unit=""                   icon={<TrendingUp size={13} />} />
+            <StatCard label={isAr ? "الخصر" : "Waist"}  value={latest?.waist_cm ?? null}   unit="cm"                 icon={<Ruler size={13} />} />
           </div>
 
           {/* Weight chart */}
-          <WeightChart entries={entries} />
+          <WeightChart entries={entries} isAr={isAr} />
 
           {/* Entry history */}
           <div>
-            <h2 className="font-heading text-base font-semibold text-ivory mb-4">History</h2>
+            <h2 className="font-heading text-base font-semibold text-ivory mb-4">
+              {isAr ? "السجل" : "History"}
+            </h2>
             <div className="space-y-3">
-              {entries.map((entry) => <EntryCard key={entry.id} entry={entry} />)}
+              {entries.map((entry) => <EntryCard key={entry.id} entry={entry} isAr={isAr} />)}
             </div>
           </div>
         </>

@@ -7,6 +7,7 @@ import { useState, useRef, useEffect } from "react";
 import { Camera, Save, CheckCircle2, AlertCircle, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useClientProfile } from "@/hooks/useClientProfile";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   updateOwnProfile,
   uploadAvatar,
@@ -19,6 +20,18 @@ const label = "block text-xs font-medium text-ivory/50 mb-1.5 uppercase tracking
 const COUNTRIES = [
   "Kuwait","Saudi Arabia","UAE","Bahrain","Qatar","Jordan","Oman","Egypt","Lebanon","Other",
 ];
+const COUNTRIES_AR: Record<string, string> = {
+  "Kuwait": "الكويت",
+  "Saudi Arabia": "المملكة العربية السعودية",
+  "UAE": "الإمارات",
+  "Bahrain": "البحرين",
+  "Qatar": "قطر",
+  "Jordan": "الأردن",
+  "Oman": "عُمان",
+  "Egypt": "مصر",
+  "Lebanon": "لبنان",
+  "Other": "أخرى",
+};
 const LANGUAGES = [
   { value: "en", label: "English" },
   { value: "ar", label: "العربية" },
@@ -27,6 +40,8 @@ const LANGUAGES = [
 export default function ProfilePage() {
   const { user } = useAuth();
   const { profile, loading, refresh } = useClientProfile();
+  const { lang } = useLanguage();
+  const isAr = lang === "ar";
 
   const [form, setForm] = useState<ProfileUpdate>({});
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -101,7 +116,7 @@ export default function ProfilePage() {
   if (!profile) {
     return (
       <div className="py-16 text-center text-ivory/50">
-        No profile found. Please contact support.
+        {isAr ? "لم يُعثر على ملف شخصي. يرجى التواصل مع الدعم." : "No profile found. Please contact support."}
       </div>
     );
   }
@@ -110,7 +125,9 @@ export default function ProfilePage() {
 
   return (
     <form onSubmit={handleSave} className="max-w-2xl">
-      <h1 className="font-heading text-2xl font-bold text-ivory mb-6">My Profile</h1>
+      <h1 className="font-heading text-2xl font-bold text-ivory mb-6">
+        {isAr ? "ملفي الشخصي" : "My Profile"}
+      </h1>
 
       {/* Avatar */}
       <div className="flex items-center gap-4 mb-8">
@@ -118,7 +135,7 @@ export default function ProfilePage() {
           {avatarSrc ? (
             <img
               src={avatarSrc}
-              alt="Avatar"
+              alt={isAr ? "الصورة الشخصية" : "Avatar"}
               className="w-20 h-20 rounded-full object-cover border-2 border-white/20"
             />
           ) : (
@@ -143,9 +160,11 @@ export default function ProfilePage() {
             onClick={() => fileRef.current?.click()}
             className="text-sm font-medium text-primary-pink hover:text-light-pink transition-colors"
           >
-            Change Photo
+            {isAr ? "تغيير الصورة" : "Change Photo"}
           </button>
-          <p className="text-xs text-ivory/40 mt-0.5">JPG, PNG or WebP · max 5 MB</p>
+          <p className="text-xs text-ivory/40 mt-0.5">
+            {isAr ? "JPG أو PNG أو WebP · الحجم الأقصى 5 ميغابايت" : "JPG, PNG or WebP · max 5 MB"}
+          </p>
         </div>
         <input
           ref={fileRef}
@@ -158,7 +177,7 @@ export default function ProfilePage() {
 
       {/* Email (read-only) */}
       <div className="mb-4">
-        <label className={label}>Email</label>
+        <label className={label}>{isAr ? "البريد الإلكتروني" : "Email"}</label>
         <input
           type="email"
           value={profile.email ?? ""}
@@ -169,19 +188,19 @@ export default function ProfilePage() {
 
       {/* Name */}
       <div className="mb-4">
-        <label className={label}>Full Name</label>
+        <label className={label}>{isAr ? "الاسم الكامل" : "Full Name"}</label>
         <input
           type="text"
           value={form.full_name ?? ""}
           onChange={(e) => set("full_name", e.target.value)}
-          placeholder="Your full name"
+          placeholder={isAr ? "اسمك الكامل" : "Your full name"}
           className={field}
         />
       </div>
 
       {/* Phone */}
       <div className="mb-4">
-        <label className={label}>Phone</label>
+        <label className={label}>{isAr ? "رقم الهاتف" : "Phone"}</label>
         <input
           type="tel"
           value={form.phone ?? ""}
@@ -194,7 +213,7 @@ export default function ProfilePage() {
       {/* Date of birth + Gender */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
-          <label className={label}>Date of Birth</label>
+          <label className={label}>{isAr ? "تاريخ الميلاد" : "Date of Birth"}</label>
           <input
             type="date"
             value={form.date_of_birth ?? ""}
@@ -203,16 +222,16 @@ export default function ProfilePage() {
           />
         </div>
         <div>
-          <label className={label}>Gender</label>
+          <label className={label}>{isAr ? "الجنس" : "Gender"}</label>
           <select
             value={form.gender ?? ""}
             onChange={(e) => set("gender", e.target.value || null)}
             className={field}
           >
-            <option value="">Select…</option>
-            <option value="Female">Female</option>
-            <option value="Male">Male</option>
-            <option value="Other">Other</option>
+            <option value="">{isAr ? "اختر…" : "Select…"}</option>
+            <option value="Female">{isAr ? "أنثى" : "Female"}</option>
+            <option value="Male">{isAr ? "ذكر" : "Male"}</option>
+            <option value="Other">{isAr ? "آخر" : "Other"}</option>
           </select>
         </div>
       </div>
@@ -220,25 +239,25 @@ export default function ProfilePage() {
       {/* Country + City */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
-          <label className={label}>Country</label>
+          <label className={label}>{isAr ? "الدولة" : "Country"}</label>
           <select
             value={form.location ?? ""}
             onChange={(e) => set("location", e.target.value)}
             className={field}
           >
-            <option value="">Select…</option>
+            <option value="">{isAr ? "اختر…" : "Select…"}</option>
             {COUNTRIES.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c}>{isAr ? (COUNTRIES_AR[c] ?? c) : c}</option>
             ))}
           </select>
         </div>
         <div>
-          <label className={label}>City</label>
+          <label className={label}>{isAr ? "المدينة" : "City"}</label>
           <input
             type="text"
             value={form.city ?? ""}
             onChange={(e) => set("city", e.target.value)}
-            placeholder="Your city"
+            placeholder={isAr ? "مدينتك" : "Your city"}
             className={field}
           />
         </div>
@@ -246,7 +265,7 @@ export default function ProfilePage() {
 
       {/* Preferred language */}
       <div className="mb-4">
-        <label className={label}>Preferred Language</label>
+        <label className={label}>{isAr ? "اللغة المفضلة" : "Preferred Language"}</label>
         <select
           value={form.preferred_language ?? "en"}
           onChange={(e) => set("preferred_language", e.target.value)}
@@ -260,12 +279,14 @@ export default function ProfilePage() {
 
       {/* Bio */}
       <div className="mb-8">
-        <label className={label}>Bio / Health Goals</label>
+        <label className={label}>{isAr ? "نبذة / أهداف صحية" : "Bio / Health Goals"}</label>
         <textarea
           rows={4}
           value={form.bio ?? ""}
           onChange={(e) => set("bio", e.target.value)}
-          placeholder="Share any health goals or notes for your nutritionist…"
+          placeholder={isAr
+            ? "شارك أهدافك الصحية أو أي ملاحظات لأخصائي التغذية…"
+            : "Share any health goals or notes for your nutritionist…"}
           className={`${field} resize-none`}
         />
       </div>
@@ -280,7 +301,9 @@ export default function ProfilePage() {
           {toast === "success"
             ? <CheckCircle2 size={16} />
             : <AlertCircle size={16} />}
-          {toast === "success" ? "Profile saved successfully!" : "Failed to save. Please try again."}
+          {toast === "success"
+            ? (isAr ? "تم حفظ الملف الشخصي بنجاح!" : "Profile saved successfully!")
+            : (isAr ? "فشل الحفظ. يرجى المحاولة مجدداً." : "Failed to save. Please try again.")}
         </div>
       )}
 
@@ -290,7 +313,9 @@ export default function ProfilePage() {
         className="flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple font-semibold text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:translate-y-0"
       >
         <Save size={16} />
-        {saving ? "Saving…" : "Save Changes"}
+        {saving
+          ? (isAr ? "جارٍ الحفظ…" : "Saving…")
+          : (isAr ? "حفظ التغييرات" : "Save Changes")}
       </button>
     </form>
   );
