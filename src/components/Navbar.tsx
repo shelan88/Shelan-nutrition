@@ -182,6 +182,23 @@ export default function Navbar() {
     return () => { cancelled = true; subscription.unsubscribe(); };
   }, []);
 
+  // Re-fetch avatar when ProfilePage signals a successful save
+  useEffect(() => {
+    let cancelled = false;
+    const handler = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user || cancelled) return;
+      const { data } = await supabase
+        .from("clients")
+        .select("avatar_url")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (!cancelled) setAvatarUrl((data as any)?.avatar_url ?? null);
+    };
+    window.addEventListener("shelan:avatar-updated", handler);
+    return () => { cancelled = true; window.removeEventListener("shelan:avatar-updated", handler); };
+  }, []);
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setOpen(false);
