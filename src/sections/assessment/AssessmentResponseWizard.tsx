@@ -282,6 +282,28 @@ function QuestionInput({
   void placeholder;
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+/**
+ * Strip answers whose question IDs are no longer enabled.
+ * This guards the offline-resume path: a client may have saved a draft to
+ * localStorage while a question was enabled; if the admin later disables that
+ * question, the stale answer must not re-surface in the UI or be submitted.
+ * visibleQuestions already excludes disabled questions from rendering, and
+ * handleSubmit iterates only visibleQuestions — but sanitising here means the
+ * answers state itself never carries ghost entries for disabled questions.
+ */
+function sanitiseAnswers(raw: AnswerMap, questions: { id: string; enabled?: boolean | null }[]): AnswerMap {
+  const disabledIds = new Set(
+    questions.filter((q) => q.enabled === false).map((q) => q.id)
+  );
+  if (disabledIds.size === 0) return raw;
+  const sanitised: AnswerMap = {};
+  for (const [qId, val] of Object.entries(raw)) {
+    if (!disabledIds.has(qId)) sanitised[qId] = val;
+  }
+  return sanitised;
+}
+
 // ─── Main wizard ──────────────────────────────────────────────────────────────
 export default function AssessmentResponseWizard({
   template,
@@ -294,7 +316,10 @@ export default function AssessmentResponseWizard({
   const [answers,     setAnswers]     = useState<AnswerMap>(() => {
     const ls = loadFromLS(appointmentId);
     // If localStorage has a draft, prefer it; otherwise seed from initialAnswers (prior response).
-    return Object.keys(ls).length > 0 ? ls : (initialAnswers ?? {});
+    // Either way, strip any answers for questions that are currently disabled so
+    // stale offline drafts can never surface or submit disabled-question data.
+    const base = Object.keys(ls).length > 0 ? ls : (initialAnswers ?? {});
+    return sanitiseAnswers(base, template.questions);
   });
   const [currentIdx,  setCurrentIdx]  = useState(0);
   const [direction,   setDirection]   = useState(1);
@@ -388,7 +413,9 @@ export default function AssessmentResponseWizard({
     setSubmitting(true);
     setSubmitError("");
     try {
-      // Save all answers
+      // Intentionally iterate visibleQuestions (not allQuestions) so that answers
+      // for disabled or conditionally-hidden questions are never included in the
+      // Supabase upsert payload — even if stale values exist in the answers state.
       await Promise.all(
         visibleQuestions.map(async (q) => {
           const raw = answers[q.id];
