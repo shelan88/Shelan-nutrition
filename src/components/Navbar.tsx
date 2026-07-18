@@ -221,11 +221,17 @@ export default function Navbar() {
   const AvatarBubble = ({ size = "sm" }: { size?: "sm" | "lg" }) => {
     const dim = size === "sm" ? "w-8 h-8 text-xs" : "w-10 h-10 text-sm";
     if (avatarUrl) {
+      // Add cache-buster at render time so the browser always loads the latest
+      // upload. The DB stores a clean URL; we bust the cache here only.
+      const src = avatarUrl.includes("supabase")
+        ? (avatarUrl.split("?t=")[0] + `?t=${Date.now()}`)
+        : avatarUrl;
       return (
         <img
-          src={avatarUrl}
+          src={src}
           alt="avatar"
           className={`${dim} rounded-full object-cover border border-white/20 select-none`}
+          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
         />
       );
     }

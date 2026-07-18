@@ -187,7 +187,7 @@ function LanguageSection() {
     setLang(value);
     if (!profile) return;
     setSaving(true);
-    const ok = await updateOwnProfile(profile.id, { preferred_language: value });
+    const { data: ok } = await updateOwnProfile({ preferred_language: value });
     setSaving(false);
     if (ok) {
       setToast({ type: "success", msg: value === "ar" ? "تم حفظ تفضيل اللغة." : "Language preference saved." });

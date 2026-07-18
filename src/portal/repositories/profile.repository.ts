@@ -1,24 +1,38 @@
 /**
  * portal/repositories/profile.repository.ts
  * Client-scoped profile read / update / avatar upload.
- * All writes are restricted to the authenticated user's own client row via RLS.
+ *
+ * ARCHITECTURE NOTES
+ * ──────────────────
+ * updateOwnProfile  → calls the SECURITY DEFINER RPC `update_own_client_profile`
+ *                     which targets rows via auth.uid() inside the function body,
+ *                     bypassing the RLS surface on the clients table entirely.
+ *                     This eliminates the "0 rows" / RLS mismatch failures that
+ *                     occur when the JS client calls .update().eq("id", …).single().
+ *
+ * uploadAvatar      → storage upload ONLY. Does NOT write to the clients table.
+ *                     The caller (handleSave) passes the returned URL to
+ *                     updateOwnProfile so both happen in one atomic RPC call.
+ *
+ * avatar_url in DB  → stored WITHOUT a cache-buster. Cache-busters are appended
+ *                     at render time so stored URLs remain clean and reusable.
  */
 
 import { supabase } from "@/lib/supabase";
 import type { ClientRow } from "@/types/database.types";
 
-// ─── Profile fields the client may edit ──────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ProfileUpdate {
   full_name?:          string;
   phone?:              string | null;
   gender?:             "Female" | "Male" | "Other" | null;
-  location?:           string;   // country
-  city?:               string;
+  location?:           string | null;
+  city?:               string | null;
   date_of_birth?:      string | null;   // "YYYY-MM-DD" or null
   preferred_language?: string;
-  bio?:                string;
-  avatar_url?:         string;
+  bio?:                string | null;
+  avatar_url?:         string | null;   // null = keep existing
 }
 
 export interface ProfileUpdateResult {
@@ -26,24 +40,9 @@ export interface ProfileUpdateResult {
   error: string | null;
 }
 
-// ─── Sanitize updates before sending to Postgres ──────────────────────────────
-// Empty strings are valid for TEXT columns but invalid for DATE/typed columns.
-// Convert them to null so Postgres never sees "" for a DATE field.
-
-function sanitize(updates: ProfileUpdate): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(updates)) {
-    if (k === "date_of_birth") {
-      // DATE column — empty string would cause "invalid input syntax for type date"
-      out[k] = typeof v === "string" && v.trim() === "" ? null : v;
-    } else if (k === "phone") {
-      // Store null instead of empty string for clean data
-      out[k] = typeof v === "string" && v.trim() === "" ? null : v;
-    } else {
-      out[k] = v;
-    }
-  }
-  return out;
+export interface AvatarUploadResult {
+  url:   string | null;   // clean public URL (no cache-buster)
+  error: string | null;
 }
 
 // ─── Read own profile ─────────────────────────────────────────────────────────
@@ -65,49 +64,61 @@ export async function getOwnProfile(): Promise<ClientRow | null> {
   return data as ClientRow | null;
 }
 
-// ─── Update own profile ───────────────────────────────────────────────────────
-// Returns the updated row on success, or an error message string on failure.
-// Never hides the actual Postgres/RLS error.
+// ─── Update own profile (SECURITY DEFINER RPC) ───────────────────────────────
+// Uses the update_own_client_profile RPC which targets the row via auth.uid()
+// inside the function body — bypasses RLS entirely. Never hides the real error.
 
 export async function updateOwnProfile(
-  clientId: string,
   updates: ProfileUpdate,
 ): Promise<ProfileUpdateResult> {
-  const payload = sanitize(updates);
+  // Convert empty-string date to null so Postgres DATE cast doesn't fail
+  const dob = updates.date_of_birth === "" ? null : (updates.date_of_birth ?? null);
 
-  const { data, error } = await supabase
-    .from("clients")
-    .update(payload)
-    .eq("id", clientId)
-    .select("*")
-    .single();
+  const { data, error } = await supabase.rpc("update_own_client_profile", {
+    p_full_name:          updates.full_name          ?? null,
+    p_phone:              updates.phone              ?? null,
+    p_gender:             updates.gender             ?? null,
+    p_location:           updates.location           ?? null,
+    p_city:               updates.city               ?? null,
+    p_date_of_birth:      dob,
+    p_preferred_language: updates.preferred_language ?? "en",
+    p_bio:                updates.bio                ?? null,
+    p_avatar_url:         updates.avatar_url         ?? null, // null = keep existing
+  });
 
   if (error) {
-    console.error("[portal/profile] updateOwnProfile:", error.message, error.details, error.hint);
+    console.error("[portal/profile] updateOwnProfile RPC error:", error.message, error.details, error.hint);
     return { data: null, error: error.message };
   }
-  return { data: data as ClientRow, error: null };
+
+  // RPC returns SETOF clients — Supabase JS returns an array
+  const row = Array.isArray(data) ? (data[0] ?? null) : (data ?? null);
+  if (!row) {
+    const msg = "Profile update returned no rows — user may not have a linked client record";
+    console.error("[portal/profile]", msg);
+    return { data: null, error: msg };
+  }
+
+  return { data: row as ClientRow, error: null };
 }
 
-// ─── Avatar upload ────────────────────────────────────────────────────────────
-// Uploads to media/avatars/{userId}/avatar.{ext} and returns the public URL.
-// The upload uses upsert:true so repeated uploads overwrite cleanly.
-// Returns { url, error } — never throws; caller decides how to surface errors.
+// ─── Avatar upload (storage only) ─────────────────────────────────────────────
+// Uploads the file to Supabase Storage and returns the clean public URL.
+// Does NOT write to the clients table — pass the returned URL to updateOwnProfile.
+// The URL is stored WITHOUT a cache-buster; add one at render time if needed.
 
 export async function uploadAvatar(
   userId: string,
-  clientId: string,
   file: File,
-): Promise<{ url: string | null; error: string | null }> {
+): Promise<AvatarUploadResult> {
   const ext  = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const path = `avatars/${userId}/avatar.${ext}`;
 
-  // Upsert the file (overwrite if same extension, no prior-remove needed)
   const { error: uploadError } = await supabase.storage
     .from("media")
     .upload(path, file, {
-      upsert:      true,
-      contentType: file.type || "image/jpeg",
+      upsert:       true,
+      contentType:  file.type || "image/jpeg",
       cacheControl: "3600",
     });
 
@@ -117,22 +128,8 @@ export async function uploadAvatar(
   }
 
   const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
-  // Append a cache-buster so the browser reloads the new image immediately
-  const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-
-  // Persist avatar_url on the client row
-  const { error: updateError } = await supabase
-    .from("clients")
-    .update({ avatar_url: publicUrl })
-    .eq("id", clientId);
-
-  if (updateError) {
-    console.error("[portal/profile] uploadAvatar row update error:", updateError.message);
-    // The file was uploaded successfully; return the URL even if the row update had a hiccup
-    return { url: publicUrl, error: updateError.message };
-  }
-
-  return { url: publicUrl, error: null };
+  // Return the clean URL — no cache-buster — so the DB stores a stable value
+  return { url: urlData.publicUrl, error: null };
 }
 
 // ─── Delete account (soft — marks Inactive + clears user_id link) ─────────────

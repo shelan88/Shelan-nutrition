@@ -20,7 +20,7 @@ const field =
 const lbl =
   "block text-xs font-medium text-ivory/50 mb-1.5 uppercase tracking-wide";
 
-// ─── Country / region list ────────────────────────────────────────────────────
+// ─── Country list ─────────────────────────────────────────────────────────────
 const COUNTRIES = [
   "Kuwait", "Saudi Arabia", "UAE", "Bahrain", "Qatar",
   "Jordan", "Oman", "Egypt", "Lebanon", "Other",
@@ -59,27 +59,30 @@ const DIAL_CODES = [
   { code: "+63",  flag: "🇵🇭", name: "Philippines" },
 ];
 
-/** Split a stored phone string (e.g. "+965 9999 9999") into dialCode + number. */
 function parsePhone(raw: string | null | undefined): { dialCode: string; number: string } {
   if (!raw) return { dialCode: "+965", number: "" };
-  // Find the longest matching prefix
   const match = DIAL_CODES.slice()
     .sort((a, b) => b.code.length - a.code.length)
     .find((d) => raw.startsWith(d.code));
-  if (match) {
-    return { dialCode: match.code, number: raw.slice(match.code.length).trim() };
-  }
+  if (match) return { dialCode: match.code, number: raw.slice(match.code.length).trim() };
   return { dialCode: "+965", number: raw };
 }
 
-/** Validate the local part of a phone number (7–15 digits, spaces/dashes OK). */
 function validatePhoneNumber(num: string): string | null {
   const digits = num.replace(/[\s\-().]/g, "");
-  if (digits === "") return null; // empty is allowed (nullable field)
+  if (digits === "") return null;
   if (!/^\d+$/.test(digits)) return "أرقام فقط";
   if (digits.length < 7)  return "رقم قصير جداً";
   if (digits.length > 15) return "رقم طويل جداً";
   return null;
+}
+
+/** Add a cache-buster to a Supabase storage URL so the browser reloads the image. */
+function withCacheBust(url: string | null | undefined): string | null {
+  if (!url) return null;
+  // Strip any existing cache-buster before adding a fresh one
+  const base = url.includes("?t=") ? url.split("?t=")[0] : url;
+  return `${base}?t=${Date.now()}`;
 }
 
 const LANGUAGES = [
@@ -90,25 +93,29 @@ const LANGUAGES = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
-  const { user }                          = useAuth();
+  const { user }                             = useAuth();
   const { profile, loading, error, refresh } = useClientProfile();
-  const { lang }                          = useLanguage();
-  const isAr                              = lang === "ar";
+  const { lang }                             = useLanguage();
+  const isAr                                 = lang === "ar";
 
-  const [form,          setForm]          = useState<ProfileUpdate>({});
-  const [dialCode,      setDialCode]      = useState("+965");
-  const [phoneNumber,   setPhoneNumber]   = useState("");
-  const [phoneError,    setPhoneError]    = useState<string | null>(null);
+  // Form state
+  const [form,        setForm]        = useState<ProfileUpdate>({});
+  const [dialCode,    setDialCode]    = useState("+965");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneError,  setPhoneError]  = useState<string | null>(null);
 
+  // Avatar state — null means "use profile.avatar_url from DB"
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile,    setAvatarFile]    = useState<File | null>(null);
-  const [saving,        setSaving]        = useState(false);
-  const [toast,         setToast]         = useState<"success" | "error" | null>(null);
-  const [toastMsg,      setToastMsg]      = useState("");
+
+  // Save state
+  const [saving,   setSaving]   = useState(false);
+  const [toast,    setToast]    = useState<"success" | "error" | null>(null);
+  const [toastMsg, setToastMsg] = useState("");
 
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // ── Populate form when profile loads ───────────────────────────────────────
+  // ── Populate form when profile first loads (or refreshes) ─────────────────
   useEffect(() => {
     if (!profile) return;
     const parsed = parsePhone(profile.phone);
@@ -123,6 +130,9 @@ export default function ProfilePage() {
       preferred_language: profile.preferred_language ?? "en",
       bio:                profile.bio ?? "",
     });
+    // If a fresh profile row came back with an avatar_url, clear the local
+    // preview so the DB-backed URL is displayed instead
+    setAvatarPreview(null);
   }, [profile]);
 
   const set = (key: keyof ProfileUpdate, value: unknown) =>
@@ -132,20 +142,22 @@ export default function ProfilePage() {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Validate size (5 MB)
     if (file.size > 5 * 1024 * 1024) {
       showToast("error", isAr ? "الحجم الأقصى 5 ميغابايت" : "Max file size is 5 MB");
       return;
     }
     setAvatarFile(file);
+    // Show local blob preview immediately
     setAvatarPreview(URL.createObjectURL(file));
+    // Reset the input so the same file can be selected again if needed
+    e.target.value = "";
   };
 
   // ── Toast helper ───────────────────────────────────────────────────────────
   const showToast = (kind: "success" | "error", msg: string) => {
     setToast(kind);
     setToastMsg(msg);
-    setTimeout(() => setToast(null), 4000);
+    setTimeout(() => setToast(null), 5000);
   };
 
   // ── Save ───────────────────────────────────────────────────────────────────
@@ -153,7 +165,6 @@ export default function ProfilePage() {
     e.preventDefault();
     if (!profile || !user) return;
 
-    // Validate phone before submitting
     const pErr = validatePhoneNumber(phoneNumber);
     setPhoneError(pErr);
     if (pErr) return;
@@ -161,46 +172,58 @@ export default function ProfilePage() {
     setSaving(true);
 
     try {
-      // Combine dial code + number into a single E.164-style string
-      const digits = phoneNumber.replace(/[\s\-().]/g, "");
-      const combinedPhone = digits ? `${dialCode}${digits}` : null;
+      // ── 1. Upload avatar to Storage (if a new file was selected) ───────────
+      let newAvatarUrl: string | null = null;
 
-      let updates: ProfileUpdate = { ...form, phone: combinedPhone ?? undefined };
-
-      // ── Upload avatar first if changed ─────────────────────────────────────
       if (avatarFile) {
-        const { url, error: avatarErr } = await uploadAvatar(user.id, profile.id, avatarFile);
-        if (avatarErr) {
+        const { url, error: avatarErr } = await uploadAvatar(user.id, avatarFile);
+        if (avatarErr || !url) {
           showToast("error", isAr
-            ? `فشل رفع الصورة: ${avatarErr}`
-            : `Avatar upload failed: ${avatarErr}`);
+            ? `فشل رفع الصورة: ${avatarErr ?? "خطأ غير معروف"}`
+            : `Avatar upload failed: ${avatarErr ?? "unknown error"}`);
           setSaving(false);
           return;
         }
-        if (url) {
-          updates.avatar_url = url;
-          // Notify Navbar to re-fetch avatar immediately
-          window.dispatchEvent(new CustomEvent("shelan:avatar-updated"));
-        }
+        newAvatarUrl = url; // clean URL, no cache-buster
       }
 
-      // ── Save profile fields ────────────────────────────────────────────────
-      const { data: saved, error: saveErr } = await updateOwnProfile(profile.id, updates);
+      // ── 2. Combine phone fields ────────────────────────────────────────────
+      const digits = phoneNumber.replace(/[\s\-().]/g, "");
+      const combinedPhone = digits ? `${dialCode}${digits}` : null;
+
+      // ── 3. Update profile via SECURITY DEFINER RPC ─────────────────────────
+      const updates: ProfileUpdate = {
+        ...form,
+        phone:      combinedPhone,
+        avatar_url: newAvatarUrl, // null = RPC keeps existing avatar_url
+      };
+
+      const { data: saved, error: saveErr } = await updateOwnProfile(updates);
 
       if (saveErr || !saved) {
-        // Show the real Postgres/RLS error — never hide it
-        const detail = saveErr ?? "No rows returned";
         showToast("error", isAr
-          ? `فشل الحفظ: ${detail}`
-          : `Save failed: ${detail}`);
+          ? `فشل الحفظ: ${saveErr ?? "لم يتم إرجاع أي بيانات"}`
+          : `Save failed: ${saveErr ?? "no data returned"}`);
         return;
       }
 
-      setAvatarFile(null);
-      refresh();
+      // ── 4. Update avatar display immediately ───────────────────────────────
+      if (newAvatarUrl) {
+        // Show the freshly uploaded image right away (cache-busted)
+        setAvatarPreview(withCacheBust(newAvatarUrl));
+        setAvatarFile(null);
+      }
 
-      // Notify Navbar to re-fetch avatar (covers the case where only fields changed)
+      // ── 5. Signal Navbar to re-fetch avatar ───────────────────────────────
+      // The Navbar reads avatar_url from the DB — dispatch the event after the
+      // RPC write has committed so the re-fetch sees the new URL.
       window.dispatchEvent(new CustomEvent("shelan:avatar-updated"));
+
+      // ── 6. Re-sync local profile state ────────────────────────────────────
+      // refresh() bumps the hook rev counter, triggering a fresh DB fetch.
+      // The useEffect([profile]) will fire and call setAvatarPreview(null),
+      // which lets the DB-backed URL take over once the hook resolves.
+      refresh();
 
       showToast("success", isAr
         ? "تم حفظ الملف الشخصي بنجاح."
@@ -233,18 +256,17 @@ export default function ProfilePage() {
             ? "تعذّر تحميل ملفك الشخصي. يرجى تحديث الصفحة أو التواصل مع الدعم."
             : "Could not load your profile. Please refresh the page or contact support."}
         </p>
-        <button
-          type="button"
-          onClick={refresh}
-          className="px-5 py-2 rounded-full border border-white/15 text-sm text-ivory/60 hover:text-ivory hover:border-white/30 transition-colors"
-        >
+        <button type="button" onClick={refresh}
+          className="px-5 py-2 rounded-full border border-white/15 text-sm text-ivory/60 hover:text-ivory hover:border-white/30 transition-colors">
           {isAr ? "إعادة المحاولة" : "Try again"}
         </button>
       </div>
     );
   }
 
-  const avatarSrc = avatarPreview ?? profile.avatar_url;
+  // avatarPreview   → local blob OR freshly-uploaded URL (with cache-buster)
+  // profile.avatar_url → DB-backed URL (shown once preview is cleared after refresh)
+  const avatarSrc = avatarPreview ?? withCacheBust(profile.avatar_url);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -261,6 +283,10 @@ export default function ProfilePage() {
               src={avatarSrc}
               alt={isAr ? "الصورة الشخصية" : "Avatar"}
               className="w-20 h-20 rounded-full object-cover border-2 border-white/20"
+              onError={(e) => {
+                // If the image URL is broken, fall back to initials
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
             />
           ) : (
             <span
@@ -293,7 +319,7 @@ export default function ProfilePage() {
           </p>
           {avatarFile && (
             <p className="text-xs text-emerald-400 mt-0.5">
-              {isAr ? "✓ صورة جديدة جاهزة للرفع" : `✓ ${avatarFile.name} ready to upload`}
+              {isAr ? `✓ ${avatarFile.name} جاهزة للرفع` : `✓ ${avatarFile.name} ready to upload`}
             </p>
           )}
         </div>
@@ -310,12 +336,8 @@ export default function ProfilePage() {
       {/* ── Email (read-only) ───────────────────────────────────────────────── */}
       <div className="mb-4">
         <label className={lbl}>{isAr ? "البريد الإلكتروني" : "Email"}</label>
-        <input
-          type="email"
-          value={profile.email ?? ""}
-          disabled
-          className={`${field} opacity-50 cursor-not-allowed`}
-        />
+        <input type="email" value={profile.email ?? ""} disabled
+          className={`${field} opacity-50 cursor-not-allowed`} />
       </div>
 
       {/* ── Full name ───────────────────────────────────────────────────────── */}
@@ -334,28 +356,20 @@ export default function ProfilePage() {
       <div className="mb-4">
         <label className={lbl}>{isAr ? "رقم الهاتف" : "Phone"}</label>
         <div className="flex gap-2">
-          {/* Country code select */}
           <div className="relative">
             <select
               value={dialCode}
               onChange={(e) => setDialCode(e.target.value)}
               className={`${field} w-auto pe-8 appearance-none cursor-pointer`}
-              style={{ paddingInlineEnd: "2rem" }}
               aria-label={isAr ? "رمز الدولة" : "Country code"}
             >
               {DIAL_CODES.map((d) => (
-                <option key={d.code} value={d.code}>
-                  {d.flag} {d.code}
-                </option>
+                <option key={d.code} value={d.code}>{d.flag} {d.code}</option>
               ))}
             </select>
-            <ChevronDown
-              size={14}
-              className="absolute inset-y-0 end-2.5 my-auto text-ivory/40 pointer-events-none"
-            />
+            <ChevronDown size={14}
+              className="absolute inset-y-0 end-2.5 my-auto text-ivory/40 pointer-events-none" />
           </div>
-
-          {/* Number input */}
           <input
             type="tel"
             inputMode="numeric"
@@ -370,7 +384,7 @@ export default function ProfilePage() {
           />
         </div>
         {phoneError && (
-          <p className="mt-1 text-xs text-red-400">{isAr ? phoneError : phoneError}</p>
+          <p className="mt-1 text-xs text-red-400">{phoneError}</p>
         )}
       </div>
 
@@ -410,9 +424,7 @@ export default function ProfilePage() {
           >
             <option value="">{isAr ? "اختر…" : "Select…"}</option>
             {COUNTRIES.map((c) => (
-              <option key={c} value={c}>
-                {isAr ? (COUNTRIES_AR[c] ?? c) : c}
-              </option>
+              <option key={c} value={c}>{isAr ? (COUNTRIES_AR[c] ?? c) : c}</option>
             ))}
           </select>
         </div>
@@ -458,13 +470,11 @@ export default function ProfilePage() {
 
       {/* ── Toast ───────────────────────────────────────────────────────────── */}
       {toast && (
-        <div
-          className={`flex items-start gap-2 text-sm px-4 py-3 rounded-xl mb-4 ${
-            toast === "success"
-              ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
-              : "bg-red-500/10 border border-red-500/20 text-red-400"
-          }`}
-        >
+        <div className={`flex items-start gap-2 text-sm px-4 py-3 rounded-xl mb-4 ${
+          toast === "success"
+            ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+            : "bg-red-500/10 border border-red-500/20 text-red-400"
+        }`}>
           {toast === "success"
             ? <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
             : <AlertCircle  size={16} className="mt-0.5 shrink-0" />}
