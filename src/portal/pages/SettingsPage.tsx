@@ -255,6 +255,7 @@ function NotificationsSection() {
             <button
               type="button"
               onClick={() => toggle(key)}
+              dir="ltr"
               role="switch"
               aria-checked={prefs[key]}
               className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border transition-colors ${

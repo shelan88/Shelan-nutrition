@@ -55,6 +55,8 @@ function WeightChart({ entries, isAr }: { entries: ProgressEntryWithPhotos[]; is
       <p className="text-xs font-semibold text-ivory/40 uppercase tracking-wider mb-3">
         {isAr ? "الوزن عبر الزمن (كغ)" : "Weight Over Time (kg)"}
       </p>
+      {/* Charts always render left-to-right regardless of locale */}
+      <div dir="ltr">
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="w-full h-auto"
@@ -118,6 +120,7 @@ function WeightChart({ entries, isAr }: { entries: ProgressEntryWithPhotos[]; is
           );
         })}
       </svg>
+      </div>
     </div>
   );
 }

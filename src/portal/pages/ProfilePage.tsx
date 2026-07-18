@@ -310,7 +310,7 @@ export default function ProfilePage() {
       <button
         type="submit"
         disabled={saving}
-        className="flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple font-semibold text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:translate-y-0"
+        className={`flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple font-semibold text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:translate-y-0 ${isAr ? "flex-row-reverse" : ""}`}
       >
         <Save size={16} />
         {saving

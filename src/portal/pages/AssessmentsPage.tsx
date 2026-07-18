@@ -139,7 +139,7 @@ function EmptyAssessments({ isAr }: { isAr: boolean }) {
       </p>
       <Link
         to="/booking"
-        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/15 text-sm font-medium text-ivory/70 hover:text-ivory hover:border-white/30 transition-colors"
+        className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/15 text-sm font-medium text-ivory/70 hover:text-ivory hover:border-white/30 transition-colors ${isAr ? "flex-row-reverse" : ""}`}
       >
         <CalendarPlus size={14} />
         {isAr ? "احجزي موعداً" : "Book a Consultation"}

@@ -78,7 +78,7 @@ function EmptyAppointments({ isAr }: { isAr: boolean }) {
       </p>
       <Link
         to="/booking"
-        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple text-sm font-semibold text-white hover:shadow-lg hover:shadow-primary-pink/20 transition-all"
+        className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple text-sm font-semibold text-white hover:shadow-lg hover:shadow-primary-pink/20 transition-all ${isAr ? "flex-row-reverse" : ""}`}
       >
         <CalendarPlus size={14} />
         {isAr ? "احجزي موعداً" : "Book a Consultation"}
@@ -151,7 +151,7 @@ export default function AppointmentsPage() {
             <p className="text-sm text-ivory/40">
               {isAr ? "لا توجد مواعيد قادمة." : "No upcoming appointments."}
             </p>
-            <Link to="/booking" className="inline-flex items-center gap-1.5 mt-3 text-sm text-primary-pink/80 hover:text-primary-pink transition-colors">
+            <Link to="/booking" className={`inline-flex items-center gap-1.5 mt-3 text-sm text-primary-pink/80 hover:text-primary-pink transition-colors ${isAr ? "flex-row-reverse" : ""}`}>
               <CalendarPlus size={13} />
               {isAr ? "احجزي موعداً" : "Book one"}
             </Link>
