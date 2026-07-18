@@ -101,7 +101,9 @@ function ResponseCard({ response, isAr }: { response: PortalAssessmentResponse; 
                 return (
                   <div key={a.id} className="pb-3 border-b border-white/5 last:border-0">
                     <p className="text-xs text-ivory/40 mb-0.5">
-                      {(a.question as any)?.label ?? (a.question as any)?.text ?? "Question"}
+                      {isAr
+                        ? (a.question?.label_ar ?? a.question?.label_en ?? (a.question as any)?.label ?? "سؤال")
+                        : (a.question?.label_en ?? (a.question as any)?.label ?? "Question")}
                     </p>
                     <p className="text-sm text-ivory/80">{val}</p>
                   </div>

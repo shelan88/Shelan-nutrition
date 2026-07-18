@@ -18,7 +18,7 @@ export interface PortalAssessmentResponse {
 }
 
 export interface AnswerWithQuestion extends ResponseAnswerRow {
-  question: TemplateQuestionRow & { options: QuestionOptionRow[] };
+  question: TemplateQuestionRow & { options: QuestionOptionRow[]; label_en?: string | null; label_ar?: string | null };
 }
 
 export interface FullPortalResponse extends PortalAssessmentResponse {
