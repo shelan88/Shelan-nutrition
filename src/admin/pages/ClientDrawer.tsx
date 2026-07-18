@@ -8,17 +8,22 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  getResponsesByClientEmail,
+  getSubmittedResponsesWithTemplateNames,
   getResponse,
 } from "@/admin/repositories/assessment-responses.repository";
-import type { AssessmentResponseRow, ResponseWithAnswers } from "@/admin/repositories/assessment-responses.repository";
+import type {
+  AssessmentResponseRow,
+  ResponseWithAnswers,
+  ResponseWithTemplateName,
+} from "@/admin/repositories/assessment-responses.repository";
+import AssessmentCompareModal from "@/admin/components/AssessmentCompareModal";
 import {
   X, User, MapPin, Phone, Mail, Calendar, FileText,
   AlertTriangle, CheckCircle2, Clock, ChevronRight,
   Flame, Wheat, Droplets, Paperclip,
   Image as ImageIcon, FlaskConical,
   ShieldCheck, Stethoscope, Lock, Printer, Download,
-  Edit2, Archive, Trash2, Save,
+  Edit2, Archive, Trash2, ArrowLeftRight,
 } from "lucide-react";
 import type { Client, TimelineType, FileType, RiskIndicatorLevel, ClientStatus } from "../data/clients";
 import { updateClient, deleteClient, archiveClient } from "@/admin/repositories/clients.repository";
@@ -109,16 +114,29 @@ interface ClientDrawerProps {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 // ─── Assessments tab ──────────────────────────────────────────────────────────
+
+interface CompareTarget {
+  idA: string;
+  idB: string;
+  templateNameEn: string;
+  templateNameAr: string | null;
+}
+
 function AssessmentsTab({ client, isAr }: { client: { id: string; email: string }; isAr: boolean }) {
-  const [responses, setResponses] = useState<AssessmentResponseRow[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [expandedId,setExpandedId]= useState<string | null>(null);
-  const [fullResp,  setFullResp]  = useState<ResponseWithAnswers | null>(null);
-  const [loadingExp,setLoadingExp]= useState(false);
+  const [responses,   setResponses]   = useState<ResponseWithTemplateName[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [expandedId,  setExpandedId]  = useState<string | null>(null);
+  const [fullResp,    setFullResp]    = useState<ResponseWithAnswers | null>(null);
+  const [loadingExp,  setLoadingExp]  = useState(false);
+  // IDs selected for comparison (max 2)
+  const [selected,    setSelected]    = useState<string[]>([]);
+  // Active comparison modal
+  const [comparing,   setComparing]   = useState<CompareTarget | null>(null);
 
   useEffect(() => {
     setLoading(true);
-    getResponsesByClientEmail(client.email).then((data) => {
+    setSelected([]);
+    getSubmittedResponsesWithTemplateNames(client.email).then((data) => {
       setResponses(data);
       setLoading(false);
     });
@@ -132,6 +150,26 @@ function AssessmentsTab({ client, isAr }: { client: { id: string; email: string 
     setFullResp(full);
     setLoadingExp(false);
   }, [expandedId]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelected((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= 2) return prev; // max 2
+      return [...prev, id];
+    });
+  }, []);
+
+  const handleCompare = useCallback(() => {
+    if (selected.length !== 2) return;
+    const [idA, idB] = selected;
+    const rA = responses.find((r) => r.id === idA)!;
+    setComparing({
+      idA,
+      idB,
+      templateNameEn: rA.template_name_en,
+      templateNameAr: rA.template_name_ar,
+    });
+  }, [selected, responses]);
 
   if (loading) {
     return (
@@ -159,85 +197,203 @@ function AssessmentsTab({ client, isAr }: { client: { id: string; email: string 
     );
   }
 
-  const STATUS_BADGE: Record<string, { cls: string; labelEn: string; labelAr: string }> = {
-    submitted:   { cls: "bg-violet-50 text-violet-700 ring-1 ring-violet-200", labelEn: "Submitted",   labelAr: "تم الإرسال"  },
-    pending:     { cls: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",    labelEn: "Pending",     labelAr: "في الانتظار" },
-    in_progress: { cls: "bg-blue-50 text-blue-600 ring-1 ring-blue-200",       labelEn: "In Progress", labelAr: "جارٍ"        },
-  };
+  // Group submitted responses by template_id
+  const groups = new Map<string, { nameEn: string; nameAr: string | null; items: ResponseWithTemplateName[] }>();
+  for (const r of responses) {
+    if (!groups.has(r.template_id)) {
+      groups.set(r.template_id, {
+        nameEn: r.template_name_en,
+        nameAr: r.template_name_ar,
+        items: [],
+      });
+    }
+    groups.get(r.template_id)!.items.push(r);
+  }
+
+  const canCompare = selected.length === 2;
 
   return (
-    <div className="space-y-3">
-      {responses.map((resp) => {
-        const isExpanded = expandedId === resp.id;
-        const badge = STATUS_BADGE[resp.status] ?? STATUS_BADGE.pending;
-        const date = resp.submitted_at
-          ? new Date(resp.submitted_at).toLocaleDateString(isAr ? "ar-SA" : "en-US", { day: "numeric", month: "short", year: "numeric" })
-          : new Date(resp.created_at).toLocaleDateString(isAr ? "ar-SA" : "en-US", { day: "numeric", month: "short", year: "numeric" });
+    <>
+      {/* ── Compare CTA bar ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {selected.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+            className="mb-4 flex items-center justify-between px-4 py-3 rounded-xl bg-lavender-purple/8 border border-lavender-purple/20"
+          >
+            <p className="text-[12px] text-[var(--admin-text-muted)]">
+              {canCompare
+                ? (isAr ? "تم اختيار استبيانين — اضغطي للمقارنة" : "2 responses selected — ready to compare")
+                : (isAr ? `تم اختيار ${selected.length} — اختاري استبياناً آخر` : `${selected.length} selected — pick 1 more`)}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelected([])}
+                className="text-[11.5px] font-semibold text-[var(--admin-text-faint)] hover:text-[var(--admin-text)] transition-colors px-2 py-1"
+              >
+                {isAr ? "إلغاء" : "Clear"}
+              </button>
+              <button
+                disabled={!canCompare}
+                onClick={handleCompare}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold bg-lavender-purple text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-lavender-purple/90 transition-colors"
+              >
+                <ArrowLeftRight size={12} strokeWidth={2.2} />
+                {isAr ? "قارن" : "Compare"}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        return (
-          <div key={resp.id} className="bg-[var(--admin-hover-bg)] rounded-xl border border-[var(--admin-border)] overflow-hidden">
-            {/* Header row */}
-            <button
-              onClick={() => resp.status === "submitted" && handleExpand(resp.id)}
-              className={`w-full flex items-center justify-between px-4 py-3.5 text-start transition-colors ${resp.status === "submitted" ? "hover:bg-[var(--admin-surface)] cursor-pointer" : "cursor-default"}`}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-pink/15 to-lavender-purple/15 flex items-center justify-center shrink-0">
-                  <FileText size={14} className="text-primary-pink" strokeWidth={2} />
+      {/* ── Template groups ──────────────────────────────────────────── */}
+      <div className="space-y-6">
+        {[...groups.entries()].map(([templateId, group]) => {
+          const groupName = isAr && group.nameAr ? group.nameAr : group.nameEn;
+          return (
+            <div key={templateId}>
+              {/* Group header */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-5 h-5 rounded-md bg-gradient-to-br from-primary-pink/15 to-lavender-purple/15 flex items-center justify-center shrink-0">
+                  <FileText size={11} className="text-primary-pink" strokeWidth={2} />
                 </div>
-                <div className="min-w-0">
-                  <p className="text-[12.5px] font-semibold text-[var(--admin-text)] truncate">
-                    {isAr ? "استبيان" : "Questionnaire"} · {date}
-                  </p>
-                  <span className={`inline-flex text-[10.5px] font-bold px-2 py-0.5 rounded-full mt-0.5 ${badge.cls}`}>
-                    {isAr ? badge.labelAr : badge.labelEn}
-                  </span>
-                </div>
+                <p className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider truncate flex-1">
+                  {groupName}
+                </p>
+                <span className="text-[10.5px] text-[var(--admin-text-faint)] shrink-0">
+                  {group.items.length} {isAr ? "استبيان" : group.items.length === 1 ? "response" : "responses"}
+                </span>
               </div>
-              {resp.status === "submitted" && (
-                <ChevronRight
-                  size={14}
-                  className={`text-[var(--admin-text-faint)] shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                />
-              )}
-            </button>
 
-            {/* Expanded answers */}
-            {isExpanded && (
-              <div className="border-t border-[var(--admin-border)] bg-[var(--admin-surface)] px-4 py-4">
-                {loadingExp ? (
-                  <div className="flex items-center justify-center py-6">
-                    <div className="w-5 h-5 rounded-full border-2 border-primary-pink/30 border-t-primary-pink animate-spin" />
-                  </div>
-                ) : fullResp && fullResp.answers.length > 0 ? (
-                  <div className="space-y-3">
-                    {fullResp.answers.map((ans, i) => {
-                      const q = ans.question;
-                      const qLabel = isAr && q.label_ar ? q.label_ar : q.label_en;
-                      const ansText = Array.isArray(ans.answer_json)
-                        ? (ans.answer_json as string[]).join(", ")
-                        : ans.answer_text;
-                      return (
-                        <div key={ans.id}>
-                          <p className="text-[10.5px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider mb-0.5">
-                            Q{i + 1}. {qLabel}
-                          </p>
-                          <p className="text-[12.5px] text-[var(--admin-text)]">{ansText ?? "—"}</p>
+              {/* Response cards */}
+              <div className="space-y-2">
+                {group.items.map((resp) => {
+                  const isExpanded = expandedId === resp.id;
+                  const isChecked  = selected.includes(resp.id);
+                  const isDisabled = selected.length >= 2 && !isChecked;
+                  const date = resp.submitted_at
+                    ? new Date(resp.submitted_at).toLocaleDateString(isAr ? "ar-SA" : "en-US", { day: "numeric", month: "short", year: "numeric" })
+                    : new Date(resp.created_at).toLocaleDateString(isAr ? "ar-SA" : "en-US", { day: "numeric", month: "short", year: "numeric" });
+
+                  return (
+                    <div
+                      key={resp.id}
+                      className={`bg-[var(--admin-hover-bg)] rounded-xl border overflow-hidden transition-colors ${
+                        isChecked
+                          ? "border-lavender-purple/40 ring-1 ring-lavender-purple/20"
+                          : "border-[var(--admin-border)]"
+                      }`}
+                    >
+                      {/* Row header */}
+                      <div className="flex items-center gap-2 px-3.5 py-3">
+                        {/* Checkbox */}
+                        <button
+                          onClick={() => toggleSelect(resp.id)}
+                          disabled={isDisabled}
+                          aria-label={isChecked ? "Deselect" : "Select for comparison"}
+                          className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                            isChecked
+                              ? "bg-lavender-purple border-lavender-purple"
+                              : isDisabled
+                              ? "border-[var(--admin-border)] opacity-30 cursor-not-allowed"
+                              : "border-[var(--admin-border)] hover:border-lavender-purple/60 cursor-pointer"
+                          }`}
+                        >
+                          {isChecked && (
+                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                              <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </button>
+
+                        {/* Expand button */}
+                        <button
+                          onClick={() => handleExpand(resp.id)}
+                          className="flex-1 flex items-center gap-2.5 text-start min-w-0"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary-pink/15 to-lavender-purple/15 flex items-center justify-center shrink-0">
+                            <FileText size={12} className="text-primary-pink" strokeWidth={2} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[12px] font-semibold text-[var(--admin-text)] truncate">
+                              {date}
+                            </p>
+                            <span className="inline-flex text-[10px] font-bold px-1.5 py-0.5 rounded-full mt-0.5 bg-violet-50 text-violet-700 ring-1 ring-violet-200">
+                              {isAr ? "تم الإرسال" : "Submitted"}
+                            </span>
+                          </div>
+                          <ChevronRight
+                            size={13}
+                            className={`text-[var(--admin-text-faint)] shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Expanded answer view */}
+                      {isExpanded && (
+                        <div className="border-t border-[var(--admin-border)] bg-[var(--admin-surface)] px-4 py-4">
+                          {loadingExp && expandedId === resp.id ? (
+                            <div className="flex items-center justify-center py-6">
+                              <div className="w-5 h-5 rounded-full border-2 border-primary-pink/30 border-t-primary-pink animate-spin" />
+                            </div>
+                          ) : fullResp && fullResp.id === resp.id && fullResp.answers.length > 0 ? (
+                            <div className="space-y-3">
+                              {fullResp.answers.map((ans, i) => {
+                                const q = ans.question;
+                                const qLabel = isAr && q.label_ar ? q.label_ar : q.label_en;
+                                const ansText = Array.isArray(ans.answer_json)
+                                  ? (ans.answer_json as string[]).join(", ")
+                                  : ans.answer_text;
+                                return (
+                                  <div key={ans.id}>
+                                    <p className="text-[10.5px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider mb-0.5">
+                                      Q{i + 1}. {qLabel}
+                                    </p>
+                                    <p className="text-[12.5px] text-[var(--admin-text)]">{ansText ?? "—"}</p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="text-[12px] text-[var(--admin-text-faint)] italic">
+                              {isAr ? "لا توجد إجابات مسجلة." : "No answers recorded."}
+                            </p>
+                          )}
                         </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-[12px] text-[var(--admin-text-faint)] italic">
-                    {isAr ? "لا توجد إجابات مسجلة." : "No answers recorded."}
-                  </p>
-                )}
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
+
+              {/* Per-group compare hint when ≥2 responses available */}
+              {group.items.length >= 2 && selected.length === 0 && (
+                <p className="mt-2 text-[10.5px] text-[var(--admin-text-faint)] text-center">
+                  {isAr
+                    ? "✓ حدّدي استبيانين لمقارنة الإجابات"
+                    : "✓ Select two responses to compare answers"}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Comparison modal ─────────────────────────────────────────── */}
+      {comparing && (
+        <AssessmentCompareModal
+          idA={comparing.idA}
+          idB={comparing.idB}
+          templateNameEn={comparing.templateNameEn}
+          templateNameAr={comparing.templateNameAr}
+          isAr={isAr}
+          onClose={() => { setComparing(null); setSelected([]); }}
+        />
+      )}
+    </>
   );
 }
 

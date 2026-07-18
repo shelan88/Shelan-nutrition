@@ -171,3 +171,78 @@ export async function getResponsesByClientEmail(email: string): Promise<Assessme
   if (error) { console.error("[assessment-responses] getResponsesByClientEmail:", error.message); return []; }
   return data ?? [];
 }
+
+// ─── Assessment history with template names ───────────────────────────────────
+
+export interface ResponseWithTemplateName extends AssessmentResponseRow {
+  template_name_en: string;
+  template_name_ar: string | null;
+}
+
+/**
+ * Fetch all submitted responses for a client (by email) enriched with the
+ * template name. Used by the admin assessment-history comparison view.
+ */
+export async function getSubmittedResponsesWithTemplateNames(
+  email: string
+): Promise<ResponseWithTemplateName[]> {
+  if (!email) return [];
+
+  // 1. Resolve appointment ids for this client email
+  const { data: appts } = await supabase
+    .from("appointments")
+    .select("id")
+    .eq("client_email", email);
+
+  const appointmentIds = (appts ?? []).map((a) => a.id);
+
+  // 2. Fetch submitted responses (both by appointment and by client_id if available)
+  const queries: Promise<AssessmentResponseRow[]>[] = [];
+
+  if (appointmentIds.length) {
+    queries.push(
+      supabase
+        .from("assessment_responses")
+        .select("*")
+        .in("appointment_id", appointmentIds)
+        .eq("status", "submitted")
+        .order("submitted_at", { ascending: false })
+        .then(({ data, error }) => {
+          if (error) console.error("[assessment-responses] getSubmittedResponsesWithTemplateNames:", error.message);
+          return data ?? [];
+        })
+    );
+  }
+
+  const allResponses = (await Promise.all(queries)).flat();
+
+  if (!allResponses.length) return [];
+
+  // Deduplicate by id
+  const seen = new Set<string>();
+  const unique = allResponses.filter((r) => {
+    if (seen.has(r.id)) return false;
+    seen.add(r.id);
+    return true;
+  }).sort((a, b) =>
+    new Date(b.submitted_at ?? b.created_at).getTime() -
+    new Date(a.submitted_at ?? a.created_at).getTime()
+  );
+
+  // 3. Fetch template names for all referenced template_ids
+  const templateIds = [...new Set(unique.map((r) => r.template_id))];
+  const { data: templates } = await supabase
+    .from("assessment_templates")
+    .select("id, name_en, name_ar")
+    .in("id", templateIds);
+
+  const templateMap = new Map(
+    (templates ?? []).map((t) => [t.id, { name_en: t.name_en, name_ar: t.name_ar }])
+  );
+
+  return unique.map((r) => ({
+    ...r,
+    template_name_en: templateMap.get(r.template_id)?.name_en ?? "Questionnaire",
+    template_name_ar: templateMap.get(r.template_id)?.name_ar ?? null,
+  }));
+}
