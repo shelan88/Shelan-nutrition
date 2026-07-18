@@ -39,6 +39,7 @@ import type { Client, TimelineEvent } from "@/admin/data/clients";
 import type { AppointmentRow } from "@/types/database.types";
 import type { ClientAssessmentResponse } from "@/admin/repositories/client-profile.repository";
 import {
+  getClientNutritionPlans,
   duplicateNutritionPlan,
   setNutritionPlanStatus,
 } from "@/admin/repositories/nutrition-plans.repository";
@@ -1598,10 +1599,15 @@ export default function ClientProfilePage() {
       getClient(id),
       getClientAppointments(id),
       getClientAssessmentResponses(id),
-    ]).then(([c, appts, assmts]) => {
+      getClientNutritionPlans(id),
+    ]).then(([c, appts, assmts, plans]) => {
       setClient(c);
       setAppointments(appts);
       setAssessments(assmts);
+      // Seed Overview nutrition state directly — no dependency on NutritionPlansTab
+      const active = plans.filter((p) => p.status === "active");
+      setActivePlans(active);
+      setNutritionCount(active.length);
       setLoading(false);
     });
   }, [id]);
