@@ -27,6 +27,17 @@ export interface TemplateWithDetails extends AssessmentTemplateRow {
 
 // ─── Templates ────────────────────────────────────────────────────────────────
 
+/** Lightweight list of active templates — for template-picker UIs. */
+export async function getActiveTemplates(): Promise<Pick<AssessmentTemplateRow, "id" | "name_en" | "name_ar" | "description_en" | "description_ar">[]> {
+  const { data, error } = await supabase
+    .from("assessment_templates")
+    .select("id, name_en, name_ar, description_en, description_ar")
+    .eq("active", true)
+    .order("name_en", { ascending: true });
+  if (error) { console.error("[assessment-templates] getActiveTemplates:", error.message); return []; }
+  return data ?? [];
+}
+
 export async function getAllTemplates(): Promise<TemplateWithDetails[]> {
   const { data: templates, error } = await supabase
     .from("assessment_templates")

@@ -30,6 +30,8 @@ import {
   getClientAppointments,
   getClientAssessmentResponses,
 } from "@/admin/repositories/client-profile.repository";
+import { getActiveTemplates } from "@/admin/repositories/assessment-templates.repository";
+import { createResponse } from "@/admin/repositories/assessment-responses.repository";
 import NutritionPlansTab from "@/admin/pages/NutritionPlansTab";
 import ProgressTab from "@/admin/pages/ProgressTab";
 import type { Client, TimelineEvent } from "@/admin/data/clients";
@@ -304,13 +306,14 @@ function InfoRow({
 // ─── Overview Tab (fully rewritten as clinic-first layout) ────────────────────
 
 function OverviewTab({
-  client, assessments, nutritionCount, isAr, onNavigate,
+  client, assessments, nutritionCount, isAr, onNavigate, onCreateAssessment,
 }: {
   client: Client;
   assessments: ClientAssessmentResponse[];
   nutritionCount: number;
   isAr: boolean;
   onNavigate: (tab: TabId, action?: "createPlan" | "upload") => void;
+  onCreateAssessment: () => void;
 }) {
   const latestAssessment =
     assessments.find((a) => a.status === "submitted") ?? assessments[0] ?? null;
@@ -459,7 +462,7 @@ function OverviewTab({
                 {isAr ? "لا توجد تقييمات بعد" : "No assessments submitted yet"}
               </p>
               <button
-                onClick={() => onNavigate("assessments")}
+                onClick={onCreateAssessment}
                 className="flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-purple-500 text-white text-[12px] font-semibold hover:opacity-90 transition-opacity"
               >
                 <Plus size={11} strokeWidth={2.5} />
@@ -971,6 +974,160 @@ function NotesTab({ client, isAr }: { client: Client; isAr: boolean }) {
   );
 }
 
+// ─── Assign Template Modal ────────────────────────────────────────────────────
+
+type ActiveTemplate = {
+  id: string;
+  name_en: string;
+  name_ar: string | null;
+  description_en: string | null;
+  description_ar: string | null;
+};
+
+function AssignTemplateModal({
+  clientId, isAr, onClose, onAssigned,
+}: {
+  clientId: string;
+  isAr: boolean;
+  onClose: () => void;
+  onAssigned: (response: ClientAssessmentResponse) => void;
+}) {
+  const [templates, setTemplates] = useState<ActiveTemplate[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [creating, setCreating] = useState<string | null>(null); // templateId being created
+
+  useEffect(() => {
+    setLoadingTemplates(true);
+    getActiveTemplates().then((ts) => {
+      setTemplates(ts as ActiveTemplate[]);
+      setLoadingTemplates(false);
+    });
+  }, []);
+
+  async function handleSelect(template: ActiveTemplate) {
+    setCreating(template.id);
+    const row = await createResponse(template.id, null, null, clientId);
+    setCreating(null);
+    if (!row) return;
+    // Shape into ClientAssessmentResponse (template names not yet joined — add them locally)
+    const enriched: ClientAssessmentResponse = {
+      ...row,
+      template_name_en: template.name_en,
+      template_name_ar: template.name_ar,
+    };
+    onAssigned(enriched);
+    onClose();
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 8 }}
+        transition={{ duration: 0.18 }}
+        className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] shadow-2xl shadow-black/20 w-full max-w-md overflow-hidden"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-border)]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-purple-50 flex items-center justify-center">
+              <ClipboardList size={15} strokeWidth={1.8} className="text-purple-600" />
+            </div>
+            <div>
+              <p className="text-[13.5px] font-bold text-[var(--admin-text)]">
+                {isAr ? "اختيار قالب التقييم" : "Assign Assessment"}
+              </p>
+              <p className="text-[11px] text-[var(--admin-text-faint)]">
+                {isAr ? "اختاري قالباً لإنشاء تقييم جديد" : "Pick a template to create a new assessment"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] transition-colors"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-4 max-h-[60vh] overflow-y-auto">
+          {loadingTemplates ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-16 rounded-xl bg-[var(--admin-hover-bg)] animate-pulse" />
+              ))}
+            </div>
+          ) : templates.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-10 text-center">
+              <ClipboardList size={24} strokeWidth={1.3} className="text-[var(--admin-text-faint)]" />
+              <p className="text-[13px] font-semibold text-[var(--admin-text)]">
+                {isAr ? "لا توجد قوالب نشطة" : "No active templates"}
+              </p>
+              <p className="text-[12px] text-[var(--admin-text-muted)] max-w-[240px] leading-relaxed">
+                {isAr
+                  ? "أنشئي قالب تقييم نشطاً من صفحة القوالب أولاً."
+                  : "Create and activate an assessment template first."}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {templates.map((t) => {
+                const isCreating = creating === t.id;
+                const name = (isAr ? t.name_ar : t.name_en) ?? t.name_en;
+                const desc = (isAr ? t.description_ar : t.description_en) ?? null;
+                return (
+                  <button
+                    key={t.id}
+                    disabled={creating !== null}
+                    onClick={() => handleSelect(t)}
+                    className={`
+                      w-full text-start flex items-center gap-3 p-3.5 rounded-xl
+                      border border-[var(--admin-border)] hover:border-purple-300
+                      hover:bg-purple-50/50 transition-all
+                      ${creating !== null && !isCreating ? "opacity-50" : ""}
+                      ${isCreating ? "border-purple-400 bg-purple-50" : ""}
+                    `}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isCreating ? "bg-purple-100" : "bg-[var(--admin-hover-bg)]"}`}>
+                      {isCreating
+                        ? <span className="w-3.5 h-3.5 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+                        : <ClipboardList size={14} strokeWidth={1.8} className="text-purple-500" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-[var(--admin-text)] leading-tight truncate">{name}</p>
+                      {desc && (
+                        <p className="text-[11px] text-[var(--admin-text-faint)] mt-0.5 line-clamp-1">{desc}</p>
+                      )}
+                    </div>
+                    {!isCreating && (
+                      <Plus size={13} strokeWidth={2.5} className="text-purple-400 shrink-0" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3.5 border-t border-[var(--admin-border)]">
+          <button
+            onClick={onClose}
+            className="w-full h-9 rounded-xl text-[12.5px] font-semibold text-[var(--admin-text-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-hover-bg)] transition-colors"
+          >
+            {isAr ? "إلغاء" : "Cancel"}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ─── Primary Action Bar ───────────────────────────────────────────────────────
 
 function ActionBar({
@@ -1142,6 +1299,8 @@ export default function ClientProfilePage() {
   // Pending remote-trigger flags for NutritionPlansTab and FilesTab
   const [pendingNutritionOpen, setPendingNutritionOpen] = useState(false);
   const [pendingUpload,        setPendingUpload]        = useState(false);
+  // Assign-template modal
+  const [showAssignModal,      setShowAssignModal]      = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -1183,6 +1342,18 @@ export default function ClientProfilePage() {
     setActiveTab(tab);
     if (action === "createPlan") setPendingNutritionOpen(true);
     if (action === "upload")     setPendingUpload(true);
+  }
+
+  // Open the assign-template modal; also switch to assessments tab so the
+  // new response is visible immediately after the modal closes.
+  function handleCreateAssessment() {
+    setActiveTab("assessments");
+    setShowAssignModal(true);
+  }
+
+  // Called by AssignTemplateModal when a response row is created
+  function handleAssigned(response: ClientAssessmentResponse) {
+    setAssessments((prev) => [response, ...prev]);
   }
 
   // Archive client — sets status to Inactive
@@ -1292,6 +1463,18 @@ export default function ClientProfilePage() {
         onRefresh={handleRefresh}
       />
 
+      {/* Assign-template modal */}
+      <AnimatePresence>
+        {showAssignModal && (
+          <AssignTemplateModal
+            clientId={client.id}
+            isAr={isAr}
+            onClose={() => setShowAssignModal(false)}
+            onAssigned={handleAssigned}
+          />
+        )}
+      </AnimatePresence>
+
       <div>
         {/* ── Page Header ────────────────────────────────────────────────── */}
         <PageHeader
@@ -1307,7 +1490,7 @@ export default function ClientProfilePage() {
         <ActionBar
           isAr={isAr}
           onCreatePlan={() => handleNavigate("nutrition", "createPlan")}
-          onCreateAssessment={() => handleNavigate("assessments")}
+          onCreateAssessment={handleCreateAssessment}
           onBookAppointment={() => handleNavigate("appointments")}
           onUploadFile={() => handleNavigate("files", "upload")}
           onEditProfile={() => setDrawerOpen(true)}
@@ -1463,6 +1646,7 @@ export default function ClientProfilePage() {
                     nutritionCount={nutritionCount}
                     isAr={isAr}
                     onNavigate={handleNavigate}
+                    onCreateAssessment={handleCreateAssessment}
                   />
                 )}
                 {activeTab === "appointments" && (
@@ -1476,7 +1660,7 @@ export default function ClientProfilePage() {
                   <AssessmentsTab
                     assessments={assessments}
                     isAr={isAr}
-                    onCreateAssessment={() => {/* future: open assessment wizard */}}
+                    onCreateAssessment={handleCreateAssessment}
                   />
                 )}
                 {activeTab === "nutrition" && (
