@@ -111,6 +111,48 @@ export interface NutritionPlanFileRow {
   created_at: string;
 }
 
+export interface ProgressEntryRow {
+  id: string;
+  client_id: string;
+  entry_date: string;           // "YYYY-MM-DD"
+
+  // Body weight & height
+  weight_kg: number | null;
+  height_cm: number | null;
+  bmi: number | null;           // auto-calculated in UI
+
+  // Circumferences (cm)
+  waist_cm: number | null;
+  hip_cm: number | null;
+  thigh_cm: number | null;
+  arm_cm: number | null;
+  chest_cm: number | null;
+
+  // Optional body composition
+  body_fat_pct: number | null;
+  muscle_mass_pct: number | null;
+  water_pct: number | null;
+
+  // Goal
+  goal_weight_kg: number | null;
+
+  // Notes
+  nutritionist_notes: string | null;
+  client_notes: string | null;
+
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProgressPhotoRow {
+  id: string;
+  entry_id: string;
+  client_id: string;
+  photo_type: "front" | "side" | "back";
+  url: string;
+  created_at: string;
+}
+
 export interface UploadedFileRow {
   id: string;
   client_id: string;

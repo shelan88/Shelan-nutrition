@@ -29,6 +29,7 @@ import {
   getClientAssessmentResponses,
 } from "@/admin/repositories/client-profile.repository";
 import NutritionPlansTab from "@/admin/pages/NutritionPlansTab";
+import ProgressTab from "@/admin/pages/ProgressTab";
 import type { Client, TimelineEvent } from "@/admin/data/clients";
 import type { AppointmentRow } from "@/types/database.types";
 import type { ClientAssessmentResponse } from "@/admin/repositories/client-profile.repository";
@@ -614,6 +615,7 @@ export default function ClientProfilePage() {
   const [activeTab,       setActiveTab]       = useState<TabId>("overview");
   const [drawerOpen,      setDrawerOpen]      = useState(false);
   const [nutritionCount,  setNutritionCount]  = useState(0);
+  const [progressCount,   setProgressCount]   = useState(0);
 
   useEffect(() => {
     if (!id) return;
@@ -710,7 +712,7 @@ export default function ClientProfilePage() {
     },
     {
       label: isAr ? "إدخالات التقدم"     : "Progress Entries",
-      value: 0,
+      value: progressCount,
       icon: TrendingUp,
       gradient: "bg-gradient-to-br from-amber-500 to-orange-400",
       delay: 0.25,
@@ -722,6 +724,7 @@ export default function ClientProfilePage() {
     appointments: appointments.length,
     assessments:  assessments.length,
     nutrition:    nutritionCount,
+    progress:     progressCount,
     files:        client.files.length,
   };
 
@@ -947,12 +950,10 @@ export default function ClientProfilePage() {
                   <FilesTab files={client.files} isAr={isAr} />
                 )}
                 {activeTab === "progress" && (
-                  <PlaceholderTab
-                    icon={TrendingUp}
-                    title="Progress Tracking"      titleAr="متابعة التقدم"
-                    desc="Weight, measurements, and progress photos will appear here."
-                    descAr="الوزن والقياسات وصور التقدم ستظهر هنا."
+                  <ProgressTab
+                    clientId={client.id}
                     isAr={isAr}
+                    onCountChange={setProgressCount}
                   />
                 )}
                 {activeTab === "notes" && (
