@@ -700,8 +700,15 @@ function EntryEditor({
   }
 
   async function handlePhotoDelete(photo: ProgressPhotoRow) {
-    await deleteEntryPhoto(photo.id, photo.url);
+    // Optimistically remove from state immediately so the slot clears without
+    // waiting for the network — this also changes the `key` on <ImageUpload>
+    // which unmounts/remounts it, clearing any stale `preview` state.
     setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
+    const ok = await deleteEntryPhoto(photo.id, photo.url);
+    if (ok === false) {
+      // Restore on failure so the UI stays consistent with the server
+      setPhotos((prev) => [...prev, photo]);
+    }
   }
 
   const editorTabs = [
