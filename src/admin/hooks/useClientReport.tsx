@@ -1,13 +1,11 @@
 /**
  * useClientReport — data assembly + PDF generation hook.
  *
- * Forensic build: every async step is numbered STEP 1–11 with its own
- * try/catch.  console.log("STEP X OK") fires after each success.
- * console.error({step,file,function,line,error,stack}) fires on failure,
- * then execution stops immediately (throw).
- *
- * The UI toast shows "STEP FAILED: X" so the exact break-point is visible
- * without opening DevTools.
+ * Forensic build: every async step (1–11) is wrapped in its own try/catch.
+ * On success: appends "STEP X OK ..." to a running log array.
+ * On failure: populates a DebugInfo object (shown in PdfDebugModal on screen)
+ *             AND still calls console.error so DevTools also captures it.
+ * Execution stops immediately after the first failure (throw).
  */
 
 import { useState, useRef } from "react";
@@ -21,108 +19,151 @@ import {
   getResponse,
 } from "@/admin/repositories/assessment-responses.repository";
 
+// ── Public debug shape ────────────────────────────────────────────────────────
+
+export interface DebugInfo {
+  lastOkStep: number;
+  failedStep: number;
+  file:       string;
+  fn:         string;
+  line:       number;
+  message:    string;
+  stack:      string;
+  fetchUrl?:  string;
+  httpStatus?: number;
+  log:        string[];   // chronological step log for the modal
+}
+
 export type PdfToastState = "idle" | "generating" | "error";
 export type PendingAction  = "export" | "print" | null;
 
 const FILE = "src/admin/hooks/useClientReport.tsx";
 
-/** Log a failed step with full forensic detail and re-throw. */
-function failStep(step: number, fn: string, line: number, err: unknown): never {
-  const e = err instanceof Error ? err : new Error(String(err));
-  console.error("══════════════════════════════════════════════");
-  console.error(`STEP ${step} FAILED`);
-  console.error("══════════════════════════════════════════════");
-  console.error({
-    step,
-    file:     FILE,
-    function: fn,
-    line,
-    error:    e.message,
-    stack:    e.stack,
-  });
-  console.error("full error object:", err);
-  console.error("══════════════════════════════════════════════");
-  throw err;
+// ── Step-logging helpers ──────────────────────────────────────────────────────
+
+function stepOk(log: string[], step: number | string, detail = ""): void {
+  const entry = `STEP ${step} OK${detail ? " — " + detail : ""}`;
+  log.push(entry);
+  console.log(entry);
 }
+
+function stepFail(
+  log: string[],
+  step: number,
+  fn: string,
+  line: number,
+  err: unknown,
+  extra?: { fetchUrl?: string; httpStatus?: number },
+): DebugInfo {
+  const e = err instanceof Error ? err : new Error(String(err));
+  const last = log.length > 0 ? log[log.length - 1] : "";
+  // Parse lastOkStep from the last "STEP X OK" entry
+  const match = last.match(/^STEP (\d+)/);
+  const lastOkStep = match ? parseInt(match[1], 10) : 0;
+
+  const entry = `STEP ${step} FAILED — ${e.message}`;
+  log.push(entry);
+
+  const info: DebugInfo = {
+    lastOkStep,
+    failedStep: step,
+    file:       FILE,
+    fn,
+    line,
+    message:    e.message,
+    stack:      e.stack ?? "(no stack)",
+    fetchUrl:   extra?.fetchUrl,
+    httpStatus: extra?.httpStatus,
+    log:        [...log],
+  };
+
+  // Also write to console so DevTools captures it on desktop
+  console.error("══════ PDF EXPORT FAILURE ══════");
+  console.error(`STEP ${step} FAILED`, info);
+  console.error("full error:", err);
+  console.error("════════════════════════════════");
+
+  return info;
+}
+
+// ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useClientReport(client: Client | null, isAr: boolean) {
   const [generating,    setGenerating]    = useState(false);
   const [pdfToast,      setPdfToast]      = useState<PdfToastState>("idle");
-  const [failedStep,    setFailedStep]    = useState<number>(0);
+  const [debugInfo,     setDebugInfo]     = useState<DebugInfo | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 
   const lastSectionsRef  = useRef<ReportSections>({ ...ALL_SECTIONS_ON });
   const retryActionRef   = useRef<PendingAction>(null);
   const retrySectionsRef = useRef<ReportSections>({ ...ALL_SECTIONS_ON });
 
-  // ── Core pipeline ────────────────────────────────────────────────────────
+  // ── Core pipeline ──────────────────────────────────────────────────────────
 
-  async function buildBlob(
-    sections: ReportSections,
-    onStepFail: (step: number) => void,
-  ): Promise<Blob | null> {
+  async function buildBlob(sections: ReportSections): Promise<Blob | null> {
+    const log: string[] = [];
 
-    // ── STEP 3: Fetching client ─────────────────────────────────────────────
+    // ── STEP 3: Fetching client ───────────────────────────────────────────
+    log.push("STEP 3 — Fetching client");
     try {
-      console.log("STEP 3 — Fetching client");
       if (!client) throw new Error("client prop is null — drawer opened without a client");
-      console.log("STEP 3 OK", { clientId: client.id, email: client.email });
+      stepOk(log, 3, `id=${client.id} email=${client.email}`);
     } catch (err) {
-      onStepFail(3);
-      failStep(3, "buildBlob", 73, err);
+      setDebugInfo(stepFail(log, 3, "buildBlob", 111, err));
+      throw err;
     }
-    if (!client) return null; // unreachable, satisfies TS
+    if (!client) return null;
 
-    // ── STEP 4: Fetching assessment ─────────────────────────────────────────
+    // ── STEP 4: Fetching assessment ───────────────────────────────────────
+    log.push(`STEP 4 — Fetching assessment responses for ${client.email}`);
     let responses;
     try {
-      console.log("STEP 4 — Fetching assessment responses for", client.email);
       responses = await getSubmittedResponsesWithTemplateNames(client.email);
-      console.log("STEP 4 OK", { count: responses.length, latest: responses[0]?.id ?? "none" });
+      stepOk(log, 4, `count=${responses.length} latest=${responses[0]?.id ?? "none"}`);
     } catch (err) {
-      onStepFail(4);
-      failStep(4, "buildBlob", 84, err);
+      setDebugInfo(stepFail(log, 4, "buildBlob", 122, err));
+      throw err;
     }
 
-    const latest = responses![0] ?? null;
-
+    const latest = responses[0] ?? null;
     const needsResponse = sections.assessmentSummary || sections.qa;
     let response = null;
+
     if (latest && needsResponse) {
+      log.push(`STEP 4b — Fetching full response for id=${latest.id}`);
       try {
-        console.log("STEP 4b — Fetching full response detail for id:", latest.id);
         response = await getResponse(latest.id);
-        console.log("STEP 4b OK", { responseId: response?.id ?? "null", answerCount: response?.answers?.length ?? 0 });
+        stepOk(log, "4b", `responseId=${response?.id ?? "null"} answers=${response?.answers?.length ?? 0}`);
       } catch (err) {
-        onStepFail(4);
-        failStep(4, "buildBlob", 97, err);
+        setDebugInfo(stepFail(log, 4, "buildBlob", 134, err));
+        throw err;
       }
     }
 
-    // ── STEP 5: Building report model ──────────────────────────────────────
+    // ── STEP 5: Building report model ─────────────────────────────────────
+    log.push("STEP 5 — Building report model");
     let templateName: string;
     let logoUrl: string;
     let generatedAt: string;
     try {
-      console.log("STEP 5 — Building report model");
       templateName = latest
         ? ((isAr && latest.template_name_ar) ? latest.template_name_ar : latest.template_name_en)
         : "";
-      logoUrl      = `${window.location.origin}/logo.png`;
-      generatedAt  = new Date().toLocaleDateString(isAr ? "ar-SA" : "en-US", {
+      logoUrl     = `${window.location.origin}/logo.png`;
+      generatedAt = new Date().toLocaleDateString(isAr ? "ar-SA" : "en-US", {
         day: "numeric", month: "long", year: "numeric",
         hour: "2-digit", minute: "2-digit",
       });
-      console.log("STEP 5 OK", { templateName, logoUrl, generatedAt });
+      stepOk(log, 5, `logoUrl=${logoUrl} templateName="${templateName}"`);
     } catch (err) {
-      onStepFail(5);
-      failStep(5, "buildBlob", 113, err);
+      setDebugInfo(stepFail(log, 5, "buildBlob", 152, err));
+      throw err;
     }
 
     // ── STEP 6: Creating PDF instance (synchronous JSX render) ────────────
+    log.push("STEP 6 — Creating PDF instance pdf(<ClinicReportDocument/>)");
     let instance: ReturnType<typeof pdf>;
     try {
-      console.log("STEP 6 — Creating PDF instance (pdf(<ClinicReportDocument .../>))");
       instance = pdf(
         <ClinicReportDocument
           client={client}
@@ -134,73 +175,73 @@ export function useClientReport(client: Client | null, isAr: boolean) {
           sections={sections}
         />
       );
-      console.log("STEP 6 OK — pdf() instance created");
+      stepOk(log, 6, "pdf() instance created");
     } catch (err) {
-      onStepFail(6);
-      failStep(6, "buildBlob", 127, err);
+      setDebugInfo(stepFail(log, 6, "buildBlob", 162, err));
+      throw err;
     }
 
-    // ── STEP 7: Loading fonts ──────────────────────────────────────────────
-    // Fonts are loaded lazily inside toBlob(); we cannot intercept them
-    // directly, but a font-load failure will surface as a toBlob() rejection.
-    // Log the registered sources so the console shows what react-pdf will fetch.
+    // ── STEP 7: Font paths (fetched internally by toBlob) ─────────────────
+    log.push("STEP 7 — Noting font paths react-pdf will fetch");
     try {
-      console.log("STEP 7 — Font sources about to be fetched by react-pdf:");
-      console.log("  Cairo-Regular:", `${window.location.origin}/fonts/Cairo-Regular.ttf`);
-      console.log("  Cairo-Bold:   ", `${window.location.origin}/fonts/Cairo-Bold.ttf`);
-      console.log("STEP 7 OK — font paths logged (actual fetch happens inside toBlob)");
+      const regularUrl = `${window.location.origin}/fonts/Cairo-Regular.ttf`;
+      const boldUrl    = `${window.location.origin}/fonts/Cairo-Bold.ttf`;
+      stepOk(log, 7, `Cairo-Regular=${regularUrl} | Cairo-Bold=${boldUrl}`);
     } catch (err) {
-      onStepFail(7);
-      failStep(7, "buildBlob", 141, err);
+      setDebugInfo(stepFail(log, 7, "buildBlob", 178, err));
+      throw err;
     }
 
-    // ── STEP 8: Loading logo ───────────────────────────────────────────────
+    // ── STEP 8: Logo reachability probe ───────────────────────────────────
+    log.push(`STEP 8 — HEAD probe for logo: ${logoUrl!}`);
     try {
-      console.log("STEP 8 — Logo URL that react-pdf will fetch:", logoUrl!);
       const probe = await fetch(logoUrl!, { method: "HEAD" });
-      console.log("STEP 8 OK — logo HEAD probe:", probe.status, probe.ok ? "reachable" : "NOT REACHABLE");
       if (!probe.ok) {
-        throw new Error(`Logo fetch returned HTTP ${probe.status} for ${logoUrl}`);
+        throw new Error(`HTTP ${probe.status} — logo not reachable at ${logoUrl}`);
       }
+      stepOk(log, 8, `HTTP ${probe.status} — logo reachable`);
     } catch (err) {
-      onStepFail(8);
-      failStep(8, "buildBlob", 153, err);
+      const e = err instanceof Error ? err : new Error(String(err));
+      // Parse HTTP status from the error message if present
+      const statusMatch = e.message.match(/HTTP (\d+)/);
+      const httpStatus  = statusMatch ? parseInt(statusMatch[1], 10) : undefined;
+      setDebugInfo(stepFail(log, 8, "buildBlob", 191, err, { fetchUrl: logoUrl!, httpStatus }));
+      throw err;
     }
 
-    // ── STEP 9: Rendering pages (toBlob entry) ────────────────────────────
-    console.log("STEP 9 — Entering toBlob() — react-pdf will now render all pages");
+    // ── STEP 9: Entering toBlob (react-pdf renders + loads fonts+images) ──
+    log.push("STEP 9 — Entering toBlob() — react-pdf renders pages, loads fonts & images");
+    console.log("STEP 9 — entering toBlob()");
 
     // ── STEP 10: Generating Blob ──────────────────────────────────────────
+    log.push("STEP 10 — Awaiting instance.toBlob()");
     let blob: Blob;
     try {
-      console.log("STEP 10 — Awaiting toBlob()");
       blob = await instance!.toBlob();
-      console.log("STEP 10 OK — blob size:", blob.size, "bytes, type:", blob.type);
+      stepOk(log, 10, `size=${blob.size} bytes type=${blob.type}`);
     } catch (err) {
-      onStepFail(10);
-      failStep(10, "buildBlob", 167, err);
+      setDebugInfo(stepFail(log, 10, "buildBlob", 204, err));
+      throw err;
     }
 
     return blob!;
   }
 
-  // ── Export runner ────────────────────────────────────────────────────────
+  // ── Export runner ──────────────────────────────────────────────────────────
 
   async function runExport(sections: ReportSections): Promise<void> {
     if (!client || generating) return;
     setGenerating(true);
-    setFailedStep(0);
+    setDebugInfo(null);
     setPdfToast("generating");
 
-    const onStepFail = (step: number) => setFailedStep(step);
-
     try {
-      const blob = await buildBlob(sections, onStepFail);
+      const blob = await buildBlob(sections);
       if (!blob) { setPdfToast("idle"); return; }
 
-      // ── STEP 11: Downloading file ────────────────────────────────────────
+      // ── STEP 11: Downloading file ──────────────────────────────────────
+      const log: string[] = ["STEP 11 — Creating object URL and triggering download"];
       try {
-        console.log("STEP 11 — Downloading file");
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement("a");
         const date = new Date().toISOString().split("T")[0];
@@ -210,14 +251,14 @@ export function useClientReport(client: Client | null, isAr: boolean) {
         a.click();
         document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(url), 10_000);
-        console.log("STEP 11 OK — download triggered:", a.download);
+        stepOk(log, 11, `file=${a.download}`);
         setPdfToast("idle");
       } catch (err) {
-        onStepFail(11);
-        failStep(11, "runExport", 201, err);
+        setDebugInfo(stepFail(log, 11, "runExport", 232, err));
+        throw err;
       }
     } catch (err) {
-      console.error("[useClientReport] runExport caught top-level error:", err);
+      console.error("[useClientReport] runExport top-level catch:", err);
       setPdfToast("error");
     } finally {
       setGenerating(false);
@@ -227,53 +268,48 @@ export function useClientReport(client: Client | null, isAr: boolean) {
   async function runPrint(sections: ReportSections): Promise<void> {
     if (!client || generating) return;
     setGenerating(true);
-    setFailedStep(0);
+    setDebugInfo(null);
     setPdfToast("generating");
 
-    const onStepFail = (step: number) => setFailedStep(step);
-
     try {
-      const blob = await buildBlob(sections, onStepFail);
+      const blob = await buildBlob(sections);
       if (!blob) { setPdfToast("idle"); return; }
 
+      const log: string[] = ["STEP 11 — Opening PDF in new tab"];
       try {
-        console.log("STEP 11 — Opening PDF in new tab");
         const url = URL.createObjectURL(blob);
         window.open(url, "_blank");
         setTimeout(() => URL.revokeObjectURL(url), 60_000);
-        console.log("STEP 11 OK — new tab opened");
+        stepOk(log, 11, "new tab opened");
         setPdfToast("idle");
       } catch (err) {
-        onStepFail(11);
-        failStep(11, "runPrint", 229, err);
+        setDebugInfo(stepFail(log, 11, "runPrint", 260, err));
+        throw err;
       }
     } catch (err) {
-      console.error("[useClientReport] runPrint caught top-level error:", err);
+      console.error("[useClientReport] runPrint top-level catch:", err);
       setPdfToast("error");
     } finally {
       setGenerating(false);
     }
   }
 
-  // ── STEP 1 + 2 live here ─────────────────────────────────────────────────
+  // ── STEP 1 + 2 ────────────────────────────────────────────────────────────
 
   function handleExport(): void {
-    console.log("STEP 1 — Export button clicked");
-    console.log("STEP 1 OK", { clientId: client?.id });
+    console.log("STEP 1 OK — Export button clicked", { clientId: client?.id });
     if (!client || generating) return;
     setPendingAction("export");
   }
 
   function handlePrint(): void {
-    console.log("STEP 1 — Print button clicked");
-    console.log("STEP 1 OK", { clientId: client?.id });
+    console.log("STEP 1 OK — Print button clicked", { clientId: client?.id });
     if (!client || generating) return;
     setPendingAction("print");
   }
 
   async function confirmGenerate(sections: ReportSections): Promise<void> {
-    console.log("STEP 2 — Selected sections collected");
-    console.log("STEP 2 OK", sections);
+    console.log("STEP 2 OK — Sections confirmed", sections);
     const action = pendingAction;
     lastSectionsRef.current  = { ...sections };
     retryActionRef.current   = action;
@@ -292,17 +328,16 @@ export function useClientReport(client: Client | null, isAr: boolean) {
     else if (action === "print") runPrint(sections);
   }
 
-  function dismissToast(): void {
-    setPdfToast("idle");
-    setFailedStep(0);
-  }
+  function dismissToast(): void  { setPdfToast("idle"); }
+  function clearDebug(): void    { setDebugInfo(null); }
 
   return {
     generating,
     handleExport,
     handlePrint,
     pdfToast,
-    failedStep,
+    debugInfo,
+    clearDebug,
     retryLast,
     dismissToast,
     pendingAction,

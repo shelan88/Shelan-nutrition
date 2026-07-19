@@ -28,6 +28,7 @@ import type { Client, TimelineType, FileType, RiskIndicatorLevel, Gender, Client
 import { deleteClient, archiveClient, updateClient } from "@/admin/repositories/clients.repository";
 import NutritionPlansTab from "./NutritionPlansTab";
 import FullAssessmentModal from "@/admin/components/FullAssessmentModal";
+import PdfDebugModal from "@/admin/components/PdfDebugModal";
 import { useClientReport } from "@/admin/hooks/useClientReport";
 import type { ReportSections, SectionKey } from "@/admin/utils/clinicReport";
 
@@ -641,7 +642,7 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
   const {
     generating: generatingPdf,
     handleExport, handlePrint,
-    pdfToast, failedStep, retryLast, dismissToast,
+    pdfToast, debugInfo, clearDebug, retryLast, dismissToast,
     pendingAction, lastSections, confirmGenerate, cancelModal,
   } = useClientReport(client, isAr);
 
@@ -1277,7 +1278,17 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
                   role="alert"
                 >
                   <AlertTriangle size={15} className="shrink-0 text-red-500" strokeWidth={2} />
-                  <span>{failedStep > 0 ? `STEP FAILED: ${failedStep}` : "STEP FAILED: ?"}</span>
+                  <span>
+                    {debugInfo ? `STEP FAILED: ${debugInfo.failedStep}` : "STEP FAILED: ?"}
+                  </span>
+                  {debugInfo && (
+                    <button
+                      onClick={() => {/* modal is already showing */}}
+                      className="ms-1 underline underline-offset-2 text-primary-pink hover:text-primary-pink/80 transition-colors font-bold"
+                    >
+                      Details ↑
+                    </button>
+                  )}
                   <button
                     onClick={retryLast}
                     className="ms-1 underline underline-offset-2 text-primary-pink hover:text-primary-pink/80 transition-colors font-bold"
@@ -1305,6 +1316,12 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
               isAr={isAr}
               onClose={() => setViewingAssessment(null)}
             />
+          )}
+
+          {/* PDF Debug Modal — on-screen forensic report for export failures.
+               Shown whenever debugInfo is set; stays until manually closed. */}
+          {debugInfo && (
+            <PdfDebugModal info={debugInfo} onClose={clearDebug} />
           )}
         </>
       )}
