@@ -16,11 +16,12 @@ import {
   Plus, TrendingUp, TrendingDown, Minus,
   Scale, Target, ArrowDownToLine,
   Edit2, Copy, Trash2, ChevronDown, ChevronUp,
-  X, Save, Loader2, Upload, Camera,
+  X, Save, Loader2, Camera,
   BarChart2, GitCompare, List,
   AlertTriangle, Eye,
   Droplets, Percent,
 } from "lucide-react";
+import ImageUpload from "@/shared/components/upload/ImageUpload";
 import {
   getClientProgressEntries,
   getEntryPhotos,
@@ -647,7 +648,6 @@ function EntryEditor({
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState<string | null>(null);
   const [photos, setPhotos]       = useState<ProgressPhotoRow[]>([]);
-  const [uploading, setUploading] = useState<ProgressPhotoRow["photo_type"] | null>(null);
   const [savedId, setSavedId]     = useState<string | null>(entry?.id ?? null);
 
   useEffect(() => {
@@ -686,18 +686,17 @@ function EntryEditor({
     onSave(saved);
   }
 
-  async function handlePhotoUpload(type: ProgressPhotoRow["photo_type"], file: File) {
-    const id = savedId ?? entry?.id;
-    if (!id) {
-      setError(isAr ? "احفظي الإدخال أولاً قبل رفع الصور" : "Save the entry first before uploading photos.");
-      return;
-    }
-    setUploading(type);
-    const result = await uploadEntryPhoto(id, clientId, type, file);
-    if (result) {
-      setPhotos((prev) => [...prev.filter((p) => p.photo_type !== type), result]);
-    }
-    setUploading(null);
+  function makePhotoUploader(type: ProgressPhotoRow["photo_type"]) {
+    return async (file: File): Promise<string | null> => {
+      const id = savedId ?? entry?.id;
+      if (!id) return null;
+      const result = await uploadEntryPhoto(id, clientId, type, file);
+      if (result) {
+        setPhotos((prev) => [...prev.filter((p) => p.photo_type !== type), result]);
+        return result.url;
+      }
+      return null;
+    };
   }
 
   async function handlePhotoDelete(photo: ProgressPhotoRow) {
@@ -861,46 +860,41 @@ function EntryEditor({
                   {isAr ? "احفظي الإدخال أولاً ثم ارفعي الصور" : "Save the entry first, then upload photos"}
                 </div>
               )}
-              {PHOTO_SLOTS.map((slot) => {
-                const existing = photos.find((p) => p.photo_type === slot.key);
-                const isUp = uploading === slot.key;
-                return (
-                  <div key={slot.key} className="flex items-center gap-4">
-                    {/* Thumbnail */}
-                    <div className="w-20 h-20 rounded-xl border border-[var(--admin-border)] overflow-hidden bg-[var(--admin-hover-bg)] shrink-0 flex items-center justify-center">
-                      {existing ? (
-                        <img src={existing.url} alt={slot.en} className="w-full h-full object-cover" />
-                      ) : (
-                        <Camera size={18} strokeWidth={1.5} className="text-[var(--admin-text-faint)]" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-[var(--admin-text)] mb-2">
+              <div className="grid grid-cols-3 gap-4">
+                {PHOTO_SLOTS.map((slot) => {
+                  const existing = photos.find((p) => p.photo_type === slot.key);
+                  const entryId = savedId ?? entry?.id;
+                  return (
+                    <div key={slot.key}>
+                      <p className="text-[11.5px] font-semibold text-[var(--admin-text-muted)] mb-2 text-center">
                         {isAr ? slot.ar : slot.en}
                       </p>
-                      <div className="flex gap-2">
-                        <label className={`flex items-center gap-1.5 h-7 px-3 rounded-lg text-[11.5px] font-semibold cursor-pointer transition-colors
-                          ${(isUp || (!savedId && !entry?.id))
-                            ? "opacity-50 pointer-events-none bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)]"
-                            : "text-primary-pink hover:bg-primary-pink/8"}`}>
-                          {isUp ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} strokeWidth={2} />}
-                          {isAr ? "رفع" : "Upload"}
-                          <input type="file" accept="image/*" className="hidden"
-                            onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(slot.key, f); e.target.value = ""; }}
-                            disabled={isUp || (!savedId && !entry?.id)} />
-                        </label>
-                        {existing && (
-                          <button onClick={() => handlePhotoDelete(existing)}
-                            className="flex items-center gap-1.5 h-7 px-3 rounded-lg text-[11.5px] font-semibold text-red-500 hover:bg-red-50 transition-colors">
-                            <Trash2 size={11} strokeWidth={2} />
-                            {isAr ? "حذف" : "Remove"}
-                          </button>
-                        )}
-                      </div>
+                      <ImageUpload
+                        key={existing?.id ?? `empty-${slot.key}`}
+                        shape="rect"
+                        value={existing?.url ?? null}
+                        disabled={!entryId}
+                        lang={isAr ? "ar" : "en"}
+                        fallback={
+                          <Camera size={18} strokeWidth={1.5} className="text-[var(--admin-text-faint)]" />
+                        }
+                        upload={makePhotoUploader(slot.key)}
+                        className="w-full"
+                      />
+                      {existing && (
+                        <button
+                          type="button"
+                          onClick={() => handlePhotoDelete(existing)}
+                          className="mt-2 w-full flex items-center justify-center gap-1.5 h-7 rounded-lg text-[11.5px] font-semibold text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 size={11} strokeWidth={2} />
+                          {isAr ? "حذف" : "Remove"}
+                        </button>
+                      )}
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
