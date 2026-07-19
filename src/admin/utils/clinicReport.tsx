@@ -42,12 +42,15 @@ import type {
 } from "@/admin/repositories/assessment-responses.repository";
 
 // ─── Font Registration ────────────────────────────────────────────────────────
-// Cairo covers Arabic + Latin in a single family.
+// Amiri is a verified static-weight TrueType font (Arabic + Latin).
+// The previous Cairo files were EOT format, which @react-pdf/renderer rejects
+// with "Unknown font format". Amiri-Regular.ttf and Amiri-Bold.ttf are real
+// TrueType binaries confirmed by the `file` utility.
 Font.register({
-  family: "Cairo",
+  family: "Amiri",
   fonts: [
-    { src: "/fonts/Cairo-Regular.ttf", fontWeight: "normal" },
-    { src: "/fonts/Cairo-Bold.ttf",    fontWeight: "bold"   },
+    { src: "/fonts/Amiri-Regular.ttf", fontWeight: "normal" },
+    { src: "/fonts/Amiri-Bold.ttf",    fontWeight: "bold"   },
   ],
 });
 
@@ -182,7 +185,7 @@ function resolveAnswer(ans: AnswerWithQuestion, isAr: boolean): string {
 const S = StyleSheet.create({
   // Page
   page: {
-    fontFamily: "Cairo",
+    fontFamily: "Amiri",
     backgroundColor: C.white,
     paddingTop: 92,
     paddingBottom: 54,
@@ -376,7 +379,7 @@ function ScoreCircle({ score }: { score: number }) {
         <Path d={d} stroke={color} strokeWidth={6} strokeLinecap="round" fill="none" />
       </Svg>
       <View style={{ position: "absolute", top: 0, left: 0, width: 88, height: 88, alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ fontSize: 20, fontWeight: "bold", color, fontFamily: "Cairo" }}>{score}</Text>
+        <Text style={{ fontSize: 20, fontWeight: "bold", color, fontFamily: "Amiri" }}>{score}</Text>
       </View>
     </View>
   );

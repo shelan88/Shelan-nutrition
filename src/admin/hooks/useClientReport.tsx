@@ -184,9 +184,9 @@ export function useClientReport(client: Client | null, isAr: boolean) {
     // ── STEP 7: Font paths (fetched internally by toBlob) ─────────────────
     log.push("STEP 7 — Noting font paths react-pdf will fetch");
     try {
-      const regularUrl = `${window.location.origin}/fonts/Cairo-Regular.ttf`;
-      const boldUrl    = `${window.location.origin}/fonts/Cairo-Bold.ttf`;
-      stepOk(log, 7, `Cairo-Regular=${regularUrl} | Cairo-Bold=${boldUrl}`);
+      const regularUrl = `${window.location.origin}/fonts/Amiri-Regular.ttf`;
+      const boldUrl    = `${window.location.origin}/fonts/Amiri-Bold.ttf`;
+      stepOk(log, 7, `Amiri-Regular=${regularUrl} | Amiri-Bold=${boldUrl}`);
     } catch (err) {
       setDebugInfo(stepFail(log, 7, "buildBlob", 178, err));
       throw err;
