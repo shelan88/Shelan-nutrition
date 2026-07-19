@@ -277,18 +277,12 @@ export default function ProfilePage() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <form onSubmit={handleSave} className="max-w-2xl">
-      <h1 className="font-heading text-2xl font-bold text-ivory mb-6">
-        {isAr ? "ملفي الشخصي" : "My Profile"}
-      </h1>
-
-      {/* ── Avatar ─────────────────────────────────────────────────────────── */}
-      {/* Event isolation: prevents Samsung Internet from triggering form submit when file dialog closes */}
-      <div
-        className="flex items-center gap-4 mb-8"
-        onClick={(e) => e.stopPropagation()}
-        onChange={(e) => e.stopPropagation()}
-      >
+    <>
+      {/* ── Avatar — intentionally OUTSIDE <form>.
+           Samsung Internet treats any file-input inside a <form> as a submit
+           trigger when the picker closes. Moving the avatar section out of the
+           form entirely (nuclear option) eliminates that association. ──────── */}
+      <div className="max-w-2xl flex items-center gap-4 mb-8">
         {/* ImageUpload: circle shape, 80×80, handles preview + progress + retry */}
         <div className="w-20 h-20 shrink-0">
           <ImageUpload
@@ -332,6 +326,11 @@ export default function ProfilePage() {
           </p>
         </div>
       </div>
+
+      <form onSubmit={handleSave} className="max-w-2xl">
+      <h1 className="font-heading text-2xl font-bold text-ivory mb-6">
+        {isAr ? "ملفي الشخصي" : "My Profile"}
+      </h1>
 
       {/* ── Email (read-only) ───────────────────────────────────────────────── */}
       <div className="mb-4">
@@ -489,6 +488,7 @@ export default function ProfilePage() {
           {toastMsg}
         </div>
       )}
-    </form>
+      </form>
+    </>
   );
 }
