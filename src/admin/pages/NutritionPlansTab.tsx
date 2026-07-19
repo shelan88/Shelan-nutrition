@@ -852,7 +852,7 @@ function FilesModal({
       <div className="mb-4">
         <FileDropZone
           upload={handleFileUpload}
-          accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xlsx,.csv"
+          accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.heif,.avif,.doc,.docx,.xlsx,.csv"
           maxSizeMb={50}
           lang={isAr ? "ar" : "en"}
           label={isAr ? "اضغطي لرفع ملف (PDF، صورة، مستند)" : "Click to upload (PDF, image, document)"}

@@ -5,6 +5,17 @@
  * Features: validation, canvas-based image compression, simulated progress,
  *           automatic retry with exponential back-off (default 3 attempts).
  *
+ * Samsung Gallery / Android compatibility notes (bugs fixed here):
+ *   1. Samsung phones produce HEIC/HEIF files. Their ISO Base Media File Format
+ *      header contains an "ftyp" box (same as MP4/MOV) — the MIME sniff must
+ *      check the brand bytes to distinguish HEIC from video.
+ *   2. "image/jpg" (non-standard) is normalised to "image/jpeg".
+ *   3. File.size === 0 is guarded — some Android content URIs resolve late.
+ *   4. HEIC/HEIF files are converted to JPEG via createImageBitmap + canvas
+ *      before compression/upload so the stored URL is always browser-renderable.
+ *      If the browser cannot decode HEIC a clear error is surfaced instead of
+ *      silently storing an unrenderable file.
+ *
  * RULE: No other file in this project may call
  *       supabase.storage.from(...).upload() directly.
  *       All uploads must go through uploadToStorage().
@@ -33,6 +44,7 @@ async function sniffMimeType(file: File): Promise<string> {
     gif:  "image/gif",
     heic: "image/heic",
     heif: "image/heif",
+    avif: "image/avif",
     mp4:  "video/mp4",
     m4v:  "video/mp4",
     mov:  "video/quicktime",
@@ -58,12 +70,32 @@ async function sniffMimeType(file: File): Promise<string> {
     if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46) return "image/gif";
     // WEBM: 1A 45 DF A3 (EBML header)
     if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return "video/webm";
-    // MP4 / MOV / M4V: ISO Base Media File Format — "ftyp" box at offset 4
-    // bytes [4..7] = 'f','t','y','p'; bytes [8..11] = major brand
+    // ISO Base Media File Format: "ftyp" box at offset 4–7, major brand at 8–11.
+    // Used by MP4, MOV, HEIC, HEIF, AVIF — must distinguish by brand.
     if (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
-      // MOV brand: "qt  " (QuickTime)
-      if (b[8] === 0x71 && b[9] === 0x74 && b[10] === 0x20 && b[11] === 0x20) return "video/quicktime";
-      // All other ftyp brands (isom, mp41, mp42, M4V , avc1, …) → MP4
+      // Build the 4-char brand string from bytes 8–11
+      const brand =
+        String.fromCharCode(b[8]) +
+        String.fromCharCode(b[9]) +
+        String.fromCharCode(b[10]) +
+        String.fromCharCode(b[11]);
+
+      // HEIC / HEIF brands (Samsung Galaxy, iPhone export)
+      // heic = still HEIC, heis = HEIC sequence, mif1 / msf1 = HEIF container
+      if (brand === "heic" || brand === "heis" || brand === "mif1" || brand === "msf1") {
+        return "image/heic";
+      }
+      // HEIF brands
+      if (brand === "heif" || brand === "MiHE" || brand === "miaf") {
+        return "image/heif";
+      }
+      // AVIF (AV1 Image File Format)
+      if (brand === "avif" || brand === "avis") {
+        return "image/avif";
+      }
+      // QuickTime MOV: "qt  "
+      if (brand === "qt  ") return "video/quicktime";
+      // Everything else (isom, mp41, mp42, M4V , avc1, …) → MP4
       return "video/mp4";
     }
   } catch {
@@ -73,6 +105,16 @@ async function sniffMimeType(file: File): Promise<string> {
   // Extension-based fallback
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
   return EXT_MAP[ext] ?? "";
+}
+
+/**
+ * Normalises non-standard MIME types produced by Samsung Gallery and
+ * other Android pickers so the rest of the pipeline sees canonical values.
+ *   "image/jpg" → "image/jpeg"   (Samsung Gallery non-standard)
+ */
+function normaliseMime(mime: string): string {
+  if (mime === "image/jpg") return "image/jpeg";
+  return mime;
 }
 
 function mimeMatches(mime: string, pattern: string): boolean {
@@ -86,6 +128,11 @@ function validateFile(
   maxSizeMb: number,
   allowedTypes?: string[],
 ): string | null {
+  // Guard against zero-byte files — Android content URIs can resolve late and
+  // deliver a File with size === 0 before the actual bytes are available.
+  if (file.size === 0) {
+    return "File appears to be empty. Please try again or choose a different file.";
+  }
   if (file.size > maxSizeMb * 1024 * 1024) {
     return `File is too large (max ${maxSizeMb} MB)`;
   }
@@ -96,9 +143,25 @@ function validateFile(
   return null;
 }
 
+/** True when the MIME type is a HEIC/HEIF/AVIF container format. */
+function isContainerImage(mime: string): boolean {
+  return mime === "image/heic" || mime === "image/heif" || mime === "image/avif";
+}
+
 /**
  * Compresses an image using a canvas if it exceeds maxWidthPx.
- * Returns the original file unchanged for non-images or on any error.
+ *
+ * HEIC/HEIF/AVIF handling (Samsung Galaxy compatibility):
+ *   Chrome's <img> element cannot decode HEIC from a blob: URL, but
+ *   createImageBitmap() can on Chrome 64+ / Android.  We try that path first.
+ *   If the browser cannot decode the container format at all, we throw a
+ *   human-readable error instead of silently storing an unrenderable file.
+ *
+ * Samsung Browser blob: URL note:
+ *   Samsung Internet Browser fails to load blob: URLs in <img>.  We fall back
+ *   to createImageBitmap() for all image types when URL.createObjectURL fails.
+ *
+ * Returns the original file unchanged for non-images.
  */
 async function compressImage(
   file: File,
@@ -106,29 +169,130 @@ async function compressImage(
   quality: number,
 ): Promise<File> {
   if (!file.type.startsWith("image/")) return file;
-  return new Promise((resolve) => {
-    const img = new Image();
-    const blobUrl = URL.createObjectURL(file);
+
+  // ── Path 1: HEIC / HEIF / AVIF — use createImageBitmap (Chrome 64+) ────────
+  if (isContainerImage(file.type)) {
+    let bitmap: ImageBitmap;
+    try {
+      bitmap = await createImageBitmap(file);
+    } catch {
+      // Browser cannot decode this container format (e.g. older WebView).
+      throw new Error(
+        "This photo format (HEIC/HEIF) is not supported. " +
+        "Please convert it to JPEG or PNG and try again.",
+      );
+    }
+
+    const targetW = Math.min(bitmap.width, maxWidthPx);
+    const scale   = targetW / bitmap.width;
+    const canvas  = document.createElement("canvas");
+    canvas.width  = targetW;
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) { bitmap.close(); return file; }
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+
+    return new Promise<File>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { resolve(file); return; }
+          resolve(new File(
+            [blob],
+            file.name.replace(/\.[^.]+$/, ".jpg"),
+            { type: "image/jpeg" },
+          ));
+        },
+        "image/jpeg",
+        quality,
+      );
+      // Timeout safety — toBlob should always fire but guard it
+      setTimeout(() => reject(new Error("Canvas toBlob timed out")), 15_000);
+    });
+  }
+
+  // ── Path 2: Standard JPEG / PNG / WebP — <img> via blob: URL ───────────────
+  // Falls back to createImageBitmap if blob: URL fails (Samsung Internet Browser).
+  const tryBitmapFallback = async (): Promise<File> => {
+    let bitmap: ImageBitmap;
+    try {
+      bitmap = await createImageBitmap(file);
+    } catch {
+      return file; // give up, upload uncompressed
+    }
+    const targetW = Math.min(bitmap.width, maxWidthPx);
+    if (bitmap.width <= maxWidthPx) { bitmap.close(); return file; }
+    const scale   = targetW / bitmap.width;
+    const canvas  = document.createElement("canvas");
+    canvas.width  = targetW;
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) { bitmap.close(); return file; }
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    return new Promise<File>((resolve) => {
+      canvas.toBlob(
+        (blob) => resolve(
+          blob
+            ? new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" })
+            : file,
+        ),
+        "image/jpeg",
+        quality,
+      );
+    });
+  };
+
+  return new Promise<File>((resolve) => {
+    const img    = new Image();
+    let blobUrl  = "";
+    let settled  = false;
+
+    const settle = (result: File) => {
+      if (settled) return;
+      settled = true;
+      if (blobUrl) { try { URL.revokeObjectURL(blobUrl); } catch { /* ignore */ } }
+      resolve(result);
+    };
+
+    try {
+      blobUrl  = URL.createObjectURL(file);
+    } catch {
+      // URL.createObjectURL not available or failed — go straight to bitmap path
+      tryBitmapFallback().then(resolve);
+      return;
+    }
+
     img.onload = () => {
-      URL.revokeObjectURL(blobUrl);
-      if (img.width <= maxWidthPx) { resolve(file); return; }
-      const scale = maxWidthPx / img.width;
+      if (img.width <= maxWidthPx) { settle(file); return; }
+      const scale  = maxWidthPx / img.width;
       const canvas = document.createElement("canvas");
       canvas.width  = Math.round(img.width  * scale);
       canvas.height = Math.round(img.height * scale);
       const ctx = canvas.getContext("2d");
-      if (!ctx) { resolve(file); return; }
+      if (!ctx) { settle(file); return; }
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       canvas.toBlob(
         (blob) => {
-          if (!blob) { resolve(file); return; }
-          resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }));
+          settle(
+            blob
+              ? new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" })
+              : file,
+          );
         },
         "image/jpeg",
         quality,
       );
     };
-    img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(file); };
+
+    img.onerror = () => {
+      // blob: URL failed to load (Samsung Internet Browser quirk).
+      // Try createImageBitmap as a fallback.
+      if (blobUrl) { try { URL.revokeObjectURL(blobUrl); } catch { /* ignore */ } blobUrl = ""; }
+      settled = true; // prevent double-settle from the outer settle()
+      tryBitmapFallback().then(resolve);
+    };
+
     img.src = blobUrl;
   });
 }
@@ -186,17 +350,22 @@ export async function uploadToStorage(
   console.log("[upload] upsert      :", upsert);
   // ───────────────────────────────────────────────────────────────────────────
 
-  // 1. Resolve MIME type — sniff from magic numbers when file.type is absent
-  const resolvedType = file.type || (await sniffMimeType(file)) || "application/octet-stream";
-  console.log("[upload] resolvedType:", resolvedType);
-  if (!file.type && resolvedType !== "application/octet-stream") {
-    console.info(`[upload] sniffed MIME type "${resolvedType}" for "${file.name}"`);
+  // 1. Resolve MIME type — sniff from magic numbers when file.type is absent,
+  //    then normalise non-standard variants (e.g. Samsung Gallery's "image/jpg").
+  const rawType     = file.type || (await sniffMimeType(file)) || "application/octet-stream";
+  const resolvedType = normaliseMime(rawType);
+  console.log("[upload] resolvedType:", resolvedType, rawType !== resolvedType ? `(normalised from "${rawType}")` : "");
+  if (!file.type) {
+    console.info(`[upload] sniffed/resolved MIME type "${resolvedType}" for "${file.name}"`);
   }
 
-  // 2. Validate (use resolved type so allowedTypes checks work correctly)
-  const fileForValidation = file.type
-    ? file
-    : new File([file], file.name, { type: resolvedType });
+  // 2. Build a file with the resolved type for validation + upload.
+  //    We always recreate so the correct contentType is sent to Supabase,
+  //    even when file.type was already set but non-standard (e.g. "image/jpg").
+  const fileForValidation = resolvedType !== file.type
+    ? new File([file], file.name, { type: resolvedType })
+    : file;
+
   const validationErr = validateFile(fileForValidation, maxSizeMb, allowedTypes);
   if (validationErr) {
     console.error("[upload] VALIDATION FAILED:", validationErr);
@@ -205,14 +374,27 @@ export async function uploadToStorage(
   }
   console.log("[upload] validation  : PASSED");
 
-  // 3. Optionally compress
-  const fileToUpload = compress && resolvedType.startsWith("image/")
-    ? await compressImage(fileForValidation, maxWidthPx, quality)
-    : fileForValidation;
-  console.log("[upload] fileToUpload:", fileToUpload.name, fileToUpload.size, "bytes", fileToUpload.type);
-
-  // 4. Start simulated progress
+  // 3. Start simulated progress (must come before compress so we can stop it on error)
   const stopProgress = onProgress ? simulateProgress(onProgress) : null;
+
+  // 4. Optionally compress.
+  //    compressImage may throw for unsupported container formats (HEIC on old
+  //    WebViews) — surface that as a user-visible error rather than crashing.
+  let fileToUpload: File;
+  if (compress && resolvedType.startsWith("image/")) {
+    try {
+      fileToUpload = await compressImage(fileForValidation, maxWidthPx, quality);
+    } catch (compressErr) {
+      const msg = compressErr instanceof Error ? compressErr.message : "Image processing failed";
+      console.error("[upload] compressImage THREW:", msg);
+      stopProgress?.();
+      console.groupEnd();
+      return { url: null, path: null, error: msg };
+    }
+  } else {
+    fileToUpload = fileForValidation;
+  }
+  console.log("[upload] fileToUpload:", fileToUpload.name, fileToUpload.size, "bytes", fileToUpload.type);
 
   // 5. Upload with retry
   let lastError = "Upload failed";

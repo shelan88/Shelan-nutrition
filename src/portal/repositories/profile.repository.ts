@@ -104,8 +104,11 @@ export async function uploadAvatar(
   userId: string,
   file: File,
 ): Promise<AvatarUploadResult> {
-  const ext  = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const path = `avatars/${userId}/avatar.${ext}`;
+  // Use .jpg for all container formats (HEIC/HEIF → converted to JPEG by
+  // compressImage) so the stored path always matches the actual content type.
+  const rawExt  = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  const ext     = (rawExt === "heic" || rawExt === "heif") ? "jpg" : rawExt;
+  const path    = `avatars/${userId}/avatar.${ext}`;
   console.log("[uploadAvatar] called — userId:", userId, "file:", file.name, "path:", path);
 
   const { url, error } = await uploadToStorage(file, {
