@@ -83,14 +83,14 @@ export default function Booking() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.2 }}
                 transition={{ duration: 0.55, delay: i * 0.08 }}
-                className={`relative rounded-[1.75rem] p-8 flex flex-col ${
+                className={`relative rounded-[1.75rem] flex flex-col ${
                   isFeatured
                     ? "bg-white text-deep-purple shadow-2xl shadow-deep-purple/40 border-2 border-light-pink lg:-translate-y-3 lg:scale-[1.03] z-10"
                     : "bg-white/10 backdrop-blur-md border border-white/25 text-white"
-                }`}
+                } ${plan.badge ? "pt-6 pb-8 px-8" : "p-8"}`}
               >
                 {plan.badge && (
-                  <div className="absolute -top-3.5 inset-x-0 flex justify-center">
+                  <div className="flex justify-center mb-5">
                     <span className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-xs font-bold uppercase tracking-wide shadow-md whitespace-nowrap">
                       <Sparkles size={13} />
                       {plan.badge}
