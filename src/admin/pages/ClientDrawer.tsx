@@ -28,6 +28,7 @@ import type { Client, TimelineType, FileType, RiskIndicatorLevel, Gender, Client
 import { deleteClient, archiveClient, updateClient } from "@/admin/repositories/clients.repository";
 import NutritionPlansTab from "./NutritionPlansTab";
 import FullAssessmentModal from "@/admin/components/FullAssessmentModal";
+import { useClientReport } from "@/admin/hooks/useClientReport";
 
 // ─── Risk helpers ──────────────────────────────────────────────────────────────
 
@@ -477,9 +478,7 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
     }
   }
 
-  function handlePrint() {
-    window.print();
-  }
+  const { generating: generatingPdf, handleExport, handlePrint } = useClientReport(client, isAr);
 
   async function handleViewFullAssessment() {
     if (!client) return;
@@ -577,31 +576,27 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
                 {actioning === "archive" ? "…" : (isAr ? "أرشفة" : "Archive")}
               </button>
 
-              {/* Print */}
+              {/* Print — opens A4 clinic PDF in new tab */}
               <button
                 onClick={handlePrint}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-semibold text-[var(--admin-text-muted)] hover:border-[var(--admin-border-strong)] hover:bg-[var(--admin-surface)] transition-all whitespace-nowrap shrink-0"
+                disabled={generatingPdf}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-semibold text-[var(--admin-text-muted)] hover:border-[var(--admin-border-strong)] hover:bg-[var(--admin-surface)] transition-all whitespace-nowrap shrink-0 disabled:opacity-60"
               >
-                <Printer size={12} strokeWidth={2} />
+                {generatingPdf
+                  ? <Loader2 size={12} strokeWidth={2} className="animate-spin" />
+                  : <Printer size={12} strokeWidth={2} />}
                 {isAr ? "طباعة" : "Print"}
               </button>
 
-              {/* Export — download current data as CSV text */}
+              {/* Export — downloads A4 clinic PDF */}
               <button
-                onClick={() => {
-                  if (!client) return;
-                  const csv = [
-                    ["Name", "Email", "Phone", "Status", "Risk", "Plan", "Joined"].join(","),
-                    [client.fullName, client.email, client.phone, client.status, client.riskLevel, client.currentPlan, client.joinedDate].map((v) => `"${v ?? ""}"`).join(","),
-                  ].join("\n");
-                  const a = document.createElement("a");
-                  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-                  a.download = `${client.fullName.replace(/\s+/g, "_")}_profile.csv`;
-                  a.click();
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-semibold text-[var(--admin-text-muted)] hover:border-[var(--admin-border-strong)] hover:bg-[var(--admin-surface)] transition-all whitespace-nowrap shrink-0"
+                onClick={handleExport}
+                disabled={generatingPdf}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-semibold text-[var(--admin-text-muted)] hover:border-[var(--admin-border-strong)] hover:bg-[var(--admin-surface)] transition-all whitespace-nowrap shrink-0 disabled:opacity-60"
               >
-                <Download size={12} strokeWidth={2} />
+                {generatingPdf
+                  ? <Loader2 size={12} strokeWidth={2} className="animate-spin" />
+                  : <Download size={12} strokeWidth={2} />}
                 {isAr ? "تصدير" : "Export"}
               </button>
 
