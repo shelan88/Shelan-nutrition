@@ -57,10 +57,13 @@ export function useUpload(): UseUploadReturn {
     setTimeout(tick, 60);
 
     try {
+      console.log("[useUpload] calling upload fn for:", file.name, file.size, "bytes");
       const url = await fn(file);
       stopped = true;
+      console.log("[useUpload] upload fn returned:", url);
 
       if (!url) {
+        console.error("[useUpload] upload fn returned null — showing generic error");
         setProgress(0);
         setError("Upload failed — please try again.");
         setUploading(false);
@@ -74,6 +77,7 @@ export function useUpload(): UseUploadReturn {
     } catch (err) {
       stopped = true;
       const msg = err instanceof Error ? err.message : "Upload failed";
+      console.error("[useUpload] upload fn THREW:", msg, err);
       setProgress(0);
       setError(msg);
       setUploading(false);

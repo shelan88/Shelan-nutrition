@@ -175,8 +175,20 @@ export async function uploadToStorage(
     maxAttempts  = 3,
   } = options;
 
+  // ── DEBUG ──────────────────────────────────────────────────────────────────
+  console.group(`[upload] START — "${file.name}"`);
+  console.log("[upload] file.size   :", file.size, "bytes (~" + (file.size / 1024 / 1024).toFixed(2) + " MB)");
+  console.log("[upload] file.type   :", file.type || "(empty — will sniff)");
+  console.log("[upload] bucket      :", bucket);
+  console.log("[upload] path        :", path);
+  console.log("[upload] maxSizeMb   :", maxSizeMb);
+  console.log("[upload] allowedTypes:", allowedTypes ?? "any");
+  console.log("[upload] upsert      :", upsert);
+  // ───────────────────────────────────────────────────────────────────────────
+
   // 1. Resolve MIME type — sniff from magic numbers when file.type is absent
   const resolvedType = file.type || (await sniffMimeType(file)) || "application/octet-stream";
+  console.log("[upload] resolvedType:", resolvedType);
   if (!file.type && resolvedType !== "application/octet-stream") {
     console.info(`[upload] sniffed MIME type "${resolvedType}" for "${file.name}"`);
   }
@@ -186,12 +198,18 @@ export async function uploadToStorage(
     ? file
     : new File([file], file.name, { type: resolvedType });
   const validationErr = validateFile(fileForValidation, maxSizeMb, allowedTypes);
-  if (validationErr) return { url: null, path: null, error: validationErr };
+  if (validationErr) {
+    console.error("[upload] VALIDATION FAILED:", validationErr);
+    console.groupEnd();
+    return { url: null, path: null, error: validationErr };
+  }
+  console.log("[upload] validation  : PASSED");
 
   // 3. Optionally compress
   const fileToUpload = compress && resolvedType.startsWith("image/")
     ? await compressImage(fileForValidation, maxWidthPx, quality)
     : fileForValidation;
+  console.log("[upload] fileToUpload:", fileToUpload.name, fileToUpload.size, "bytes", fileToUpload.type);
 
   // 4. Start simulated progress
   const stopProgress = onProgress ? simulateProgress(onProgress) : null;
@@ -202,23 +220,28 @@ export async function uploadToStorage(
     if (attempt > 0) {
       await new Promise((r) => setTimeout(r, 500 * 2 ** (attempt - 1)));
     }
-    const { error: uploadErr } = await supabase.storage
+    console.log(`[upload] attempt ${attempt + 1}/${maxAttempts} — calling supabase.storage.from("${bucket}").upload("${path}", ...)`);
+    const uploadResponse = await supabase.storage
       .from(bucket)
       .upload(path, fileToUpload, {
         upsert,
         contentType: fileToUpload.type || resolvedType,
         cacheControl,
       });
+    console.log(`[upload] attempt ${attempt + 1} raw response:`, JSON.stringify(uploadResponse));
 
+    const { error: uploadErr } = uploadResponse;
     if (!uploadErr) {
       stopProgress?.();
       onProgress?.(100);
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path);
+      console.log("[upload] SUCCESS — publicUrl:", urlData.publicUrl);
+      console.groupEnd();
       return { url: urlData.publicUrl, path, error: null };
     }
 
     lastError = uploadErr.message;
-    console.error(`[upload] attempt ${attempt + 1}/${maxAttempts} failed:`, uploadErr.message);
+    console.error(`[upload] attempt ${attempt + 1}/${maxAttempts} FAILED:`, uploadErr.message);
     // Errors that will never succeed on retry — break immediately
     const msg = uploadErr.message.toLowerCase();
     const isFatal =
@@ -235,6 +258,8 @@ export async function uploadToStorage(
 
   stopProgress?.();
   onProgress?.(0);
+  console.error("[upload] ALL ATTEMPTS FAILED — final error:", lastError);
+  console.groupEnd();
   return { url: null, path: null, error: lastError };
 }
 

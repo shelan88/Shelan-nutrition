@@ -65,23 +65,28 @@ export default function FileDropZone({
 
   // ── Upload a single file ───────────────────────────────────────────────────
   async function processFile(file: File) {
+    console.log("[FileDropZone] processFile:", file.name, file.size, "bytes", file.type || "(no type)");
     if (file.size > maxSizeMb * 1024 * 1024) {
       const msg = lang === "ar"
         ? `الملف كبير جداً (الحد الأقصى ${maxSizeMb} MB)`
         : `File too large (max ${maxSizeMb} MB)`;
+      console.warn("[FileDropZone] client-side size check failed:", msg);
       onError?.(msg);
       return;
     }
 
     setCurrentFile(file);
     const url = await run(file, upload);
+    console.log("[FileDropZone] run() result:", url);
 
     if (!url) {
       const msg = lang === "ar" ? "فشل رفع الملف" : "File upload failed";
+      console.error("[FileDropZone] upload returned null — calling onError");
       onError?.(msg);
       return;
     }
 
+    console.log("[FileDropZone] SUCCESS — calling onSuccess with url:", url);
     onSuccess?.(url, file);
     setCurrentFile(null);
   }

@@ -106,6 +106,7 @@ export async function uploadAvatar(
 ): Promise<AvatarUploadResult> {
   const ext  = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const path = `avatars/${userId}/avatar.${ext}`;
+  console.log("[uploadAvatar] called — userId:", userId, "file:", file.name, "path:", path);
 
   const { url, error } = await uploadToStorage(file, {
     path,
@@ -117,6 +118,7 @@ export async function uploadAvatar(
     allowedTypes: ["image/*"],
     cacheControl: "3600",
   });
+  console.log("[uploadAvatar] uploadToStorage result — url:", url, "error:", error);
 
   if (error || !url) {
     console.error("[portal/profile] uploadAvatar:", error);

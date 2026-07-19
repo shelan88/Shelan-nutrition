@@ -246,12 +246,14 @@ export async function uploadPlanFile(
   file: File,
 ): Promise<NutritionPlanFileRow | null> {
   const path = buildPath(`nutrition-plans/${planId}`, file.name);
+  console.log("[uploadPlanFile] called — planId:", planId, "clientId:", clientId, "file:", file.name, "path:", path);
 
   const { url: publicUrl, error: uploadError } = await uploadToStorage(file, {
     path,
     upsert: false,
     maxSizeMb: 50,
   });
+  console.log("[uploadPlanFile] uploadToStorage result — url:", publicUrl, "error:", uploadError);
 
   if (!publicUrl) {
     // Throw so useUpload's catch block surfaces the real error in the UI
@@ -268,6 +270,7 @@ export async function uploadPlanFile(
     : mime.startsWith("image/") ? "image"
     : "document";
 
+  console.log("[uploadPlanFile] inserting into nutrition_plan_files — fileType:", fileType, "size:", file.size);
   const { data, error: dbError } = await supabase
     .from("nutrition_plan_files")
     .insert({
@@ -280,6 +283,7 @@ export async function uploadPlanFile(
     })
     .select()
     .single();
+  console.log("[uploadPlanFile] insert result — data:", data, "error:", dbError);
 
   if (dbError) {
     console.error("[nutrition-plans] nutrition_plan_files insert:", dbError.message);
