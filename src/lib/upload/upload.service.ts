@@ -168,15 +168,25 @@ async function compressImage(
   maxWidthPx: number,
   quality: number,
 ): Promise<File> {
-  if (!file.type.startsWith("image/")) return file;
+  console.group("[compressImage] ENTERED — file:", file.name, "size:", file.size, "type:", file.type);
+
+  if (!file.type.startsWith("image/")) {
+    console.log("[compressImage] not an image type — returning original unchanged");
+    console.groupEnd();
+    return file;
+  }
 
   // ── Path 1: HEIC / HEIF / AVIF — use createImageBitmap (Chrome 64+) ────────
   if (isContainerImage(file.type)) {
+    console.log("[compressImage] PATH 1 — container format (HEIC/HEIF/AVIF), using createImageBitmap");
     let bitmap: ImageBitmap;
     try {
       bitmap = await createImageBitmap(file);
-    } catch {
+      console.log("[compressImage] createImageBitmap succeeded — width:", bitmap.width, "height:", bitmap.height);
+    } catch (bitmapErr) {
       // Browser cannot decode this container format (e.g. older WebView).
+      console.error("[compressImage] createImageBitmap THREW — browser cannot decode format:", bitmapErr);
+      console.groupEnd();
       throw new Error(
         "This photo format (HEIC/HEIF) is not supported. " +
         "Please convert it to JPEG or PNG and try again.",
@@ -189,95 +199,147 @@ async function compressImage(
     canvas.width  = targetW;
     canvas.height = Math.round(bitmap.height * scale);
     const ctx = canvas.getContext("2d");
-    if (!ctx) { bitmap.close(); return file; }
+    if (!ctx) {
+      console.warn("[compressImage] PATH 1 — getContext('2d') returned null — returning original");
+      bitmap.close();
+      console.groupEnd();
+      return file;
+    }
     ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     bitmap.close();
+    console.log("[compressImage] PATH 1 — canvas drawn", canvas.width, "x", canvas.height, "— calling toBlob...");
 
     return new Promise<File>((resolve, reject) => {
       canvas.toBlob(
         (blob) => {
-          if (!blob) { resolve(file); return; }
-          resolve(new File(
-            [blob],
-            file.name.replace(/\.[^.]+$/, ".jpg"),
-            { type: "image/jpeg" },
-          ));
+          if (!blob) {
+            console.warn("[compressImage] PATH 1 — toBlob returned null blob — returning original");
+            console.groupEnd();
+            resolve(file);
+            return;
+          }
+          const out = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" });
+          console.log("[compressImage] PATH 1 — toBlob SUCCEEDED — compressed size:", out.size, "bytes");
+          console.groupEnd();
+          resolve(out);
         },
         "image/jpeg",
         quality,
       );
       // Timeout safety — toBlob should always fire but guard it
-      setTimeout(() => reject(new Error("Canvas toBlob timed out")), 15_000);
+      setTimeout(() => {
+        console.error("[compressImage] PATH 1 — toBlob TIMED OUT after 15s");
+        console.groupEnd();
+        reject(new Error("Canvas toBlob timed out"));
+      }, 15_000);
     });
   }
 
   // ── Path 2: Standard JPEG / PNG / WebP — <img> via blob: URL ───────────────
   // Falls back to createImageBitmap if blob: URL fails (Samsung Internet Browser).
   const tryBitmapFallback = async (): Promise<File> => {
+    console.log("[compressImage] PATH 2 bitmap-fallback — trying createImageBitmap...");
     let bitmap: ImageBitmap;
     try {
       bitmap = await createImageBitmap(file);
-    } catch {
+      console.log("[compressImage] PATH 2 bitmap-fallback — createImageBitmap succeeded", bitmap.width, "x", bitmap.height);
+    } catch (bitmapErr) {
+      console.warn("[compressImage] PATH 2 bitmap-fallback — createImageBitmap THREW, uploading uncompressed:", bitmapErr);
       return file; // give up, upload uncompressed
     }
     const targetW = Math.min(bitmap.width, maxWidthPx);
-    if (bitmap.width <= maxWidthPx) { bitmap.close(); return file; }
+    if (bitmap.width <= maxWidthPx) {
+      console.log("[compressImage] PATH 2 bitmap-fallback — image already <= maxWidthPx, returning original");
+      bitmap.close();
+      return file;
+    }
     const scale   = targetW / bitmap.width;
     const canvas  = document.createElement("canvas");
     canvas.width  = targetW;
     canvas.height = Math.round(bitmap.height * scale);
     const ctx = canvas.getContext("2d");
-    if (!ctx) { bitmap.close(); return file; }
+    if (!ctx) {
+      console.warn("[compressImage] PATH 2 bitmap-fallback — getContext null, returning original");
+      bitmap.close();
+      return file;
+    }
     ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     bitmap.close();
+    console.log("[compressImage] PATH 2 bitmap-fallback — canvas drawn, calling toBlob...");
     return new Promise<File>((resolve) => {
       canvas.toBlob(
-        (blob) => resolve(
-          blob
-            ? new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" })
-            : file,
-        ),
+        (blob) => {
+          if (blob) {
+            const out = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" });
+            console.log("[compressImage] PATH 2 bitmap-fallback — toBlob SUCCEEDED, size:", out.size);
+            resolve(out);
+          } else {
+            console.warn("[compressImage] PATH 2 bitmap-fallback — toBlob returned null, returning original");
+            resolve(file);
+          }
+        },
         "image/jpeg",
         quality,
       );
     });
   };
 
+  console.log("[compressImage] PATH 2 — standard image, attempting blob: URL...");
   return new Promise<File>((resolve) => {
     const img    = new Image();
     let blobUrl  = "";
     let settled  = false;
 
-    const settle = (result: File) => {
+    const settle = (result: File, reason: string) => {
       if (settled) return;
       settled = true;
+      console.log("[compressImage] PATH 2 — settle called:", reason, "size:", result.size);
+      console.groupEnd();
       if (blobUrl) { try { URL.revokeObjectURL(blobUrl); } catch { /* ignore */ } }
       resolve(result);
     };
 
     try {
-      blobUrl  = URL.createObjectURL(file);
-    } catch {
+      blobUrl = URL.createObjectURL(file);
+      console.log("[compressImage] PATH 2 — createObjectURL succeeded:", blobUrl.slice(0, 50));
+    } catch (urlErr) {
       // URL.createObjectURL not available or failed — go straight to bitmap path
+      console.warn("[compressImage] PATH 2 — createObjectURL THREW, falling back to bitmap:", urlErr);
       tryBitmapFallback().then(resolve);
       return;
     }
 
     img.onload = () => {
-      if (img.width <= maxWidthPx) { settle(file); return; }
+      console.log("[compressImage] PATH 2 — img.onload fired, naturalWidth:", img.width, "naturalHeight:", img.height);
+      if (img.width <= maxWidthPx) {
+        settle(file, "img already <= maxWidthPx — no resize needed");
+        return;
+      }
       const scale  = maxWidthPx / img.width;
       const canvas = document.createElement("canvas");
       canvas.width  = Math.round(img.width  * scale);
       canvas.height = Math.round(img.height * scale);
       const ctx = canvas.getContext("2d");
-      if (!ctx) { settle(file); return; }
+      if (!ctx) {
+        settle(file, "getContext('2d') returned null");
+        return;
+      }
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      console.log("[compressImage] PATH 2 — canvas drawn", canvas.width, "x", canvas.height, ", calling toBlob...");
       canvas.toBlob(
         (blob) => {
           settle(
             blob
-              ? new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" })
-              : file,
+              ? (() => {
+                  const out = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" });
+                  console.log("[compressImage] PATH 2 — toBlob SUCCEEDED, compressed size:", out.size);
+                  return out;
+                })()
+              : (() => {
+                  console.warn("[compressImage] PATH 2 — toBlob returned null blob");
+                  return file;
+                })(),
+            "toBlob callback resolved",
           );
         },
         "image/jpeg",
@@ -288,12 +350,18 @@ async function compressImage(
     img.onerror = () => {
       // blob: URL failed to load (Samsung Internet Browser quirk).
       // Try createImageBitmap as a fallback.
+      console.warn("[compressImage] PATH 2 — img.onerror fired (blob: URL failed to load), falling back to bitmap path");
       if (blobUrl) { try { URL.revokeObjectURL(blobUrl); } catch { /* ignore */ } blobUrl = ""; }
       settled = true; // prevent double-settle from the outer settle()
-      tryBitmapFallback().then(resolve);
+      tryBitmapFallback().then((result) => {
+        console.log("[compressImage] PATH 2 bitmap-fallback complete, size:", result.size);
+        console.groupEnd();
+        resolve(result);
+      });
     };
 
     img.src = blobUrl;
+    console.log("[compressImage] PATH 2 — set img.src, waiting for onload/onerror...");
   });
 }
 

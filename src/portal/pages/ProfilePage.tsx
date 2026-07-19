@@ -162,19 +162,39 @@ export default function ProfilePage() {
   // ── Avatar: upload fn passed to ImageUpload ────────────────────────────────
   // Returns the public URL (string) or null on failure.
   async function handleAvatarUpload(file: File): Promise<string | null> {
-    if (!user) return null;
+    console.group("[handleAvatarUpload] ENTERED");
+    console.log("[handleAvatarUpload] user:", user ? user.id : "NULL — early return");
+    if (!user) {
+      console.error("[handleAvatarUpload] EARLY RETURN — user is null/undefined");
+      console.groupEnd();
+      return null;
+    }
+    console.log("[handleAvatarUpload] calling uploadAvatar...");
     const { url, error: avatarErr } = await uploadAvatar(user.id, file);
-    if (avatarErr || !url) return null;
+    console.log("[handleAvatarUpload] uploadAvatar returned — url:", url, "error:", avatarErr);
+    if (avatarErr || !url) {
+      console.error("[handleAvatarUpload] EARLY RETURN — avatarErr:", avatarErr, "url:", url);
+      console.groupEnd();
+      return null;
+    }
+    console.log("[handleAvatarUpload] returning url:", url);
+    console.groupEnd();
     return url;
   }
 
   // ── Avatar: success handler — persist URL to DB ────────────────────────────
   async function handleAvatarSuccess(url: string) {
+    console.group("[handleAvatarSuccess] ENTERED — url:", url);
     const { error: saveErr } = await updateOwnProfile({ avatar_url: url });
+    console.log("[handleAvatarSuccess] updateOwnProfile returned — error:", saveErr);
     if (saveErr) {
+      console.error("[handleAvatarSuccess] updateOwnProfile FAILED:", saveErr);
+      console.groupEnd();
       showToast("error", isAr ? "فشل حفظ الصورة" : "Failed to save photo");
       return;
     }
+    console.log("[handleAvatarSuccess] SUCCESS — proceeding to set avatar");
+    console.groupEnd();
     // Set the guard BEFORE refresh() so the profile effect triggered by the
     // re-fetch does not overwrite the cache-busted URL we're about to set.
     avatarJustUploaded.current = true;
