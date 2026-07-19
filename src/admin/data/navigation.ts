@@ -43,7 +43,7 @@ export const NAV_ITEMS: NavItem[] = [
     id: "website-builder",
     label: "Website Settings",
     labelAr: "إعدادات الموقع",
-    href: "/admin/website-builder",
+    href: "/admin/website-settings",
     iconName: "Globe",
     group: "content",
   },

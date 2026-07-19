@@ -43,6 +43,7 @@ import AssessmentTemplatesPage from "../pages/AssessmentTemplatesPage";
 import QuestionLibraryPage from "../pages/QuestionLibraryPage";
 import ClientProfilePage from "../pages/ClientProfilePage";
 import AdminProfilePage from "../pages/AdminProfilePage";
+import AdminSettingsPage from "../pages/AdminSettingsPage";
 
 export default function AdminLayout() {
   return (
@@ -61,7 +62,6 @@ export default function AdminLayout() {
               <Route index element={<DashboardPage />} />
 
               {/* Content — CMS-powered pages */}
-              <Route path="website-builder"       element={<WebsiteSettingsPage />} />
               <Route path="website-settings"      element={<WebsiteSettingsPage />} />
               <Route path="social-media"          element={<SocialMediaAdminPage />} />
               <Route path="services"              element={<ServicesAdminPage />} />
@@ -89,7 +89,7 @@ export default function AdminLayout() {
 
               {/* System */}
               <Route path="profile"               element={<AdminProfilePage />} />
-              <Route path="settings"              element={<PlaceholderPage pageId="settings" />} />
+              <Route path="settings"              element={<AdminSettingsPage />} />
 
               {/* Fallback — redirect to dashboard */}
               <Route path="*" element={<DashboardPage />} />

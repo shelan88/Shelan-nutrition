@@ -7,3 +7,4 @@
 - [Progress Tracking module](progress-tracking-module.md) — progress_entries + progress_photos tables; SVG line charts (no external lib); self-contained ProgressTab; photos in media bucket under progress/{clientId}/{entryId}/.
 - [Client portal](client-portal.md) — SECURITY DEFINER RPCs must derive identity from auth.uid()/auth.email(), not parameters; broad auth_all policies must be dropped before adding scoped replacements; loading gates need a null-profile exit path.
 - [Admin/Client role separation](role-separation.md) — two separate auth domains; admin_profiles table gates /admin/*; PortalLayout gates /portal/* and redirects admins; useClientProfile guards against auto-creating client rows for admins.
+- [Bug sprint decisions](bug-sprint-decisions.md) — appointments table uses `date`/`time` not appointment_date/time; nutrition_plans v2 schema; admin settings page keys; sidebar live data pattern; form-input-label CSS addition.

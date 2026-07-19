@@ -556,7 +556,12 @@ export default function DashboardPage() {
               {isAr ? "طلبات التقييم الأخيرة" : "Recent Assessment Requests"}
             </h2>
             <p className="text-[11.5px] text-[var(--admin-text-faint)] mt-0.5">
-              {isAr ? "٢ تحتاجان مراجعة عاجلة" : "2 flagged and require urgent review"}
+              {(() => {
+                const flaggedCount = store.assessmentEntries.filter(e => e.risk === "High").length;
+                return flaggedCount > 0
+                  ? (isAr ? `${flaggedCount} تحتاج${flaggedCount > 1 ? "ان" : ""} مراجعة عاجلة` : `${flaggedCount} high-risk flagged`)
+                  : (isAr ? "لا توجد حالات عاجلة" : "No urgent cases flagged");
+              })()}
             </p>
           </div>
           <Link

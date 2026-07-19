@@ -76,9 +76,29 @@ function mapRowToClient(row: any): Client {
     privateNotesAr:  "",
     consultations:   Array.isArray(row.consultations) ? row.consultations : [],
 
-    // plan_data no longer exists in the new nutrition_plans schema;
-    // full plan details are loaded by NutritionTab via the nutrition repository.
-    nutritionPlan: null,
+    // Populate from joined nutrition_plans rows (new multi-column schema).
+    // Show the single active plan (or latest draft/other if no active plan).
+    // Full meal-level detail is loaded lazily by NutritionPlansTab.
+    nutritionPlan: (() => {
+      const plans = (row.nutrition_plans as any[]) ?? [];
+      const pick =
+        plans.find((p: any) => p.status === "active") ??
+        plans.find((p: any) => p.status === "draft")  ??
+        plans[0] ?? null;
+      if (!pick) return null;
+      return {
+        planId:    pick.id,
+        name:      pick.name ?? "",
+        nameAr:    pick.name ?? "",     // no separate AR name column in v2 schema
+        startDate: pick.start_date ?? "",
+        endDate:   pick.end_date   ?? "",
+        calories:  0,                   // calories not stored at plan level in v2
+        macros:    [],                  // macros live inside the meals JSONB
+        notes:     pick.general_instructions ?? "",
+        notesAr:   pick.general_instructions ?? "",
+        status:    pick.status ?? "draft",
+      };
+    })(),
 
     files: fileRows.map((f: any) => ({
       id:         f.id,

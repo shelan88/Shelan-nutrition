@@ -41,6 +41,10 @@ export interface NutritionPlan {
   macros: MacroItem[];
   notes: string;
   notesAr: string;
+  /** Status from new nutrition_plans schema: draft | active | completed | archived */
+  status?: string;
+  /** DB id — used to deep-link into the Nutrition Plans tab */
+  planId?: string;
 }
 
 export interface ClientFile {

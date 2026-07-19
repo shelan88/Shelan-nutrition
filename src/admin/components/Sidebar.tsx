@@ -7,7 +7,7 @@
  * Groups nav items under labeled sections. Active state uses react-router
  * location. All labels are bilingual via useLanguage.
  */
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, ExternalLink, X } from "lucide-react";
@@ -17,8 +17,11 @@ import {
   NAV_ITEMS,
   NAV_GROUP_LABELS,
   type NavGroup,
+  type NavItem,
 } from "../data/navigation";
 import NavigationItem from "./NavigationItem";
+import { supabase } from "@/lib/supabase";
+import { getUnreadCount } from "@/admin/repositories/messages.repository";
 
 // ─── Logo mark ────────────────────────────────────────────────────────────────
 function SidebarLogo({ collapsed, lang }: { collapsed: boolean; lang: "en" | "ar" }) {
@@ -58,7 +61,17 @@ function SidebarLogo({ collapsed, lang }: { collapsed: boolean; lang: "en" | "ar
 }
 
 // ─── User strip at the bottom ─────────────────────────────────────────────────
-function SidebarUser({ collapsed }: { collapsed: boolean }) {
+function SidebarUser({
+  collapsed,
+  name,
+  initials,
+  role,
+}: {
+  collapsed: boolean;
+  name:      string;
+  initials:  string;
+  role:      string;
+}) {
   return (
     <div className="shrink-0 border-t border-[var(--admin-border)] p-3">
       <div
@@ -68,7 +81,7 @@ function SidebarUser({ collapsed }: { collapsed: boolean }) {
       >
         {/* Avatar */}
         <div className="shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-primary-pink to-lavender-purple flex items-center justify-center text-white text-[11px] font-bold">
-          S
+          {initials || "A"}
         </div>
 
         <AnimatePresence initial={false}>
@@ -81,10 +94,10 @@ function SidebarUser({ collapsed }: { collapsed: boolean }) {
               className="overflow-hidden flex-1 min-w-0"
             >
               <p className="text-[13px] font-medium text-[var(--admin-text)] truncate whitespace-nowrap leading-none">
-                Shelan
+                {name || "Admin"}
               </p>
               <p className="text-[11px] text-[var(--admin-text-faint)] whitespace-nowrap leading-none mt-0.5">
-                Admin
+                {role || "Admin"}
               </p>
             </motion.div>
           )}
@@ -105,16 +118,69 @@ export default function Sidebar() {
   } = useAdmin();
   const location = useLocation();
 
+  // Live admin user + unread message count
+  const [adminName,     setAdminName]     = useState("");
+  const [adminInitials, setAdminInitials] = useState("A");
+  const [adminRole,     setAdminRole]     = useState("Admin");
+  const [unreadCount,   setUnreadCount]   = useState(0);
+
+  useEffect(() => {
+    // Fetch current admin user from Supabase auth
+    supabase.auth.getUser().then(({ data }) => {
+      const user = data?.user;
+      if (!user) return;
+      const raw =
+        (user.user_metadata?.full_name as string | undefined) ||
+        (user.user_metadata?.name     as string | undefined) ||
+        user.email?.split("@")[0] ||
+        "Admin";
+      setAdminName(raw);
+      setAdminInitials(
+        raw.split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0].toUpperCase()).join("") || "A"
+      );
+    });
+
+    // Fetch role from admin_profiles
+    supabase.auth.getUser().then(({ data }) => {
+      const uid = data?.user?.id;
+      if (!uid) return;
+      supabase
+        .from("admin_profiles")
+        .select("role")
+        .eq("user_id", uid)
+        .maybeSingle()
+        .then(({ data: profile }) => {
+          if (profile?.role) setAdminRole(profile.role);
+        });
+    });
+
+    // Fetch unread message count
+    getUnreadCount().then(setUnreadCount);
+
+    // Refresh unread count every 60 s
+    const interval = setInterval(() => {
+      getUnreadCount().then(setUnreadCount);
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Close mobile sidebar on route change
   useEffect(() => {
     setMobileSidebarOpen(false);
   }, [location.pathname, setMobileSidebarOpen]);
 
+  // Override the messages badge with the live unread count
+  const navItemsWithLiveBadge: NavItem[] = NAV_ITEMS.map((item) =>
+    item.id === "messages"
+      ? { ...item, badge: unreadCount > 0 ? String(unreadCount) : undefined }
+      : item
+  );
+
   // Grouped nav
   const groups: NavGroup[] = ["main", "content", "business", "insights", "system"];
 
   const renderNavGroup = (group: NavGroup, isMobile = false) => {
-    const items = NAV_ITEMS.filter((i) => i.group === group);
+    const items = navItemsWithLiveBadge.filter((i) => i.group === group);
     const groupLabel = NAV_GROUP_LABELS[group][lang];
     const isCollapsed = isMobile ? false : sidebarCollapsed;
 
@@ -177,7 +243,7 @@ export default function Sidebar() {
         </div>
       )}
 
-      <SidebarUser collapsed={sidebarCollapsed} />
+      <SidebarUser collapsed={sidebarCollapsed} name={adminName} initials={adminInitials} role={adminRole} />
 
       {/* Collapse toggle */}
       <button
@@ -261,7 +327,7 @@ export default function Sidebar() {
               {groups.map((g) => renderNavGroup(g, true))}
             </nav>
 
-            <SidebarUser collapsed={false} />
+            <SidebarUser collapsed={false} name={adminName} initials={adminInitials} role={adminRole} />
           </motion.aside>
         </>
       )}

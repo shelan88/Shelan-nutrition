@@ -22,10 +22,10 @@ import {
   Flame, Wheat, Droplets, Paperclip,
   Image as ImageIcon, FlaskConical,
   ShieldCheck, Stethoscope, Lock, Printer, Download,
-  Edit2, Archive, Trash2, ArrowLeftRight,
+  Edit2, Archive, Trash2, ArrowLeftRight, Save, X as XIcon,
 } from "lucide-react";
-import type { Client, TimelineType, FileType, RiskIndicatorLevel } from "../data/clients";
-import { deleteClient, archiveClient } from "@/admin/repositories/clients.repository";
+import type { Client, TimelineType, FileType, RiskIndicatorLevel, Gender, ClientStatus } from "../data/clients";
+import { deleteClient, archiveClient, updateClient } from "@/admin/repositories/clients.repository";
 import NutritionPlansTab from "./NutritionPlansTab";
 
 // ─── Risk helpers ──────────────────────────────────────────────────────────────
@@ -398,10 +398,55 @@ function AssessmentsTab({ client, isAr }: { client: { id: string; email: string 
 }
 
 // ─── Main component ────────────────────────────────────────────────────────────
+// ─── Edit form state ──────────────────────────────────────────────────────────
+interface EditForm {
+  fullName:      string;
+  fullNameAr:    string;
+  phone:         string;
+  email:         string;
+  age:           number;
+  gender:        Gender;
+  country:       string;
+  status:        ClientStatus;
+  medicalNotes:  string;
+  medicalNotesAr:string;
+}
+
 export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefresh }: ClientDrawerProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [actioning, setActioning] = useState<string | null>(null);
   const [tab, setTab] = useState<"profile" | "assessments" | "nutrition">("profile");
+
+  // ── Edit mode ──────────────────────────────────────────────────────────────
+  const [editMode,  setEditMode]  = useState(false);
+  const [editForm,  setEditForm]  = useState<EditForm | null>(null);
+  const [editSaving,setEditSaving]= useState(false);
+
+  function openEdit() {
+    if (!client) return;
+    setEditForm({
+      fullName:       client.fullName,
+      fullNameAr:     client.fullNameAr,
+      phone:          client.phone,
+      email:          client.email,
+      age:            client.age,
+      gender:         client.gender,
+      country:        client.country,
+      status:         client.status,
+      medicalNotes:   client.medicalNotes,
+      medicalNotesAr: client.medicalNotesAr,
+    });
+    setEditMode(true);
+  }
+
+  async function saveEdit() {
+    if (!client || !editForm) return;
+    setEditSaving(true);
+    await updateClient(client.id, editForm);
+    setEditSaving(false);
+    setEditMode(false);
+    onRefresh?.();
+  }
 
   async function handleArchive() {
     if (!client) return;
@@ -492,11 +537,10 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
 
             {/* ── Action bar ────────────────────────────────────────────── */}
             <div className="shrink-0 flex items-center gap-2 px-6 py-3 border-b border-[var(--admin-border)] bg-[var(--admin-hover-bg)] overflow-x-auto no-scrollbar">
-              {/* Edit — placeholder, opens edit mode if needed */}
+              {/* Edit */}
               <button
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-semibold text-[var(--admin-text-muted)] hover:border-[var(--admin-border-strong)] hover:bg-[var(--admin-surface)] transition-all whitespace-nowrap shrink-0 opacity-50 cursor-not-allowed"
-                title={isAr ? "التعديل المباشر سيتوفر قريباً" : "Direct editing coming soon"}
-                disabled
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-semibold text-[var(--admin-text-muted)] hover:border-primary-pink/40 hover:bg-primary-pink/5 hover:text-primary-pink transition-all whitespace-nowrap shrink-0"
+                onClick={openEdit}
               >
                 <Edit2 size={12} strokeWidth={2} />
                 {isAr ? "تعديل" : "Edit"}
@@ -747,43 +791,78 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
                 {client.nutritionPlan ? (
                   <div className="bg-[var(--admin-hover-bg)] rounded-2xl border border-[var(--admin-border)] p-4">
                     <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <p className="text-[13.5px] font-bold text-[var(--admin-text)]">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13.5px] font-bold text-[var(--admin-text)] truncate">
                           {isAr ? client.nutritionPlan.nameAr : client.nutritionPlan.name}
                         </p>
-                        <p className="text-[11.5px] text-[var(--admin-text-faint)] mt-0.5">
-                          {client.nutritionPlan.startDate} → {client.nutritionPlan.endDate}
-                        </p>
+                        {(client.nutritionPlan.startDate || client.nutritionPlan.endDate) && (
+                          <p className="text-[11.5px] text-[var(--admin-text-faint)] mt-0.5">
+                            {client.nutritionPlan.startDate}{client.nutritionPlan.endDate ? ` → ${client.nutritionPlan.endDate}` : ""}
+                          </p>
+                        )}
                       </div>
-                      <span className="text-[12px] font-bold text-primary-pink bg-primary-pink/10 px-2.5 py-0.5 rounded-full">
-                        {client.nutritionPlan.calories} {isAr ? "سعرة" : "kcal"}
-                      </span>
+                      {/* Status badge (v2 schema) — calories badge kept for legacy data */}
+                      {client.nutritionPlan.status ? (
+                        <span className={`ms-2 shrink-0 text-[11px] font-bold px-2.5 py-0.5 rounded-full capitalize ${
+                          client.nutritionPlan.status === "active"    ? "bg-emerald-100 text-emerald-700" :
+                          client.nutritionPlan.status === "completed" ? "bg-blue-100 text-blue-700"      :
+                          client.nutritionPlan.status === "archived"  ? "bg-gray-100 text-gray-600"      :
+                                                                        "bg-amber-100 text-amber-700"
+                        }`}>
+                          {isAr
+                            ? ({ active:"نشطة", draft:"مسودة", completed:"مكتملة", archived:"مؤرشفة" } as Record<string,string>)[client.nutritionPlan.status] ?? client.nutritionPlan.status
+                            : client.nutritionPlan.status}
+                        </span>
+                      ) : client.nutritionPlan.calories > 0 ? (
+                        <span className="ms-2 shrink-0 text-[12px] font-bold text-primary-pink bg-primary-pink/10 px-2.5 py-0.5 rounded-full">
+                          {client.nutritionPlan.calories} {isAr ? "سعرة" : "kcal"}
+                        </span>
+                      ) : null}
                     </div>
 
-                    {/* Macros */}
-                    <div className="grid grid-cols-3 gap-2 mb-3">
-                      {client.nutritionPlan.macros.map((m, i) => {
-                        const MacroIcon = macroIcons[i] ?? Flame;
-                        return (
-                          <div key={m.label} className="bg-[var(--admin-surface)] rounded-xl border border-[var(--admin-border)] px-3 py-2.5 text-center">
-                            <div className={`w-6 h-6 rounded-lg mx-auto mb-1.5 flex items-center justify-center ${macroColors[i]}`}>
-                              <MacroIcon size={12} className="text-white" strokeWidth={2} />
+                    {/* Macros — only rendered when present (legacy v1 data) */}
+                    {client.nutritionPlan.macros.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2 mb-3">
+                        {client.nutritionPlan.macros.map((m, i) => {
+                          const MacroIcon = macroIcons[i] ?? Flame;
+                          return (
+                            <div key={m.label} className="bg-[var(--admin-surface)] rounded-xl border border-[var(--admin-border)] px-3 py-2.5 text-center">
+                              <div className={`w-6 h-6 rounded-lg mx-auto mb-1.5 flex items-center justify-center ${macroColors[i]}`}>
+                                <MacroIcon size={12} className="text-white" strokeWidth={2} />
+                              </div>
+                              <p className="text-[15px] font-bold text-[var(--admin-text)]">{m.value}<span className="text-[10px] font-semibold text-[var(--admin-text-faint)]">{m.unit}</span></p>
+                              <p className="text-[10px] text-[var(--admin-text-faint)]">{isAr ? m.labelAr : m.label}</p>
                             </div>
-                            <p className="text-[15px] font-bold text-[var(--admin-text)]">{m.value}<span className="text-[10px] font-semibold text-[var(--admin-text-faint)]">{m.unit}</span></p>
-                            <p className="text-[10px] text-[var(--admin-text-faint)]">{isAr ? m.labelAr : m.label}</p>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    )}
 
-                    <p className="text-[12px] text-[var(--admin-text-muted)] leading-relaxed">
-                      {isAr ? client.nutritionPlan.notesAr : client.nutritionPlan.notes}
-                    </p>
+                    {(isAr ? client.nutritionPlan.notesAr : client.nutritionPlan.notes) && (
+                      <p className="text-[12px] text-[var(--admin-text-muted)] leading-relaxed mb-3">
+                        {isAr ? client.nutritionPlan.notesAr : client.nutritionPlan.notes}
+                      </p>
+                    )}
+
+                    <button
+                      onClick={() => setTab("nutrition")}
+                      className="text-[12px] font-semibold text-primary-pink hover:underline"
+                    >
+                      {isAr ? "→ عرض جميع الخطط" : "View All Plans →"}
+                    </button>
                   </div>
                 ) : (
-                  <p className="text-[13px] text-[var(--admin-text-faint)] italic">
-                    {isAr ? "لا توجد خطة تغذية نشطة." : "No active nutrition plan."}
-                  </p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[13px] text-[var(--admin-text-faint)] italic">
+                      {isAr ? "لا توجد خطة تغذية نشطة." : "No active nutrition plan."}
+                    </p>
+                    <button
+                      onClick={() => setTab("nutrition")}
+                      className="shrink-0 text-[12px] font-semibold text-primary-pink hover:underline"
+                    >
+                      {isAr ? "إضافة خطة →" : "Add Plan →"}
+                    </button>
+                  </div>
                 )}
 
                 <Divider />
@@ -841,6 +920,114 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
                 <div className="h-6" />
               </div>}
             </div>
+
+            {/* ── Edit overlay ────────────────────────────────────────── */}
+            <AnimatePresence>
+              {editMode && editForm && (
+                <motion.div
+                  key="edit-overlay"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  transition={{ duration: 0.18 }}
+                  className="absolute inset-0 z-10 bg-[var(--admin-surface)] flex flex-col"
+                >
+                  {/* Header */}
+                  <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-[var(--admin-border)]">
+                    <p className="text-[14px] font-bold text-[var(--admin-text)]">
+                      {isAr ? "تعديل بيانات العميلة" : "Edit Client"}
+                    </p>
+                    <button
+                      onClick={() => setEditMode(false)}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] transition-colors"
+                    >
+                      <XIcon size={16} />
+                    </button>
+                  </div>
+
+                  {/* Form */}
+                  <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 no-scrollbar">
+                    {/* Name row */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="form-input-label">{isAr ? "الاسم (EN)" : "Full Name (EN)"}</label>
+                        <input className="form-input" value={editForm.fullName} onChange={e => setEditForm(f => f && ({ ...f, fullName: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label className="form-input-label">{isAr ? "الاسم (AR)" : "Full Name (AR)"}</label>
+                        <input className="form-input" dir="rtl" value={editForm.fullNameAr} onChange={e => setEditForm(f => f && ({ ...f, fullNameAr: e.target.value }))} />
+                      </div>
+                    </div>
+                    {/* Contact row */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="form-input-label">{isAr ? "الهاتف" : "Phone"}</label>
+                        <input className="form-input" value={editForm.phone} onChange={e => setEditForm(f => f && ({ ...f, phone: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label className="form-input-label">{isAr ? "البريد" : "Email"}</label>
+                        <input className="form-input" type="email" value={editForm.email} onChange={e => setEditForm(f => f && ({ ...f, email: e.target.value }))} />
+                      </div>
+                    </div>
+                    {/* Demographics */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="form-input-label">{isAr ? "العمر" : "Age"}</label>
+                        <input className="form-input" type="number" min={1} max={120} value={editForm.age} onChange={e => setEditForm(f => f && ({ ...f, age: Number(e.target.value) }))} />
+                      </div>
+                      <div>
+                        <label className="form-input-label">{isAr ? "الجنس" : "Gender"}</label>
+                        <select className="form-input" value={editForm.gender} onChange={e => setEditForm(f => f && ({ ...f, gender: e.target.value as Gender }))}>
+                          <option value="Female">{isAr ? "أنثى" : "Female"}</option>
+                          <option value="Male">{isAr ? "ذكر" : "Male"}</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="form-input-label">{isAr ? "الدولة" : "Country"}</label>
+                        <input className="form-input" value={editForm.country} onChange={e => setEditForm(f => f && ({ ...f, country: e.target.value }))} />
+                      </div>
+                    </div>
+                    {/* Status */}
+                    <div>
+                      <label className="form-input-label">{isAr ? "الحالة" : "Status"}</label>
+                      <select className="form-input" value={editForm.status} onChange={e => setEditForm(f => f && ({ ...f, status: e.target.value as ClientStatus }))}>
+                        {(["Active", "Inactive", "Waiting", "Completed"] as ClientStatus[]).map(s => (
+                          <option key={s} value={s}>{isAr ? ({Active:"نشطة",Inactive:"غير نشطة",Waiting:"في الانتظار",Completed:"مكتملة"} as Record<string,string>)[s] : s}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* Medical notes */}
+                    <div>
+                      <label className="form-input-label">{isAr ? "ملاحظات طبية (EN)" : "Medical Notes (EN)"}</label>
+                      <textarea className="form-input resize-none" rows={3} value={editForm.medicalNotes} onChange={e => setEditForm(f => f && ({ ...f, medicalNotes: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="form-input-label">{isAr ? "ملاحظات طبية (AR)" : "Medical Notes (AR)"}</label>
+                      <textarea className="form-input resize-none" dir="rtl" rows={3} value={editForm.medicalNotesAr} onChange={e => setEditForm(f => f && ({ ...f, medicalNotesAr: e.target.value }))} />
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="shrink-0 flex items-center justify-end gap-3 px-6 py-4 border-t border-[var(--admin-border)] bg-[var(--admin-hover-bg)]">
+                    <button
+                      onClick={() => setEditMode(false)}
+                      disabled={editSaving}
+                      className="px-4 py-2 text-[13px] font-semibold rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-muted)] hover:bg-[var(--admin-surface)] transition-all disabled:opacity-50"
+                    >
+                      {isAr ? "إلغاء" : "Cancel"}
+                    </button>
+                    <button
+                      onClick={saveEdit}
+                      disabled={editSaving}
+                      className="flex items-center gap-2 px-4 py-2 text-[13px] font-semibold rounded-lg bg-primary-pink text-white hover:bg-primary-pink/90 transition-all disabled:opacity-60"
+                    >
+                      <Save size={14} strokeWidth={2} />
+                      {editSaving ? (isAr ? "جاري الحفظ…" : "Saving…") : (isAr ? "حفظ التغييرات" : "Save Changes")}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </>
       )}

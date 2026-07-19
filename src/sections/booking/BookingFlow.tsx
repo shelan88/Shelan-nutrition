@@ -6,12 +6,13 @@
  *       before real card processing can happen.
  * Props-only for data and strings. CMS-ready.
  */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { createAppointment } from "@/admin/repositories/appointments.repository";
 import { getTemplateForService } from "@/admin/repositories/assessment-templates.repository";
 import { createResponse } from "@/admin/repositories/assessment-responses.repository";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Calendar, Star, RefreshCw, ChevronLeft, ChevronRight, CheckCircle2, Lock } from "lucide-react";
 import type { CMSBookingData, CMSBookingService } from "@/types/cms.types";
@@ -125,8 +126,24 @@ function PickTime({
   strings: { calendarLabel: string; selectTimeLabel: string; unavailableLabel: string; noSlotsMessage: string };
 }) {
   const today = new Date();
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const [viewYear,    setViewYear]    = useState(today.getFullYear());
+  const [viewMonth,   setViewMonth]   = useState(today.getMonth());
+  // Booked time values for the currently selected date
+  const [bookedTimes, setBookedTimes] = useState<string[]>([]);
+
+  // Fetch already-booked slots when the selected date changes.
+  // Appointments table uses `date` (DATE) and `time` (TEXT) columns.
+  useEffect(() => {
+    if (!selectedDate) { setBookedTimes([]); return; }
+    supabase
+      .from("appointments")
+      .select("time")
+      .eq("date", selectedDate)
+      .neq("status", "cancelled")
+      .then(({ data }) => {
+        setBookedTimes((data ?? []).map((row: { time: string | null }) => row.time ?? ""));
+      });
+  }, [selectedDate]);
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const firstDay = new Date(viewYear, viewMonth, 1).getDay();
@@ -212,22 +229,26 @@ function PickTime({
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-1 gap-2">
             {timeSlots.map((slot) => {
-              const sel = selectedTime === slot.time;
+              // A slot is unavailable if it's already booked OR if the CMS marks it unavailable
+              const alreadyBooked = bookedTimes.includes(slot.time);
+              const effectiveSlot = { ...slot, available: slot.available && !alreadyBooked };
+              const sel = selectedTime === effectiveSlot.time;
               return (
                 <button
-                  key={slot.time}
+                  key={effectiveSlot.time}
                   type="button"
-                  disabled={!slot.available}
-                  onClick={() => onTimeChange(slot.time)}
+                  disabled={!effectiveSlot.available}
+                  onClick={() => onTimeChange(effectiveSlot.time)}
+                  title={alreadyBooked ? "Already booked" : undefined}
                   className={`px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-center ${
                     sel
                       ? "bg-gradient-to-br from-primary-pink to-lavender-purple text-white shadow-md shadow-deep-purple/18"
-                      : !slot.available
+                      : !effectiveSlot.available
                       ? "bg-light-pink/20 text-deep-purple/25 cursor-not-allowed line-through"
                       : "bg-white border border-soft-purple/15 text-heading hover:border-primary-pink/30 hover:bg-light-pink/20"
                   }`}
                 >
-                  {slot.time}
+                  {effectiveSlot.time}
                 </button>
               );
             })}
