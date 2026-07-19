@@ -181,7 +181,7 @@ export default function AdminSettingsPage() {
           {DAY_KEYS.map((day) => {
             const cfg = workingHours[day] ?? DEFAULT_WORKING_HOURS[day];
             return (
-              <div key={day} className="flex items-center gap-4">
+              <div key={day} className="flex items-center gap-2">
                 {/* Toggle */}
                 <button
                   type="button"
@@ -192,25 +192,25 @@ export default function AdminSettingsPage() {
                 </button>
 
                 {/* Day label */}
-                <span className={`w-24 text-[13px] font-semibold shrink-0 ${cfg.enabled ? "text-[var(--admin-text)]" : "text-[var(--admin-text-faint)]"}`}>
+                <span className={`w-16 sm:w-24 text-[12px] sm:text-[13px] font-semibold shrink-0 ${cfg.enabled ? "text-[var(--admin-text)]" : "text-[var(--admin-text-faint)]"}`}>
                   {DAY_LABELS[day][isAr ? "ar" : "en"]}
                 </span>
 
                 {/* Time range */}
                 {cfg.enabled ? (
-                  <div className="flex items-center gap-2 flex-1">
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
                     <input
                       type="time"
                       value={cfg.start}
                       onChange={e => updateDay(day, { start: e.target.value })}
-                      className="form-input py-1.5 text-[13px] w-[110px]"
+                      className="form-input py-1.5 text-[12px] flex-1 min-w-0"
                     />
-                    <span className="text-[var(--admin-text-faint)] text-[12px]">→</span>
+                    <span className="text-[var(--admin-text-faint)] text-[11px] shrink-0">→</span>
                     <input
                       type="time"
                       value={cfg.end}
                       onChange={e => updateDay(day, { end: e.target.value })}
-                      className="form-input py-1.5 text-[13px] w-[110px]"
+                      className="form-input py-1.5 text-[12px] flex-1 min-w-0"
                     />
                   </div>
                 ) : (
