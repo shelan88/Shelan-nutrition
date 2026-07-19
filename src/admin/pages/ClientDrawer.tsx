@@ -641,7 +641,7 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
   const {
     generating: generatingPdf,
     handleExport, handlePrint,
-    pdfToast, retryLast, dismissToast,
+    pdfToast, failedStep, retryLast, dismissToast,
     pendingAction, lastSections, confirmGenerate, cancelModal,
   } = useClientReport(client, isAr);
 
@@ -1277,7 +1277,7 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
                   role="alert"
                 >
                   <AlertTriangle size={15} className="shrink-0 text-red-500" strokeWidth={2} />
-                  <span>{isAr ? "فشل إنشاء التقرير" : "Failed to generate report"}</span>
+                  <span>{failedStep > 0 ? `STEP FAILED: ${failedStep}` : "STEP FAILED: ?"}</span>
                   <button
                     onClick={retryLast}
                     className="ms-1 underline underline-offset-2 text-primary-pink hover:text-primary-pink/80 transition-colors font-bold"

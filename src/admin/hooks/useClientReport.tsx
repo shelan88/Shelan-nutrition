@@ -1,20 +1,13 @@
 /**
  * useClientReport — data assembly + PDF generation hook.
  *
- * Flow:
- *   1. User clicks Print or Export → pendingAction is set ("print" | "export")
- *   2. ClientDrawer renders the ReportSectionsModal
- *   3. User confirms section selection → confirmGenerate(sections) is called
- *   4. PDF is built with only the selected sections and delivered
+ * Forensic build: every async step is numbered STEP 1–11 with its own
+ * try/catch.  console.log("STEP X OK") fires after each success.
+ * console.error({step,file,function,line,error,stack}) fires on failure,
+ * then execution stops immediately (throw).
  *
- * Exposed:
- *   - pendingAction   → "print" | "export" | null  (drives modal visibility)
- *   - cancelModal()   → dismiss modal without generating
- *   - confirmGenerate(sections) → build + deliver PDF
- *   - generating      → boolean spinner state while building
- *   - pdfToast        → "idle" | "generating" | "error"
- *   - retryLast()     → retries last failed action with last sections
- *   - dismissToast()  → clears error toast
+ * The UI toast shows "STEP FAILED: X" so the exact break-point is visible
+ * without opening DevTools.
  */
 
 import { useState, useRef } from "react";
@@ -31,193 +24,277 @@ import {
 export type PdfToastState = "idle" | "generating" | "error";
 export type PendingAction  = "export" | "print" | null;
 
+const FILE = "src/admin/hooks/useClientReport.tsx";
+
+/** Log a failed step with full forensic detail and re-throw. */
+function failStep(step: number, fn: string, line: number, err: unknown): never {
+  const e = err instanceof Error ? err : new Error(String(err));
+  console.error("══════════════════════════════════════════════");
+  console.error(`STEP ${step} FAILED`);
+  console.error("══════════════════════════════════════════════");
+  console.error({
+    step,
+    file:     FILE,
+    function: fn,
+    line,
+    error:    e.message,
+    stack:    e.stack,
+  });
+  console.error("full error object:", err);
+  console.error("══════════════════════════════════════════════");
+  throw err;
+}
+
 export function useClientReport(client: Client | null, isAr: boolean) {
   const [generating,    setGenerating]    = useState(false);
   const [pdfToast,      setPdfToast]      = useState<PdfToastState>("idle");
+  const [failedStep,    setFailedStep]    = useState<number>(0);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 
-  // Remembers last-used sections so the modal re-opens with the same state.
   const lastSectionsRef  = useRef<ReportSections>({ ...ALL_SECTIONS_ON });
-  // Remembers last action + sections so retryLast() works after an error.
   const retryActionRef   = useRef<PendingAction>(null);
   const retrySectionsRef = useRef<ReportSections>({ ...ALL_SECTIONS_ON });
 
-  /** Fetch all data and build the PDF blob with the given section toggles. */
-  async function buildBlob(sections: ReportSections): Promise<Blob | null> {
-    if (!client) return null;
+  // ── Core pipeline ────────────────────────────────────────────────────────
 
-    // ── Step 1: fetch submitted assessment responses ────────────────────────
+  async function buildBlob(
+    sections: ReportSections,
+    onStepFail: (step: number) => void,
+  ): Promise<Blob | null> {
+
+    // ── STEP 3: Fetching client ─────────────────────────────────────────────
+    try {
+      console.log("STEP 3 — Fetching client");
+      if (!client) throw new Error("client prop is null — drawer opened without a client");
+      console.log("STEP 3 OK", { clientId: client.id, email: client.email });
+    } catch (err) {
+      onStepFail(3);
+      failStep(3, "buildBlob", 73, err);
+    }
+    if (!client) return null; // unreachable, satisfies TS
+
+    // ── STEP 4: Fetching assessment ─────────────────────────────────────────
     let responses;
     try {
+      console.log("STEP 4 — Fetching assessment responses for", client.email);
       responses = await getSubmittedResponsesWithTemplateNames(client.email);
-      console.log("[buildBlob] step 1 OK — responses:", responses.length);
-    } catch (err: unknown) {
-      const e = err as Error;
-      console.error("[buildBlob] ✖ step 1 FAILED — getSubmittedResponsesWithTemplateNames");
-      console.error("[buildBlob]   message:", e?.message);
-      console.error("[buildBlob]   stack:  ", e?.stack);
-      throw err;
+      console.log("STEP 4 OK", { count: responses.length, latest: responses[0]?.id ?? "none" });
+    } catch (err) {
+      onStepFail(4);
+      failStep(4, "buildBlob", 84, err);
     }
 
-    const latest = responses[0] ?? null;
+    const latest = responses![0] ?? null;
 
-    // ── Step 2: fetch full response detail (answers + questions) ────────────
     const needsResponse = sections.assessmentSummary || sections.qa;
     let response = null;
     if (latest && needsResponse) {
       try {
+        console.log("STEP 4b — Fetching full response detail for id:", latest.id);
         response = await getResponse(latest.id);
-        console.log("[buildBlob] step 2 OK — response id:", response?.id ?? "null");
-      } catch (err: unknown) {
-        const e = err as Error;
-        console.error("[buildBlob] ✖ step 2 FAILED — getResponse(", latest.id, ")");
-        console.error("[buildBlob]   message:", e?.message);
-        console.error("[buildBlob]   stack:  ", e?.stack);
-        throw err;
+        console.log("STEP 4b OK", { responseId: response?.id ?? "null", answerCount: response?.answers?.length ?? 0 });
+      } catch (err) {
+        onStepFail(4);
+        failStep(4, "buildBlob", 97, err);
       }
     }
 
-    // Build template name string (language-aware).
-    const templateName = latest
-      ? ((isAr && latest.template_name_ar) ? latest.template_name_ar : latest.template_name_en)
-      : "";
-
-    // Absolute logo URL (react-pdf fetches fonts/images via URL in browser).
-    const logoUrl = `${window.location.origin}/logo.png`;
-
-    // Formatted generation timestamp.
-    const generatedAt = new Date().toLocaleDateString(isAr ? "ar-SA" : "en-US", {
-      day:    "numeric",
-      month:  "long",
-      year:   "numeric",
-      hour:   "2-digit",
-      minute: "2-digit",
-    });
-
-    // ── Step 3: render react-pdf document → Blob ────────────────────────────
-    console.log("[buildBlob] step 3 — calling pdf().toBlob()", {
-      clientId:     client.id,
-      isAr,
-      hasResponse:  !!response,
-      hasLogoUrl:   !!logoUrl,
-      sections,
-    });
+    // ── STEP 5: Building report model ──────────────────────────────────────
+    let templateName: string;
+    let logoUrl: string;
+    let generatedAt: string;
     try {
-      const blob = await pdf(
+      console.log("STEP 5 — Building report model");
+      templateName = latest
+        ? ((isAr && latest.template_name_ar) ? latest.template_name_ar : latest.template_name_en)
+        : "";
+      logoUrl      = `${window.location.origin}/logo.png`;
+      generatedAt  = new Date().toLocaleDateString(isAr ? "ar-SA" : "en-US", {
+        day: "numeric", month: "long", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      });
+      console.log("STEP 5 OK", { templateName, logoUrl, generatedAt });
+    } catch (err) {
+      onStepFail(5);
+      failStep(5, "buildBlob", 113, err);
+    }
+
+    // ── STEP 6: Creating PDF instance (synchronous JSX render) ────────────
+    let instance: ReturnType<typeof pdf>;
+    try {
+      console.log("STEP 6 — Creating PDF instance (pdf(<ClinicReportDocument .../>))");
+      instance = pdf(
         <ClinicReportDocument
           client={client}
           isAr={isAr}
           response={response}
-          templateName={templateName}
-          logoUrl={logoUrl}
-          generatedAt={generatedAt}
+          templateName={templateName!}
+          logoUrl={logoUrl!}
+          generatedAt={generatedAt!}
           sections={sections}
         />
-      ).toBlob();
-      console.log("[buildBlob] step 3 OK — blob size:", blob.size, "bytes, type:", blob.type);
-      return blob;
-    } catch (err: unknown) {
-      const e = err as Error;
-      console.error("[buildBlob] ✖ step 3 FAILED — pdf().toBlob() threw");
-      console.error("[buildBlob]   message:", e?.message);
-      console.error("[buildBlob]   stack:  ", e?.stack);
-      console.error("[buildBlob]   full error object:", err);
-      throw err;
+      );
+      console.log("STEP 6 OK — pdf() instance created");
+    } catch (err) {
+      onStepFail(6);
+      failStep(6, "buildBlob", 127, err);
     }
+
+    // ── STEP 7: Loading fonts ──────────────────────────────────────────────
+    // Fonts are loaded lazily inside toBlob(); we cannot intercept them
+    // directly, but a font-load failure will surface as a toBlob() rejection.
+    // Log the registered sources so the console shows what react-pdf will fetch.
+    try {
+      console.log("STEP 7 — Font sources about to be fetched by react-pdf:");
+      console.log("  Cairo-Regular:", `${window.location.origin}/fonts/Cairo-Regular.ttf`);
+      console.log("  Cairo-Bold:   ", `${window.location.origin}/fonts/Cairo-Bold.ttf`);
+      console.log("STEP 7 OK — font paths logged (actual fetch happens inside toBlob)");
+    } catch (err) {
+      onStepFail(7);
+      failStep(7, "buildBlob", 141, err);
+    }
+
+    // ── STEP 8: Loading logo ───────────────────────────────────────────────
+    try {
+      console.log("STEP 8 — Logo URL that react-pdf will fetch:", logoUrl!);
+      const probe = await fetch(logoUrl!, { method: "HEAD" });
+      console.log("STEP 8 OK — logo HEAD probe:", probe.status, probe.ok ? "reachable" : "NOT REACHABLE");
+      if (!probe.ok) {
+        throw new Error(`Logo fetch returned HTTP ${probe.status} for ${logoUrl}`);
+      }
+    } catch (err) {
+      onStepFail(8);
+      failStep(8, "buildBlob", 153, err);
+    }
+
+    // ── STEP 9: Rendering pages (toBlob entry) ────────────────────────────
+    console.log("STEP 9 — Entering toBlob() — react-pdf will now render all pages");
+
+    // ── STEP 10: Generating Blob ──────────────────────────────────────────
+    let blob: Blob;
+    try {
+      console.log("STEP 10 — Awaiting toBlob()");
+      blob = await instance!.toBlob();
+      console.log("STEP 10 OK — blob size:", blob.size, "bytes, type:", blob.type);
+    } catch (err) {
+      onStepFail(10);
+      failStep(10, "buildBlob", 167, err);
+    }
+
+    return blob!;
   }
 
-  /** Download the PDF as a file. */
+  // ── Export runner ────────────────────────────────────────────────────────
+
   async function runExport(sections: ReportSections): Promise<void> {
     if (!client || generating) return;
     setGenerating(true);
+    setFailedStep(0);
     setPdfToast("generating");
+
+    const onStepFail = (step: number) => setFailedStep(step);
+
     try {
-      const blob = await buildBlob(sections);
+      const blob = await buildBlob(sections, onStepFail);
       if (!blob) { setPdfToast("idle"); return; }
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
-      const date = new Date().toISOString().split("T")[0];
-      a.href     = url;
-      a.download = `${client.fullName.replace(/\s+/g, "_")}_Report_${date}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
-      setPdfToast("idle");
+
+      // ── STEP 11: Downloading file ────────────────────────────────────────
+      try {
+        console.log("STEP 11 — Downloading file");
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement("a");
+        const date = new Date().toISOString().split("T")[0];
+        a.href     = url;
+        a.download = `${client.fullName.replace(/\s+/g, "_")}_Report_${date}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+        console.log("STEP 11 OK — download triggered:", a.download);
+        setPdfToast("idle");
+      } catch (err) {
+        onStepFail(11);
+        failStep(11, "runExport", 201, err);
+      }
     } catch (err) {
-      console.error("[useClientReport] export failed:", err);
+      console.error("[useClientReport] runExport caught top-level error:", err);
       setPdfToast("error");
     } finally {
       setGenerating(false);
     }
   }
 
-  /** Open the PDF in a new tab so the user can print from the browser. */
   async function runPrint(sections: ReportSections): Promise<void> {
     if (!client || generating) return;
     setGenerating(true);
+    setFailedStep(0);
     setPdfToast("generating");
+
+    const onStepFail = (step: number) => setFailedStep(step);
+
     try {
-      const blob = await buildBlob(sections);
+      const blob = await buildBlob(sections, onStepFail);
       if (!blob) { setPdfToast("idle"); return; }
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
-      // Keep the blob alive for 60 s so the new tab can fully load before revoke.
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-      setPdfToast("idle");
+
+      try {
+        console.log("STEP 11 — Opening PDF in new tab");
+        const url = URL.createObjectURL(blob);
+        window.open(url, "_blank");
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        console.log("STEP 11 OK — new tab opened");
+        setPdfToast("idle");
+      } catch (err) {
+        onStepFail(11);
+        failStep(11, "runPrint", 229, err);
+      }
     } catch (err) {
-      console.error("[useClientReport] print failed:", err);
+      console.error("[useClientReport] runPrint caught top-level error:", err);
       setPdfToast("error");
     } finally {
       setGenerating(false);
     }
   }
 
-  /** Open the section-picker modal for export. */
+  // ── STEP 1 + 2 live here ─────────────────────────────────────────────────
+
   function handleExport(): void {
+    console.log("STEP 1 — Export button clicked");
+    console.log("STEP 1 OK", { clientId: client?.id });
     if (!client || generating) return;
     setPendingAction("export");
   }
 
-  /** Open the section-picker modal for print. */
   function handlePrint(): void {
+    console.log("STEP 1 — Print button clicked");
+    console.log("STEP 1 OK", { clientId: client?.id });
     if (!client || generating) return;
     setPendingAction("print");
   }
 
-  /**
-   * Called when the user confirms sections in the modal.
-   * Closes the modal and kicks off generation.
-   */
   async function confirmGenerate(sections: ReportSections): Promise<void> {
+    console.log("STEP 2 — Selected sections collected");
+    console.log("STEP 2 OK", sections);
     const action = pendingAction;
-    // Save for retry and for next modal open.
     lastSectionsRef.current  = { ...sections };
     retryActionRef.current   = action;
     retrySectionsRef.current = { ...sections };
-    // Close modal immediately so the generating overlay takes over.
     setPendingAction(null);
     if (action === "export") await runExport(sections);
     else if (action === "print") await runPrint(sections);
   }
 
-  /** Dismiss the modal without generating. */
-  function cancelModal(): void {
-    setPendingAction(null);
-  }
+  function cancelModal(): void { setPendingAction(null); }
 
-  /** Retry the last failed action with the same sections. */
   function retryLast(): void {
     const action   = retryActionRef.current;
     const sections = retrySectionsRef.current;
-    retryActionRef.current = action; // keep it
     if (action === "export") runExport(sections);
     else if (action === "print") runPrint(sections);
   }
 
-  /** Dismiss an error toast manually. */
   function dismissToast(): void {
     setPdfToast("idle");
+    setFailedStep(0);
   }
 
   return {
@@ -225,9 +302,9 @@ export function useClientReport(client: Client | null, isAr: boolean) {
     handleExport,
     handlePrint,
     pdfToast,
+    failedStep,
     retryLast,
     dismissToast,
-    // Modal state
     pendingAction,
     lastSections: lastSectionsRef,
     confirmGenerate,
