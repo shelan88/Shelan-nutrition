@@ -17,6 +17,50 @@ export const MEDIA_BUCKET = "media";
 
 // ── Internal helpers ───────────────────────────────────────────────────────────
 
+/**
+ * Reads the first 12 bytes of a file and matches known magic-number signatures.
+ * Falls back to the file extension when magic numbers are inconclusive.
+ * Returns an empty string when neither strategy resolves a type.
+ */
+async function sniffMimeType(file: File): Promise<string> {
+  // Extension → MIME fallback map
+  const EXT_MAP: Record<string, string> = {
+    jpg:  "image/jpeg",
+    jpeg: "image/jpeg",
+    png:  "image/png",
+    webp: "image/webp",
+    pdf:  "application/pdf",
+    gif:  "image/gif",
+    heic: "image/heic",
+    heif: "image/heif",
+  };
+
+  try {
+    const headerBytes = await file.slice(0, 12).arrayBuffer();
+    const b = new Uint8Array(headerBytes);
+
+    // JPEG: FF D8 FF
+    if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
+    // PNG: 89 50 4E 47 0D 0A 1A 0A
+    if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return "image/png";
+    // PDF: 25 50 44 46 (%PDF)
+    if (b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46) return "application/pdf";
+    // WEBP: RIFF????WEBP
+    if (
+      b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+      b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50
+    ) return "image/webp";
+    // GIF: GIF87a or GIF89a
+    if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46) return "image/gif";
+  } catch {
+    // If reading fails, fall through to extension lookup
+  }
+
+  // Extension-based fallback
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  return EXT_MAP[ext] ?? "";
+}
+
 function mimeMatches(mime: string, pattern: string): boolean {
   if (pattern === "*/*" || pattern === "*") return true;
   if (pattern.endsWith("/*")) return mime.startsWith(pattern.slice(0, -1));
@@ -117,19 +161,28 @@ export async function uploadToStorage(
     maxAttempts  = 3,
   } = options;
 
-  // 1. Validate
-  const validationErr = validateFile(file, maxSizeMb, allowedTypes);
+  // 1. Resolve MIME type — sniff from magic numbers when file.type is absent
+  const resolvedType = file.type || (await sniffMimeType(file)) || "application/octet-stream";
+  if (!file.type && resolvedType !== "application/octet-stream") {
+    console.info(`[upload] sniffed MIME type "${resolvedType}" for "${file.name}"`);
+  }
+
+  // 2. Validate (use resolved type so allowedTypes checks work correctly)
+  const fileForValidation = file.type
+    ? file
+    : new File([file], file.name, { type: resolvedType });
+  const validationErr = validateFile(fileForValidation, maxSizeMb, allowedTypes);
   if (validationErr) return { url: null, path: null, error: validationErr };
 
-  // 2. Optionally compress
-  const fileToUpload = compress && file.type.startsWith("image/")
-    ? await compressImage(file, maxWidthPx, quality)
-    : file;
+  // 3. Optionally compress
+  const fileToUpload = compress && resolvedType.startsWith("image/")
+    ? await compressImage(fileForValidation, maxWidthPx, quality)
+    : fileForValidation;
 
-  // 3. Start simulated progress
+  // 4. Start simulated progress
   const stopProgress = onProgress ? simulateProgress(onProgress) : null;
 
-  // 4. Upload with retry
+  // 5. Upload with retry
   let lastError = "Upload failed";
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (attempt > 0) {
@@ -139,7 +192,7 @@ export async function uploadToStorage(
       .from(bucket)
       .upload(path, fileToUpload, {
         upsert,
-        contentType:  fileToUpload.type || "application/octet-stream",
+        contentType: fileToUpload.type || resolvedType,
         cacheControl,
       });
 
