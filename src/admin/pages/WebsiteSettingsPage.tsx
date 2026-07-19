@@ -89,7 +89,7 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "services",        label_en: "Services",        label_ar: "الخدمات",         href: "/services",        visible: true,  order: 2 },
   { id: "programs",        label_en: "Programs",        label_ar: "البرامج",         href: "/programs",        visible: true,  order: 3 },
   { id: "success-stories", label_en: "Success Stories", label_ar: "قصص النجاح",     href: "/success-stories", visible: true,  order: 4 },
-  { id: "testimonials",    label_en: "Testimonials",    label_ar: "الشهادات",        href: "/testimonials",    visible: true,  order: 5 },
+  { id: "testimonials",    label_en: "Client Reviews",  label_ar: "آراء العملاء",   href: "/testimonials",    visible: true,  order: 5 },
   { id: "blog",            label_en: "Blog",            label_ar: "المدونة",         href: "/blog",            visible: true,  order: 6 },
   { id: "faq",             label_en: "FAQ",             label_ar: "الأسئلة الشائعة", href: "/faq",             visible: true,  order: 7 },
   { id: "contact",         label_en: "Contact",         label_ar: "تواصلي معي",      href: "/contact",         visible: true,  order: 8 },

@@ -509,48 +509,6 @@ export default function Navbar() {
               {/* Divider */}
               <motion.div variants={linkVariants} className="w-16 h-px bg-white/10 my-1" />
 
-              {/* ── AUTHENTICATED CLIENT: portal links ── */}
-              {hasSession && !isAdmin && (
-                <>
-                  {/* User info */}
-                  <motion.div variants={linkVariants} className="flex items-center gap-2.5">
-                    <AvatarBubble size="sm" />
-                    <span className="text-sm font-medium text-ivory/60">
-                      {lang === "ar" ? "بوابتي الشخصية" : "My Portal"}
-                    </span>
-                  </motion.div>
-
-                  {/* Portal nav links */}
-                  {PORTAL_NAV.map(({ href, labelEn, labelAr, Icon }) => (
-                    <motion.div key={href} variants={linkVariants}>
-                      <Link
-                        to={href}
-                        className={`flex items-center justify-center gap-2 font-heading text-base font-semibold transition-colors ${
-                          location.pathname === href
-                            ? "text-primary-pink"
-                            : "text-ivory/70 hover:text-ivory"
-                        }`}
-                      >
-                        <Icon size={16} className="text-ivory/40 shrink-0" />
-                        {lang === "ar" ? labelAr : labelEn}
-                      </Link>
-                    </motion.div>
-                  ))}
-
-                  {/* Sign Out */}
-                  <motion.div variants={linkVariants}>
-                    <button
-                      type="button"
-                      onClick={handleSignOut}
-                      className="flex items-center gap-2 font-heading text-base font-semibold text-red-400/80 hover:text-red-300 transition-colors"
-                    >
-                      <LogOut size={16} />
-                      {lang === "ar" ? "تسجيل الخروج" : "Sign Out"}
-                    </button>
-                  </motion.div>
-                </>
-              )}
-
               {/* ── AUTHENTICATED ADMIN: dashboard shortcut + sign out ── */}
               {hasSession && isAdmin && (
                 <>

@@ -73,8 +73,8 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "testimonials",
-    label: "Testimonials",
-    labelAr: "الشهادات",
+    label: "Client Reviews",
+    labelAr: "آراء العملاء",
     href: "/admin/testimonials",
     iconName: "Star",
     group: "content",
@@ -249,8 +249,8 @@ export const PAGE_META: Record<string, PageMeta> = {
     illustrationVariant: "blog",
   },
   testimonials: {
-    title: "Testimonials",
-    titleAr: "الشهادات",
+    title: "Client Reviews",
+    titleAr: "آراء العملاء",
     description: "Curate and showcase client success stories and reviews on your public website.",
     descriptionAr: "تنظيم وعرض قصص نجاح العملاء والمراجعات على موقعك العام.",
     illustrationVariant: "testimonials",

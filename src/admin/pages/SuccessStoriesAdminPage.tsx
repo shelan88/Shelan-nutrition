@@ -72,17 +72,17 @@ export default function SuccessStoriesAdminPage() {
   function openEdit(row: Row) {
     setEditing(row);
     setForm({
-      title_en:        row.title_en        ?? "",
-      title_ar:        row.title_ar        ?? "",
-      client_name_en:  row.client_name_en  ?? "",
-      client_name_ar:  row.client_name_ar  ?? "",
-      story_en:        row.story_en        ?? "",
-      story_ar:        row.story_ar        ?? "",
-      before_image_url:row.before_image_url ?? "",
-      after_image_url: row.after_image_url  ?? "",
-      publish_date:    row.publish_date     ?? null,
-      published:       row.published        ?? false,
-      sort_order:      row.sort_order       ?? 0,
+      title_en:         row.title_en         ?? "",
+      title_ar:         row.title_ar         ?? "",
+      client_name_en:   row.client_name_en   ?? "",
+      client_name_ar:   row.client_name_ar   ?? "",
+      story_en:         row.story_en         ?? "",
+      story_ar:         row.story_ar         ?? "",
+      before_image_url: row.before_image_url ?? "",
+      after_image_url:  row.after_image_url  ?? "",
+      publish_date:     row.publish_date     ?? null,
+      published:        row.published        ?? false,
+      sort_order:       row.sort_order       ?? 0,
     });
     setView("edit");
   }
@@ -116,18 +116,19 @@ export default function SuccessStoriesAdminPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  const t = (en: string, ar: string) => (isAr ? ar : en);
+
   return (
     <div>
       <PageHeader
-        title={isAr ? "قصص النجاح" : "Success Stories"}
-        description={
-          isAr
-            ? "إدارة قصص نجاح العملاء وأبرز التحولات."
-            : "Manage client success stories and transformation highlights."
-        }
+        title={t("Success Stories", "قصص النجاح")}
+        description={t(
+          "Manage client success stories and transformation highlights.",
+          "إدارة قصص نجاح العملاء وأبرز التحولات.",
+        )}
         breadcrumbs={[
-          { label: isAr ? "الإدارة" : "Admin", href: "/admin" },
-          { label: isAr ? "قصص النجاح" : "Success Stories" },
+          { label: t("Admin", "الإدارة"), href: "/admin" },
+          { label: t("Success Stories", "قصص النجاح") },
         ]}
       />
 
@@ -146,23 +147,39 @@ export default function SuccessStoriesAdminPage() {
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all"
               >
                 <Plus size={15} />
-                {isAr ? "إضافة قصة" : "New Story"}
+                {t("New Story", "إضافة قصة")}
               </button>
             </div>
 
             {loading ? (
               <div className="py-12 text-center text-[13px] text-[var(--admin-text-muted)]">
-                {isAr ? "جارٍ التحميل…" : "Loading…"}
+                {t("Loading…", "جارٍ التحميل…")}
               </div>
             ) : rows.length === 0 ? (
               <div className="py-12 text-center text-[13px] text-[var(--admin-text-muted)]">
-                {isAr ? "لا توجد قصص بعد." : "No success stories yet."}
+                {t("No success stories yet.", "لا توجد قصص بعد.")}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {rows.map((row, i) => {
+                  // Language-aware display values — prefer active language, fall back to other.
+                  const displayTitle = isAr
+                    ? (row.title_ar || row.title_en || "")
+                    : (row.title_en || row.title_ar || "");
+                  const displayClientName = isAr
+                    ? (row.client_name_ar || row.client_name_en || "")
+                    : (row.client_name_en || row.client_name_ar || "");
+                  const displayStory = isAr
+                    ? (row.story_ar || row.story_en || "")
+                    : (row.story_en || row.story_ar || "");
+                  // Secondary caption: show the other language as a subtle hint.
+                  const secondaryTitle = isAr
+                    ? (row.title_en || "")
+                    : (row.title_ar || "");
+
                   const hasBoth = !!(row.before_image_url && row.after_image_url);
                   const singleImg = row.before_image_url || row.after_image_url || null;
+
                   return (
                     <motion.div key={row.id} {...fadeUp(i * 0.05)}>
                       <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
@@ -172,34 +189,34 @@ export default function SuccessStoriesAdminPage() {
                             <div className="relative">
                               <img
                                 src={row.before_image_url!}
-                                alt="Before"
+                                alt={t("Before", "قبل")}
                                 className="w-full h-36 object-cover"
                               />
                               <span className="absolute bottom-1 start-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/50 text-white">
-                                {isAr ? "قبل" : "Before"}
+                                {t("Before", "قبل")}
                               </span>
                             </div>
                             <div className="relative">
                               <img
                                 src={row.after_image_url!}
-                                alt="After"
+                                alt={t("After", "بعد")}
                                 className="w-full h-36 object-cover"
                               />
                               <span className="absolute bottom-1 start-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/50 text-white">
-                                {isAr ? "بعد" : "After"}
+                                {t("After", "بعد")}
                               </span>
                             </div>
                           </div>
                         ) : singleImg ? (
                           <img
                             src={singleImg}
-                            alt={row.title_en ?? row.client_name_en ?? "Story"}
+                            alt={displayTitle || displayClientName || t("Story", "قصة")}
                             className="w-full h-36 object-cover"
                           />
                         ) : (
                           <div className="w-full h-24 bg-gradient-to-br from-primary-pink/15 to-lavender-purple/15 flex items-center justify-center">
                             <span className="text-[12px] text-[var(--admin-text-faint)] italic">
-                              {isAr ? "لا توجد صورة" : "No image yet"}
+                              {t("No image yet", "لا توجد صورة")}
                             </span>
                           </div>
                         )}
@@ -208,16 +225,23 @@ export default function SuccessStoriesAdminPage() {
                           {/* Title + badge */}
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <p className="text-[14px] font-semibold text-[var(--admin-text)] truncate">
-                                {row.title_en || row.client_name_en || (
+                              <p
+                                className="text-[14px] font-semibold text-[var(--admin-text)] truncate"
+                                dir={isAr ? "rtl" : "ltr"}
+                              >
+                                {displayTitle || displayClientName || (
                                   <span className="italic text-[var(--admin-text-faint)]">
-                                    {isAr ? "بدون عنوان" : "Untitled"}
+                                    {t("Untitled", "بدون عنوان")}
                                   </span>
                                 )}
                               </p>
-                              {row.title_ar && (
-                                <p className="text-[11px] text-[var(--admin-text-muted)] truncate mt-0.5" dir="rtl">
-                                  {row.title_ar}
+                              {/* Show the other language's title as a subtle secondary label */}
+                              {secondaryTitle && (
+                                <p
+                                  className="text-[11px] text-[var(--admin-text-muted)] truncate mt-0.5"
+                                  dir={isAr ? "ltr" : "rtl"}
+                                >
+                                  {secondaryTitle}
                                 </p>
                               )}
                               {row.publish_date && (
@@ -231,19 +255,22 @@ export default function SuccessStoriesAdminPage() {
                             </div>
                             {row.published ? (
                               <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200 shrink-0">
-                                {isAr ? "منشور" : "Published"}
+                                {t("Published", "منشور")}
                               </span>
                             ) : (
                               <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)] ring-1 ring-[var(--admin-border)] shrink-0">
-                                {isAr ? "مسودة" : "Draft"}
+                                {t("Draft", "مسودة")}
                               </span>
                             )}
                           </div>
 
                           {/* Story preview */}
-                          {row.story_en && (
-                            <p className="text-[12px] text-[var(--admin-text-muted)] line-clamp-2 leading-relaxed">
-                              {row.story_en}
+                          {displayStory && (
+                            <p
+                              className="text-[12px] text-[var(--admin-text-muted)] line-clamp-2 leading-relaxed"
+                              dir={isAr ? "rtl" : "ltr"}
+                            >
+                              {displayStory}
                             </p>
                           )}
 
@@ -253,7 +280,8 @@ export default function SuccessStoriesAdminPage() {
                               onClick={() => openEdit(row)}
                               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors"
                             >
-                              <Pencil size={12} /> {isAr ? "تعديل" : "Edit"}
+                              <Pencil size={12} />
+                              {t("Edit", "تعديل")}
                             </button>
                             <button
                               onClick={() => handleDelete(row.id)}
@@ -262,8 +290,8 @@ export default function SuccessStoriesAdminPage() {
                             >
                               <Trash2 size={12} />
                               {deletingId === row.id
-                                ? (isAr ? "جارٍ الحذف…" : "Deleting…")
-                                : (isAr ? "حذف" : "Delete")}
+                                ? t("Deleting…", "جارٍ الحذف…")
+                                : t("Delete", "حذف")}
                             </button>
                           </div>
                         </div>
@@ -285,15 +313,15 @@ export default function SuccessStoriesAdminPage() {
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors"
               >
                 <ArrowLeft size={13} className="rtl:rotate-180" />
-                {isAr ? "رجوع" : "Back"}
+                {t("Back", "رجوع")}
               </button>
               <div className="flex items-center gap-2">
                 <button
                   onClick={cancel}
-                  className="px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors"
+                  className="px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors flex items-center gap-1"
                 >
-                  <X size={13} className="inline mr-1" />
-                  {isAr ? "إلغاء" : "Cancel"}
+                  <X size={13} />
+                  {t("Cancel", "إلغاء")}
                 </button>
                 <button
                   onClick={handleSave}
@@ -302,10 +330,10 @@ export default function SuccessStoriesAdminPage() {
                 >
                   <Save size={14} />
                   {saving
-                    ? (isAr ? "جارٍ الحفظ…" : "Saving…")
+                    ? t("Saving…", "جارٍ الحفظ…")
                     : editing
-                    ? (isAr ? "حفظ التغييرات" : "Save Changes")
-                    : (isAr ? "إنشاء قصة" : "Create Story")}
+                    ? t("Save Changes", "حفظ التغييرات")
+                    : t("Create Story", "إنشاء قصة")}
                 </button>
               </div>
             </div>
@@ -314,8 +342,8 @@ export default function SuccessStoriesAdminPage() {
               <div className="flex items-center px-5 py-4 border-b border-[var(--admin-border)]">
                 <h2 className="text-[13px] font-bold text-[var(--admin-text)]">
                   {editing
-                    ? (isAr ? "تعديل قصة النجاح" : "Edit Success Story")
-                    : (isAr ? "قصة نجاح جديدة" : "New Success Story")}
+                    ? t("Edit Success Story", "تعديل قصة النجاح")
+                    : t("New Success Story", "قصة نجاح جديدة")}
                 </h2>
               </div>
 
@@ -323,7 +351,7 @@ export default function SuccessStoriesAdminPage() {
                 {/* Title */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelCls}>Title (EN)</label>
+                    <label className={labelCls}>{t("Title (EN)", "العنوان (EN)")}</label>
                     <input
                       value={form.title_en ?? ""}
                       onChange={(e) => setField("title_en", e.target.value)}
@@ -332,7 +360,7 @@ export default function SuccessStoriesAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className={labelCls}>Title (AR)</label>
+                    <label className={labelCls}>{t("Title (AR)", "العنوان (AR)")}</label>
                     <input
                       dir="rtl"
                       value={form.title_ar ?? ""}
@@ -346,7 +374,9 @@ export default function SuccessStoriesAdminPage() {
                 {/* Client Name — optional */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelCls}>Client Name (EN) — optional</label>
+                    <label className={labelCls}>
+                      {t("Client Name (EN) — optional", "اسم العميل (EN) — اختياري")}
+                    </label>
                     <input
                       value={form.client_name_en ?? ""}
                       onChange={(e) => setField("client_name_en", e.target.value)}
@@ -355,7 +385,9 @@ export default function SuccessStoriesAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className={labelCls}>Client Name (AR) — optional</label>
+                    <label className={labelCls}>
+                      {t("Client Name (AR) — optional", "اسم العميل (AR) — اختياري")}
+                    </label>
                     <input
                       dir="rtl"
                       value={form.client_name_ar ?? ""}
@@ -369,7 +401,7 @@ export default function SuccessStoriesAdminPage() {
                 {/* Story text */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelCls}>Story (EN)</label>
+                    <label className={labelCls}>{t("Story (EN)", "القصة (EN)")}</label>
                     <textarea
                       rows={5}
                       value={form.story_en ?? ""}
@@ -379,7 +411,7 @@ export default function SuccessStoriesAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className={labelCls}>Story (AR)</label>
+                    <label className={labelCls}>{t("Story (AR)", "القصة (AR)")}</label>
                     <textarea
                       dir="rtl"
                       rows={5}
@@ -394,7 +426,7 @@ export default function SuccessStoriesAdminPage() {
                 {/* Before / After images */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className={labelCls}>Before Photo</label>
+                    <label className={labelCls}>{t("Before Photo", "صورة قبل")}</label>
                     <FileUploadField
                       value={form.before_image_url ?? ""}
                       onChange={(url) => setField("before_image_url", url)}
@@ -404,7 +436,7 @@ export default function SuccessStoriesAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className={labelCls}>After Photo</label>
+                    <label className={labelCls}>{t("After Photo", "صورة بعد")}</label>
                     <FileUploadField
                       value={form.after_image_url ?? ""}
                       onChange={(url) => setField("after_image_url", url)}
@@ -418,12 +450,14 @@ export default function SuccessStoriesAdminPage() {
                 {/* Settings row */}
                 <div className="border-t border-[var(--admin-border)] pt-6">
                   <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">
-                    {isAr ? "الإعدادات" : "Settings"}
+                    {t("Settings", "الإعدادات")}
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     {/* Publish Date */}
                     <div>
-                      <label className={labelCls}>Publish Date (optional)</label>
+                      <label className={labelCls}>
+                        {t("Publish Date (optional)", "تاريخ النشر (اختياري)")}
+                      </label>
                       <input
                         type="date"
                         value={form.publish_date ?? ""}
@@ -436,7 +470,9 @@ export default function SuccessStoriesAdminPage() {
 
                     {/* Sort Order */}
                     <div>
-                      <label className={labelCls}>Sort Order</label>
+                      <label className={labelCls}>
+                        {t("Sort Order", "ترتيب العرض")}
+                      </label>
                       <input
                         type="number"
                         min={0}
@@ -459,7 +495,7 @@ export default function SuccessStoriesAdminPage() {
                         htmlFor="story-published"
                         className="text-[13px] text-[var(--admin-text)] cursor-pointer select-none"
                       >
-                        {isAr ? "منشور (مرئي على الموقع)" : "Published (visible on site)"}
+                        {t("Published (visible on site)", "منشور (مرئي على الموقع)")}
                       </label>
                     </div>
                   </div>

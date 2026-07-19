@@ -64,7 +64,7 @@ function StarSelector({
           </span>
         </button>
       ))}
-      <span className="ml-2 text-[12px] text-[var(--admin-text-muted)]">
+      <span className="ms-2 text-[12px] text-[var(--admin-text-muted)]">
         {value} / 5
       </span>
     </div>
@@ -73,6 +73,8 @@ function StarSelector({
 
 export default function TestimonialsAdminPage() {
   const { lang } = useLanguage();
+  const isAr = lang === "ar";
+
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"list" | "edit">("list");
@@ -101,15 +103,15 @@ export default function TestimonialsAdminPage() {
   function openEdit(row: Row) {
     setEditing(row);
     setForm({
-      client_name: row.client_name ?? "",
+      client_name:    row.client_name    ?? "",
       client_name_ar: row.client_name_ar ?? "",
-      content_en: row.content_en ?? "",
-      content_ar: row.content_ar ?? "",
-      rating: row.rating ?? 5,
-      published: row.published ?? false,
-      avatar_url: row.avatar_url ?? "",
-      role_en: row.role_en ?? "",
-      role_ar: row.role_ar ?? "",
+      content_en:     row.content_en     ?? "",
+      content_ar:     row.content_ar     ?? "",
+      rating:         row.rating         ?? 5,
+      published:      row.published      ?? false,
+      avatar_url:     row.avatar_url     ?? "",
+      role_en:        row.role_en        ?? "",
+      role_ar:        row.role_ar        ?? "",
     });
     setView("edit");
   }
@@ -132,7 +134,7 @@ export default function TestimonialsAdminPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!window.confirm("Delete this testimonial?")) return;
+    if (!window.confirm(isAr ? "هل تريدين حذف هذا الرأي؟" : "Delete this client review?")) return;
     setDeletingId(id);
     await deleteTestimonial(id);
     await load();
@@ -151,12 +153,27 @@ export default function TestimonialsAdminPage() {
       .toUpperCase()
       .slice(0, 2);
 
+  // Label helper for bilingual field labels inside the edit form.
+  // "(EN)" / "(AR)" are kept as language identifiers regardless of UI lang.
+  const lbl = (en: string, ar: string) =>
+    `block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5` &&
+    undefined; // dummy — we use t() below
+  void lbl; // suppress unused warning
+
+  const t = (en: string, ar: string) => (isAr ? ar : en);
+
   return (
     <div>
       <PageHeader
-        title={lang === "ar" ? "الشهادات" : "Testimonials"}
-        description={lang === "ar" ? "إدارة شهادات العملاء المعروضة على الموقع." : "Manage client testimonials shown on the website."}
-        breadcrumbs={[{ label: lang === "ar" ? "الإدارة" : "Admin", href: "/admin" }, { label: lang === "ar" ? "الشهادات" : "Testimonials" }]}
+        title={t("Client Reviews", "آراء العملاء")}
+        description={t(
+          "Manage client reviews shown on the website.",
+          "إدارة آراء العملاء المعروضة على الموقع.",
+        )}
+        breadcrumbs={[
+          { label: t("Admin", "الإدارة"), href: "/admin" },
+          { label: t("Client Reviews", "آراء العملاء") },
+        ]}
       />
 
       <AnimatePresence mode="wait">
@@ -165,80 +182,126 @@ export default function TestimonialsAdminPage() {
             {/* Toolbar */}
             <div className="flex items-center justify-between mb-6">
               <p className="text-[13px] text-[var(--admin-text-muted)]">
-                {lang === "ar" ? `${rows.length} شهادة` : `${rows.length} testimonial${rows.length !== 1 ? "s" : ""}`}
+                {isAr
+                  ? `${rows.length} ${rows.length === 1 ? "رأي" : "آراء"}`
+                  : `${rows.length} review${rows.length !== 1 ? "s" : ""}`}
               </p>
-              <button onClick={openNew} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all">
+              <button
+                onClick={openNew}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all"
+              >
                 <Plus size={15} />
-                {lang === "ar" ? "إضافة شهادة" : "New Testimonial"}
+                {t("New Review", "إضافة رأي")}
               </button>
             </div>
 
             {loading ? (
-              <div className="text-[13px] text-[var(--admin-text-muted)] py-12 text-center">{lang === "ar" ? "جارٍ التحميل…" : "Loading…"}</div>
+              <div className="text-[13px] text-[var(--admin-text-muted)] py-12 text-center">
+                {t("Loading…", "جارٍ التحميل…")}
+              </div>
             ) : rows.length === 0 ? (
-              <div className="text-[13px] text-[var(--admin-text-muted)] py-12 text-center">{lang === "ar" ? "لا توجد شهادات بعد." : "No testimonials yet."}</div>
+              <div className="text-[13px] text-[var(--admin-text-muted)] py-12 text-center">
+                {t("No client reviews yet.", "لا توجد آراء بعد.")}
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {rows.map((row, i) => (
-                  <motion.div key={row.id} {...fadeUp(i * 0.04)}>
-                    <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden p-5 flex flex-col gap-4">
-                      {/* Header */}
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-pink to-lavender-purple flex items-center justify-center text-white text-[13px] font-bold shrink-0">
-                          {row.client_name ? initials(row.client_name) : "?"}
+                {rows.map((row, i) => {
+                  // Show the name in the active UI language; fall back to the other language.
+                  const displayName = isAr
+                    ? (row.client_name_ar || row.client_name || "")
+                    : (row.client_name || row.client_name_ar || "");
+                  const displayRole = isAr
+                    ? (row.role_ar || row.role_en || "")
+                    : (row.role_en || row.role_ar || "");
+                  const displayContent = isAr
+                    ? (row.content_ar || row.content_en || "")
+                    : (row.content_en || row.content_ar || "");
+
+                  return (
+                    <motion.div key={row.id} {...fadeUp(i * 0.04)}>
+                      <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden p-5 flex flex-col gap-4">
+                        {/* Header */}
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-pink to-lavender-purple flex items-center justify-center text-white text-[13px] font-bold shrink-0">
+                            {displayName ? initials(displayName) : "?"}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] font-semibold text-[var(--admin-text)] truncate">
+                              {displayName || (
+                                <span className="italic text-[var(--admin-text-faint)]">
+                                  {t("Unnamed", "بدون اسم")}
+                                </span>
+                              )}
+                            </p>
+                            {displayRole && (
+                              <p className="text-[11px] text-[var(--admin-text-muted)] truncate">
+                                {displayRole}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {row.published ? (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200">
+                                {t("Published", "منشور")}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)] ring-1 ring-[var(--admin-border)]">
+                                {t("Draft", "مسودة")}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[13px] font-semibold text-[var(--admin-text)] truncate">
-                            {row.client_name || <span className="italic text-[var(--admin-text-faint)]">Unnamed</span>}
+
+                        {/* Stars */}
+                        <div className="flex items-center gap-0.5">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <span
+                              key={s}
+                              className={
+                                s <= (row.rating ?? 0)
+                                  ? "text-yellow-400 text-sm"
+                                  : "text-[var(--admin-border)] text-sm"
+                              }
+                            >
+                              ★
+                            </span>
+                          ))}
+                        </div>
+
+                        {/* Content preview */}
+                        {displayContent && (
+                          <p
+                            className="text-[12px] text-[var(--admin-text-muted)] line-clamp-3 leading-relaxed"
+                            dir={isAr ? "rtl" : "ltr"}
+                          >
+                            {displayContent}
                           </p>
-                          <p className="text-[11px] text-[var(--admin-text-muted)] truncate">{row.role_en}</p>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 pt-1 border-t border-[var(--admin-border)]">
+                          <button
+                            onClick={() => openEdit(row)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors"
+                          >
+                            <Pencil size={12} />
+                            {t("Edit", "تعديل")}
+                          </button>
+                          <button
+                            onClick={() => handleDelete(row.id)}
+                            disabled={deletingId === row.id}
+                            className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-red-500 hover:bg-red-50 transition-colors flex items-center gap-1"
+                          >
+                            <Trash2 size={12} />
+                            {deletingId === row.id
+                              ? t("Deleting…", "جارٍ الحذف…")
+                              : t("Delete", "حذف")}
+                          </button>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          {row.published ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200">
-                              {lang === "ar" ? "منشور" : "Published"}
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)] ring-1 ring-[var(--admin-border)]">
-                              {lang === "ar" ? "مسودة" : "Draft"}
-                            </span>
-                          )}
-                        </div>
                       </div>
-
-                      {/* Stars */}
-                      <div className="flex items-center gap-0.5">
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <span key={s} className={s <= (row.rating ?? 0) ? "text-yellow-400 text-sm" : "text-[var(--admin-border)] text-sm"}>★</span>
-                        ))}
-                      </div>
-
-                      {/* Content preview */}
-                      <p className="text-[12px] text-[var(--admin-text-muted)] line-clamp-3 leading-relaxed">
-                        {row.content_en}
-                      </p>
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-2 pt-1 border-t border-[var(--admin-border)]">
-                        <button
-                          onClick={() => openEdit(row)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors"
-                        >
-                          <Pencil size={12} />
-                          {lang === "ar" ? "تعديل" : "Edit"}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(row.id)}
-                          disabled={deletingId === row.id}
-                          className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-red-500 hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2 size={12} className="inline mr-1" />
-                          {deletingId === row.id ? (lang === "ar" ? "جارٍ الحذف…" : "Deleting…") : (lang === "ar" ? "حذف" : "Delete")}
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  );
+                })}
               </div>
             )}
           </motion.div>
@@ -246,18 +309,32 @@ export default function TestimonialsAdminPage() {
           <motion.div key="edit" {...fadeUp()}>
             {/* Edit toolbar */}
             <div className="flex items-center justify-between mb-6">
-              <button onClick={cancel} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors">
+              <button
+                onClick={cancel}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors"
+              >
                 <ArrowLeft size={13} className="rtl:rotate-180" />
-                {lang === "ar" ? "رجوع" : "Back"}
+                {t("Back", "رجوع")}
               </button>
               <div className="flex items-center gap-2">
-                <button onClick={cancel} className="px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors">
-                  <X size={13} className="inline mr-1" />
-                  {lang === "ar" ? "إلغاء" : "Cancel"}
+                <button
+                  onClick={cancel}
+                  className="px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-medium text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] transition-colors flex items-center gap-1"
+                >
+                  <X size={13} />
+                  {t("Cancel", "إلغاء")}
                 </button>
-                <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all disabled:opacity-70"
+                >
                   <Save size={14} />
-                  {saving ? (lang === "ar" ? "جارٍ الحفظ…" : "Saving…") : editing ? (lang === "ar" ? "حفظ التغييرات" : "Save Changes") : (lang === "ar" ? "إنشاء شهادة" : "Create Testimonial")}
+                  {saving
+                    ? t("Saving…", "جارٍ الحفظ…")
+                    : editing
+                    ? t("Save Changes", "حفظ التغييرات")
+                    : t("Create Review", "إنشاء رأي")}
                 </button>
               </div>
             </div>
@@ -265,7 +342,9 @@ export default function TestimonialsAdminPage() {
             <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-border)]">
                 <h2 className="text-[13px] font-bold text-[var(--admin-text)]">
-                  {editing ? (lang === "ar" ? "تعديل الشهادة" : "Edit Testimonial") : (lang === "ar" ? "شهادة جديدة" : "New Testimonial")}
+                  {editing
+                    ? t("Edit Review", "تعديل الرأي")
+                    : t("New Review", "رأي جديد")}
                 </h2>
               </div>
 
@@ -273,7 +352,9 @@ export default function TestimonialsAdminPage() {
                 {/* Bilingual row 1: Client Name */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Client Name (EN)</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
+                      {t("Client Name (EN)", "اسم العميل (EN)")}
+                    </label>
                     <input
                       value={form.client_name}
                       onChange={(e) => set("client_name", e.target.value)}
@@ -282,7 +363,9 @@ export default function TestimonialsAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Client Name (AR)</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
+                      {t("Client Name (AR)", "اسم العميل (AR)")}
+                    </label>
                     <input
                       dir="rtl"
                       value={form.client_name_ar ?? ""}
@@ -296,7 +379,9 @@ export default function TestimonialsAdminPage() {
                 {/* Bilingual row 2: Role */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Role (EN)</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
+                      {t("Role (EN)", "المسمى (EN)")}
+                    </label>
                     <input
                       value={form.role_en ?? ""}
                       onChange={(e) => set("role_en", e.target.value)}
@@ -305,7 +390,9 @@ export default function TestimonialsAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Role (AR)</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
+                      {t("Role (AR)", "المسمى (AR)")}
+                    </label>
                     <input
                       dir="rtl"
                       value={form.role_ar ?? ""}
@@ -319,40 +406,53 @@ export default function TestimonialsAdminPage() {
                 {/* Bilingual row 3: Content */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Content (EN)</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
+                      {t("Review Text (EN)", "نص الرأي (EN)")}
+                    </label>
                     <textarea
                       rows={4}
                       value={form.content_en}
                       onChange={(e) => set("content_en", e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
-                      placeholder="Write testimonial content in English…"
+                      placeholder="Write review content in English…"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Content (AR)</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
+                      {t("Review Text (AR)", "نص الرأي (AR)")}
+                    </label>
                     <textarea
                       dir="rtl"
                       rows={4}
                       value={form.content_ar ?? ""}
                       onChange={(e) => set("content_ar", e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
-                      placeholder="اكتب المحتوى بالعربية…"
+                      placeholder="اكتب نص الرأي بالعربية…"
                     />
                   </div>
                 </div>
 
                 <div className="border-t border-[var(--admin-border)] pt-6 mt-6">
-                  <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">{lang === "ar" ? "الإعدادات" : "Settings"}</p>
+                  <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">
+                    {t("Settings", "الإعدادات")}
+                  </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Rating */}
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Rating</label>
-                      <StarSelector value={form.rating ?? 5} onChange={(v) => set("rating", v)} />
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
+                        {t("Rating", "التقييم")}
+                      </label>
+                      <StarSelector
+                        value={form.rating ?? 5}
+                        onChange={(v) => set("rating", v)}
+                      />
                     </div>
 
                     {/* Client Photo */}
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Client Photo</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
+                        {t("Client Photo", "صورة العميل")}
+                      </label>
                       <FileUploadField
                         value={form.avatar_url ?? ""}
                         onChange={(url) => set("avatar_url", url)}
@@ -369,8 +469,11 @@ export default function TestimonialsAdminPage() {
                         onChange={(e) => set("published", e.target.checked)}
                         className="w-4 h-4 accent-pink-500 rounded cursor-pointer"
                       />
-                      <label htmlFor="t-published" className="text-[13px] text-[var(--admin-text)] cursor-pointer select-none">
-                        {lang === "ar" ? "منشور (مرئي على الموقع)" : "Published (visible on site)"}
+                      <label
+                        htmlFor="t-published"
+                        className="text-[13px] text-[var(--admin-text)] cursor-pointer select-none"
+                      >
+                        {t("Published (visible on site)", "منشور (مرئي على الموقع)")}
                       </label>
                     </div>
                   </div>
