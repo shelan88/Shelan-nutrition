@@ -2,7 +2,10 @@
  * ImageUpload — unified image picker used for every photo/avatar upload surface.
  *
  * Behaviour:
- *   • Click/tap anywhere on the component to open the file picker.
+ *   • Tap/click anywhere on the component to open the file picker.
+ *   • The <input type="file"> is absolutely positioned as a transparent overlay
+ *     covering the entire interactive area so the user's finger touches it
+ *     directly — no programmatic .click() involved.
  *   • Immediately shows a FileReader-based base64 preview (works on all browsers,
  *     including Samsung Browser where blob: URLs fail).
  *   • Calls the caller-supplied `upload` function (which handles the actual
@@ -10,7 +13,6 @@
  *   • Shows UploadProgressBar overlay while uploading.
  *   • On success calls `onSuccess(url)`.
  *   • On error shows an inline error message with a Retry button.
- *   • `onError` on the <img> hides it so the fallback slot is always visible.
  *
  * Props:
  *   value     — current URL to display (DB-backed); cleared preview takes over.
@@ -72,26 +74,13 @@ export default function ImageUpload({
   }, []);
 
   // ── Forensic: detect when the input element itself is recreated by React ─────
-  //    If fileRef.current identity changes between renders, React replaced the DOM node.
   const prevInputRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
     if (prevInputRef.current && prevInputRef.current !== fileRef.current) {
       console.error("[ImageUpload] ⚠ INPUT ELEMENT WAS RECREATED by React — " +
-        "fileRef.current identity changed. A new <input> DOM node exists. " +
-        "If this fires after Samsung Gallery closes, React unmounted/remounted " +
-        "the input before onChange could deliver the file.");
+        "fileRef.current identity changed. A new <input> DOM node exists.");
     }
     prevInputRef.current = fileRef.current;
-  });
-
-  // ── Forensic: track uploading state changes ───────────────────────────────────
-  const uploadingRef = useRef(uploading);
-  useEffect(() => {
-    if (uploadingRef.current !== uploading) {
-      console.log(`[ImageUpload] uploading state changed: ${uploadingRef.current} → ${uploading}` +
-        (uploading ? " (input is now disabled)" : " (input is now enabled)"));
-      uploadingRef.current = uploading;
-    }
   });
 
   // Shape styles
@@ -106,33 +95,27 @@ export default function ImageUpload({
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
 
     // ════════════════════════════════════════════════════════════════════════
-    // FORENSIC STEP 1 — onChange fired
-    // Log everything about the event and input element BEFORE touching anything.
-    // input.value is read HERE, before e.target.value = "" clears it.
+    // FORENSIC — onChange fired. Log everything before touching anything.
     // ════════════════════════════════════════════════════════════════════════
     const inputEl    = e.target;
     const fileList   = inputEl.files;
     const file       = fileList?.[0] ?? null;
     const inputValue = inputEl.value; // capture BEFORE clearing
 
-    console.group("[input] onChange fired");
+    console.group("[input] onChange fired (ImageUpload)");
     console.log("[input] navigator.userAgent  :", navigator.userAgent);
-    console.log("[input] event.target         :", inputEl);
-    console.log("[input] event.target.files   :", fileList);
     console.log("[input] files.length         :", fileList?.length ?? "null — FileList is null");
     console.log("[input] input.value (raw)    :", inputValue || "(empty)");
     console.log("[input] input.accept         :", inputEl.accept);
     console.log("[input] input.disabled       :", inputEl.disabled);
 
     if (!file) {
-      console.warn("[input] ⚠ file is null/undefined — files[0] did not exist. " +
-        "Possible causes: Samsung Internet fired onChange with empty FileList, " +
-        "or the picker was dismissed without selection.");
+      console.warn("[input] ⚠ file is null/undefined — files[0] did not exist.");
       console.groupEnd();
       return;
     }
 
-    // ── Full File object forensics ───────────────────────────────────────────
+    // Full File object forensics
     let objectKeys: string[] = [];
     try { objectKeys = Object.keys(file); } catch { objectKeys = ["(Object.keys threw)"]; }
 
@@ -147,121 +130,58 @@ export default function ImageUpload({
     }
 
     console.log("[input] file instanceof File :", file instanceof File);
-    console.log("[input] constructor.name     :", file.constructor?.name ?? "(unknown)");
     console.log("[input] file.name            :", file.name);
-    console.log("[input] file.type            :", file.type || "(empty — MIME omitted by Samsung Gallery)");
+    console.log("[input] file.type            :", file.type || "(empty)");
     console.log("[input] file.size            :", file.size, "bytes",
-      file.size === 0 ? "⚠ ZERO BYTES — Android content URI may not have resolved yet" : "");
-    console.log("[input] file.lastModified    :", file.lastModified,
-      `(${new Date(file.lastModified).toISOString()})`);
-    console.log("[input] Object.keys(file)    :", objectKeys.length ? objectKeys : "(none — File properties are non-enumerable, this is normal)");
+      file.size === 0 ? "⚠ ZERO BYTES" : "");
+    console.log("[input] Object.keys(file)    :", objectKeys.length ? objectKeys : "(none — non-enumerable, normal)");
     console.log("[input] file.slice(0,16) hex :", slicePreview);
     console.groupEnd();
     // ════════════════════════════════════════════════════════════════════════
 
-    // ── Clear input value so the same file can be re-selected ───────────────
-    // NOTE: this happens AFTER we've already read file from e.target.files[0].
-    // The File object reference in `file` is still valid after this clear.
-    // If Samsung Internet invalidates the File object when input.value is cleared,
-    // subsequent reads (file.size, file.slice) would change or throw.
-    console.log("[input] clearing e.target.value (was:", inputValue, ")");
+    // Clear input so the same file can be re-selected next time
     e.target.value = "";
-    // ── Post-clear slice check ────────────────────────────────────────────────
-    // Read 4 bytes AFTER e.target.value = "" to test whether Samsung Internet
-    // released the file handle when the input was cleared.
-    // Chrome: still returns the real magic bytes.
-    // Samsung Internet (if buggy): returns 00 00 00 00 — all zeros.
-    // This is the key comparison against the pre-clear slice logged above.
-    let postClearSlice = "(slice failed — file handle may have been released)";
-    try {
-      const postBuf = await file.slice(0, 4).arrayBuffer();
-      postClearSlice = Array.from(new Uint8Array(postBuf))
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join(" ");
-    } catch (e2) {
-      postClearSlice = `(threw after clear: ${e2})`;
-    }
-    console.log("[input] after e.target.value=\"\" — file.name:", file.name,
-      "| file.size:", file.size,
-      "| first 4 bytes:", postClearSlice);
-    console.log("[input] ← if first 4 bytes are '00 00 00 00' but size > 0, " +
-      "Samsung Internet released the file handle when input.value was cleared. " +
-      "Exact line: ImageUpload.tsx:77  e.target.value = \"\"");
 
-    // ════════════════════════════════════════════════════════════════════════
-    // FORENSIC STEP 2 — client-side size guard (validateFile equivalent here)
-    // ════════════════════════════════════════════════════════════════════════
-    console.log("[ImageUpload] BEFORE size guard — file.size:", file.size, "| maxSizeMb:", maxSizeMb);
+    // Client-side size guard
     if (file.size > maxSizeMb * 1024 * 1024) {
       const msg = lang === "ar"
         ? `الحجم الأقصى ${maxSizeMb} ميغابايت`
         : `Max file size is ${maxSizeMb} MB`;
-      console.warn("[ImageUpload] size guard REJECTED — file too large:", msg);
       onError?.(msg);
       return;
     }
-    console.log("[ImageUpload] AFTER size guard — passed, continuing");
 
-    // ════════════════════════════════════════════════════════════════════════
-    // FORENSIC STEP 3 — FileReader preview (base64)
-    // ════════════════════════════════════════════════════════════════════════
-    console.log("[ImageUpload] BEFORE FileReader.readAsDataURL — file identity:", file.name, file.size);
+    // FileReader preview (base64, works on Samsung Internet where blob: URLs fail)
     const reader = new FileReader();
-
     reader.onloadstart = () => {
-      // ✓ FileReader.onloadstart — browser accepted the read request.
-      // If this never fires, the File object was already invalid before readAsDataURL().
       console.log("[FileReader] onloadstart — browser accepted the read. file.size:", file.size);
     };
-
-    reader.onload  = (ev) => {
+    reader.onload = (ev) => {
       const result = ev.target?.result as string;
       console.log("[FileReader] onload — result length:", result?.length ?? 0,
-        "| data prefix:", result?.slice(0, 40),
-        result?.length === 0 || result === "data:application/octet-stream;base64,"
-          ? "⚠ EMPTY DATA URI — file contents were 0 bytes when FileReader read it"
-          : "");
+        "| prefix:", result?.slice(0, 40));
       setPreview(result);
     };
-
     reader.onabort = () => {
-      // Fires if the browser aborted the read mid-flight.
-      // Samsung Internet Browser may abort FileReader when the input element
-      // that owned the File becomes disabled (disabled={uploading} re-render).
-      console.error("[FileReader] ⚠ onabort — read was aborted mid-flight. " +
-        "Check whether setUploading(true) → React re-render → input disabled={true} " +
-        "fired between readAsDataURL() and onload. " +
-        "Exact suspects: useUpload.ts:43 setUploading(true), ImageUpload.tsx input disabled={uploading}");
+      console.error("[FileReader] ⚠ onabort — read was aborted mid-flight.");
     };
-
     reader.onerror = (ev) => {
-      console.error("[FileReader] ⚠ onerror — FileReader failed to read the File. " +
-        "This confirms the File object was invalidated before the read completed. " +
-        "Most likely cause: e.target.value=\"\" on ImageUpload.tsx:77 released the " +
-        "file handle in Samsung Internet Browser.", ev);
+      console.error("[FileReader] ⚠ onerror — FileReader failed to read the File.", ev);
     };
-
     reader.readAsDataURL(file);
 
-    // ════════════════════════════════════════════════════════════════════════
-    // FORENSIC STEP 4 — upload.run()
-    // ════════════════════════════════════════════════════════════════════════
-    console.log("[ImageUpload] BEFORE upload.run() — file:", file.name, file.size, "bytes", file.type || "(no type)");
-    console.log("[ImageUpload] uploading state at this point:", uploading);
+    // Run upload
+    console.log("[ImageUpload] calling upload.run — file:", file.name, file.size, "bytes");
     const url = await run(file, upload);
-    console.log("[ImageUpload] AFTER upload.run() — returned url:", url);
+    console.log("[ImageUpload] upload.run returned:", url);
 
     if (!url) {
-      setPreview(null); // revert to original on failure
+      setPreview(null);
       const msg = lang === "ar" ? "فشل رفع الصورة" : "Image upload failed";
-      console.error("[ImageUpload] upload.run() returned null/undefined — " +
-        "check upload.service.ts logs for the exact failure reason");
       onError?.(msg);
       return;
     }
 
-    // 3. Replace preview with final URL + notify parent
-    console.log("[ImageUpload] SUCCESS — setting preview and calling onSuccess:", url);
     setPreview(url);
     onSuccess?.(url);
   }
@@ -274,6 +194,9 @@ export default function ImageUpload({
       onSuccess?.(url);
     }
   }
+
+  // Whether interaction is blocked (passed to CSS + disabled attr on the input)
+  const inactive = disabled || uploading;
 
   return (
     <div className={`relative group inline-block ${className ?? ""}`}>
@@ -289,7 +212,6 @@ export default function ImageUpload({
             alt=""
             className={`w-full h-full object-cover ${shapeClass}`}
             onError={(e) => {
-              // Broken URL — hide img so fallback slot shows through
               (e.currentTarget as HTMLImageElement).style.display = "none";
             }}
           />
@@ -309,27 +231,33 @@ export default function ImageUpload({
           </div>
         )}
 
-        {/* ── Camera hover overlay (not shown while uploading) ────────────── */}
-        {!uploading && !disabled && (
-          <button
-            type="button"
-            onClick={() => {
-              // ── Forensic: log the onClick that opens the file picker ─────
-              console.group("[input] onClick fired — opening file picker");
-              console.log("[input] fileRef.current      :", fileRef.current);
-              console.log("[input] input.disabled       :", fileRef.current?.disabled);
-              console.log("[input] input.accept         :", fileRef.current?.accept);
-              console.log("[input] input.value (before) :", fileRef.current?.value || "(empty)");
-              console.log("[input] navigator.userAgent  :", navigator.userAgent);
-              console.groupEnd();
-              fileRef.current?.click();
-            }}
-            className={`absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity ${shapeClass}`}
-            aria-label={lang === "ar" ? "تغيير الصورة" : "Change image"}
+        {/* ── Camera icon — visual only, pointer-events-none ──────────────── */}
+        {/*    The input overlay behind this receives all touches.            */}
+        {!inactive && (
+          <div
+            aria-hidden
+            className={`absolute inset-0 flex items-center justify-center bg-black/40
+              opacity-0 group-hover:opacity-100 group-active:opacity-100
+              transition-opacity pointer-events-none ${shapeClass}`}
           >
             <Camera size={20} className="text-white drop-shadow" />
-          </button>
+          </div>
         )}
+
+        {/* ── Transparent <input> overlay — user's finger lands here directly  */}
+        {/*    No programmatic .click() anywhere. The native file picker opens  */}
+        {/*    because the user directly touched this input element.            */}
+        <input
+          ref={fileRef}
+          type="file"
+          accept={accept}
+          aria-label={lang === "ar" ? "تغيير الصورة" : "Change image"}
+          className={`absolute inset-0 w-full h-full opacity-0
+            ${inactive ? "pointer-events-none cursor-default" : "cursor-pointer"}`}
+          tabIndex={inactive ? -1 : 0}
+          disabled={inactive}
+          onChange={handleChange}
+        />
       </div>
 
       {/* ── Error + retry (shown below the image) ─────────────────────────── */}
@@ -346,24 +274,6 @@ export default function ImageUpload({
           </button>
         </div>
       )}
-
-      {/* ── Hidden file input ─────────────────────────────────────────────── */}
-      {/*
-        NOTE: This input is always rendered (no conditional). Its `key` prop never
-        changes. React will update it in-place, not recreate the DOM node.
-        If the [ImageUpload] UNMOUNTED or INPUT ELEMENT WAS RECREATED warnings
-        appear in the console, that assumption is wrong and React is destroying
-        this element, which would explain why Samsung Internet never fires onChange.
-      */}
-      <input
-        ref={fileRef}
-        type="file"
-        accept={accept}
-        className="sr-only"
-        tabIndex={-1}
-        disabled={disabled || uploading}
-        onChange={handleChange}
-      />
     </div>
   );
 }

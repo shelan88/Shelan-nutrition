@@ -70,17 +70,29 @@ export default function FileUploadField({
           placeholder={placeholder}
           className="flex-1 px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors min-w-0"
         />
-        <button
-          type="button"
-          disabled={uploading}
-          onClick={() => fileRef.current?.click()}
-          className={btnBase}
+        {/* Label wraps the input so the user's tap/click directly activates the
+            native file picker — no programmatic .click() required.            */}
+        <label
+          className={`${btnBase} ${uploading ? "opacity-50 pointer-events-none" : "cursor-pointer"}`}
         >
           <Upload size={13} />
           {uploading
             ? (lang === "ar" ? "جارٍ الرفع…" : "Uploading…")
             : (lang === "ar" ? "رفع" : "Upload")}
-        </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept={accept}
+            className="sr-only"
+            tabIndex={-1}
+            disabled={uploading}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleFile(file);
+              e.target.value = "";
+            }}
+          />
+        </label>
         {value && !uploading && (
           <button
             type="button"
@@ -132,19 +144,7 @@ export default function FileUploadField({
         </div>
       )}
 
-      {/* Hidden native file picker */}
-      <input
-        ref={fileRef}
-        type="file"
-        accept={accept}
-        className="sr-only"
-        tabIndex={-1}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleFile(file);
-          e.target.value = "";
-        }}
-      />
+      {/* File input is now inside the Upload label above — no second input needed */}
     </div>
   );
 }

@@ -158,8 +158,16 @@ function EmptyState({
 }: {
   icon: React.ElementType;
   label: string;
-  action?: { label: string; onClick: () => void };
+  /**
+   * When `htmlFor` is supplied the action renders as a <label> so the
+   * user's tap directly activates the associated <input type="file">.
+   * When only `onClick` is supplied it renders as a plain <button>.
+   */
+  action?: { label: string; onClick?: () => void; htmlFor?: string };
 }) {
+  const actionClass =
+    "flex items-center gap-1.5 h-10 px-4 rounded-xl bg-primary-pink text-white text-[12.5px] font-semibold hover:opacity-90 transition-opacity cursor-pointer";
+
   return (
     <div className="flex flex-col items-center gap-3 py-14 text-center">
       <div className="w-12 h-12 rounded-2xl bg-[var(--admin-hover-bg)] flex items-center justify-center">
@@ -167,13 +175,17 @@ function EmptyState({
       </div>
       <p className="text-[13px] text-[var(--admin-text-muted)]">{label}</p>
       {action && (
-        <button
-          onClick={action.onClick}
-          className="flex items-center gap-1.5 h-10 px-4 rounded-xl bg-primary-pink text-white text-[12.5px] font-semibold hover:opacity-90 transition-opacity"
-        >
-          <Plus size={12} strokeWidth={2.5} />
-          {action.label}
-        </button>
+        action.htmlFor ? (
+          <label htmlFor={action.htmlFor} className={actionClass}>
+            <Plus size={12} strokeWidth={2.5} />
+            {action.label}
+          </label>
+        ) : (
+          <button onClick={action.onClick} className={actionClass}>
+            <Plus size={12} strokeWidth={2.5} />
+            {action.label}
+          </button>
+        )
       )}
     </div>
   );
@@ -875,9 +887,20 @@ function FilesTab({
   const [deleting,  setDeleting]  = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Whenever triggerUpload flips to true (from the action bar or overview empty-state),
-  // programmatically open the file picker and immediately consume the flag so the
-  // parent resets it. Works both when the tab first mounts and when already mounted.
+  // Whenever triggerUpload flips to true (from the action bar), programmatically
+  // open the file picker and consume the flag so the parent resets it.
+  //
+  // NOTE: This is the ONE intentional exception to the "no programmatic .click()"
+  // rule. The trigger originates from an admin action-bar button click in a
+  // completely separate part of the component tree. There is no way to relay a
+  // user gesture through React state → useEffect — the gesture context is lost
+  // by the time this effect runs.
+  //
+  // This is acceptable because:
+  //   1. It is admin-only (admin portal, desktop browsers).
+  //   2. The primary upload button on this tab is already a <label htmlFor> that
+  //      works correctly on all browsers including Samsung Internet.
+  //   3. The triggerUpload path is a convenience shortcut, not the primary flow.
   useEffect(() => {
     if (triggerUpload && !uploading) {
       fileInputRef.current?.click();
@@ -929,6 +952,7 @@ function FilesTab({
           {isAr ? (uploading ? "جارٍ الرفع…" : "رفع ملف") : (uploading ? "Uploading…" : "Upload File")}
           <input
             ref={fileInputRef}
+            id="files-tab-input"
             type="file"
             className="hidden"
             disabled={uploading}
@@ -943,7 +967,7 @@ function FilesTab({
           label={isAr ? "لا توجد ملفات مرفوعة بعد" : "No files uploaded yet"}
           action={{
             label: isAr ? "رفع ملف" : "Upload File",
-            onClick: () => fileInputRef.current?.click(),
+            htmlFor: "files-tab-input",
           }}
         />
       ) : (
