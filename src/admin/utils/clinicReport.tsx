@@ -532,9 +532,12 @@ function DiagnosesSection({ client, isAr }: { client: Client; isAr: boolean }) {
 function QASection({
   response, templateName, isAr,
 }: { response: ResponseWithAnswers; templateName: string; isAr: boolean }) {
-  // Filter out any answer whose question was deleted from the template after
-  // submission — those have question === undefined from the repository join.
-  const answers = (response.answers ?? []).filter((a) => a.question != null);
+  // Filter out answers whose question was deleted from the template after submission.
+  // The repository spreads `undefined` into {}, so `a.question` is always a non-null
+  // object — checking `!= null` is therefore insufficient.  The reliable signal of a
+  // deleted question is that `label_en` (a required TemplateQuestionRow field) is absent.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const answers = (response.answers ?? []).filter((a) => !!(a.question as any)?.label_en);
   if (!answers.length) return null;
 
   return (
@@ -560,7 +563,8 @@ function QASection({
       {/* Q&A items — each one stays together */}
       {answers.map((ans, idx) => {
         const q = ans.question;
-        const qLabel   = (isAr && q.label_ar) ? q.label_ar : q.label_en;
+        // qLabel must be a string — react-pdf v4 throws if <Text> receives undefined.
+        const qLabel   = ((isAr && q.label_ar) ? q.label_ar : q.label_en) ?? "—";
         const ansText  = resolveAnswer(ans, isAr);
         const isLast   = idx === answers.length - 1;
 
@@ -639,13 +643,17 @@ function ConsultationsSection({ consultations, isAr }: { consultations: Consulta
   return (
     <SectionCard title={t("Consultation History", "سجل الاستشارات", isAr)} isAr={isAr} wrap>
       {consultations.map((c) => {
-        const notes = isAr ? c.notesAr : c.notes;
-        const type  = isAr ? c.typeAr  : c.type;
+        const notes = isAr ? (c.notesAr ?? c.notes) : c.notes;
+        // typeAr may be absent in older JSONB records — fall back to the EN label
+        // so we never pass undefined to a <Text> node (react-pdf v4 throws on undefined children).
+        const type  = (isAr ? (c.typeAr ?? c.type) : c.type) ?? "—";
+        // c.date may also be absent in malformed JSONB; guard with a dash.
+        const date  = c.date ?? "—";
         return (
           <View key={c.id} style={S.consultCard} wrap={false}>
             <View style={[S.consultMeta, { flexDirection: isAr ? "row-reverse" : "row" }]}>
               <View style={S.consultBadge}>
-                <Text style={S.consultBadgeText}>{c.date}</Text>
+                <Text style={S.consultBadgeText}>{date}</Text>
               </View>
               <View style={[S.consultBadge, { backgroundColor: C.bgPink }]}>
                 <Text style={[S.consultBadgeText, { color: C.pink }]}>{type}</Text>

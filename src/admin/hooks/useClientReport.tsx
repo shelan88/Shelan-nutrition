@@ -46,14 +46,36 @@ export function useClientReport(client: Client | null, isAr: boolean) {
   async function buildBlob(sections: ReportSections): Promise<Blob | null> {
     if (!client) return null;
 
-    // Fetch most-recent submitted assessment response (enriched with template name).
-    const responses = await getSubmittedResponsesWithTemplateNames(client.email);
-    const latest    = responses[0] ?? null;
+    // ── Step 1: fetch submitted assessment responses ────────────────────────
+    let responses;
+    try {
+      responses = await getSubmittedResponsesWithTemplateNames(client.email);
+      console.log("[buildBlob] step 1 OK — responses:", responses.length);
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error("[buildBlob] ✖ step 1 FAILED — getSubmittedResponsesWithTemplateNames");
+      console.error("[buildBlob]   message:", e?.message);
+      console.error("[buildBlob]   stack:  ", e?.stack);
+      throw err;
+    }
 
-    // Load the full response whenever Assessment Summary or Q&A is enabled —
-    // Assessment Summary uses the live score/risk/diagnosis from the response too.
+    const latest = responses[0] ?? null;
+
+    // ── Step 2: fetch full response detail (answers + questions) ────────────
     const needsResponse = sections.assessmentSummary || sections.qa;
-    const response = (latest && needsResponse) ? await getResponse(latest.id) : null;
+    let response = null;
+    if (latest && needsResponse) {
+      try {
+        response = await getResponse(latest.id);
+        console.log("[buildBlob] step 2 OK — response id:", response?.id ?? "null");
+      } catch (err: unknown) {
+        const e = err as Error;
+        console.error("[buildBlob] ✖ step 2 FAILED — getResponse(", latest.id, ")");
+        console.error("[buildBlob]   message:", e?.message);
+        console.error("[buildBlob]   stack:  ", e?.stack);
+        throw err;
+      }
+    }
 
     // Build template name string (language-aware).
     const templateName = latest
@@ -72,17 +94,36 @@ export function useClientReport(client: Client | null, isAr: boolean) {
       minute: "2-digit",
     });
 
-    return pdf(
-      <ClinicReportDocument
-        client={client}
-        isAr={isAr}
-        response={response}
-        templateName={templateName}
-        logoUrl={logoUrl}
-        generatedAt={generatedAt}
-        sections={sections}
-      />
-    ).toBlob();
+    // ── Step 3: render react-pdf document → Blob ────────────────────────────
+    console.log("[buildBlob] step 3 — calling pdf().toBlob()", {
+      clientId:     client.id,
+      isAr,
+      hasResponse:  !!response,
+      hasLogoUrl:   !!logoUrl,
+      sections,
+    });
+    try {
+      const blob = await pdf(
+        <ClinicReportDocument
+          client={client}
+          isAr={isAr}
+          response={response}
+          templateName={templateName}
+          logoUrl={logoUrl}
+          generatedAt={generatedAt}
+          sections={sections}
+        />
+      ).toBlob();
+      console.log("[buildBlob] step 3 OK — blob size:", blob.size, "bytes, type:", blob.type);
+      return blob;
+    } catch (err: unknown) {
+      const e = err as Error;
+      console.error("[buildBlob] ✖ step 3 FAILED — pdf().toBlob() threw");
+      console.error("[buildBlob]   message:", e?.message);
+      console.error("[buildBlob]   stack:  ", e?.stack);
+      console.error("[buildBlob]   full error object:", err);
+      throw err;
+    }
   }
 
   /** Download the PDF as a file. */
