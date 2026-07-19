@@ -153,13 +153,6 @@ export default function TestimonialsAdminPage() {
       .toUpperCase()
       .slice(0, 2);
 
-  // Label helper for bilingual field labels inside the edit form.
-  // "(EN)" / "(AR)" are kept as language identifiers regardless of UI lang.
-  const lbl = (en: string, ar: string) =>
-    `block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5` &&
-    undefined; // dummy — we use t() below
-  void lbl; // suppress unused warning
-
   const t = (en: string, ar: string) => (isAr ? ar : en);
 
   return (
