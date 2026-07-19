@@ -1,21 +1,27 @@
 /**
  * useClientReport — data assembly + PDF generation hook.
  *
- * Fetches the most recent submitted assessment response for the client,
- * assembles a ReportData object, and exposes:
- *   - handleExport()  → downloads a PDF file
- *   - handlePrint()   → opens the PDF in a new tab for browser printing
- *   - generating      → boolean spinner state for both buttons
- *   - pdfToast        → toast state: "idle" | "generating" | "error"
- *   - retryLast()     → retries the last failed action
+ * Flow:
+ *   1. User clicks Print or Export → pendingAction is set ("print" | "export")
+ *   2. ClientDrawer renders the ReportSectionsModal
+ *   3. User confirms section selection → confirmGenerate(sections) is called
+ *   4. PDF is built with only the selected sections and delivered
  *
- * Graceful fallback: if no submitted assessment response exists in Supabase,
- * the PDF is generated with client info + health indicators only (no Q&A).
+ * Exposed:
+ *   - pendingAction   → "print" | "export" | null  (drives modal visibility)
+ *   - cancelModal()   → dismiss modal without generating
+ *   - confirmGenerate(sections) → build + deliver PDF
+ *   - generating      → boolean spinner state while building
+ *   - pdfToast        → "idle" | "generating" | "error"
+ *   - retryLast()     → retries last failed action with last sections
+ *   - dismissToast()  → clears error toast
  */
 
 import { useState, useRef } from "react";
 import { pdf } from "@react-pdf/renderer";
 import ClinicReportDocument from "@/admin/utils/clinicReport";
+import type { ReportSections } from "@/admin/utils/clinicReport";
+import { ALL_SECTIONS_ON } from "@/admin/utils/clinicReport";
 import type { Client } from "@/admin/data/clients";
 import {
   getSubmittedResponsesWithTemplateNames,
@@ -23,22 +29,31 @@ import {
 } from "@/admin/repositories/assessment-responses.repository";
 
 export type PdfToastState = "idle" | "generating" | "error";
+export type PendingAction  = "export" | "print" | null;
 
 export function useClientReport(client: Client | null, isAr: boolean) {
-  const [generating,   setGenerating]   = useState(false);
-  const [pdfToast,     setPdfToast]     = useState<PdfToastState>("idle");
-  const lastActionRef = useRef<"export" | "print" | null>(null);
+  const [generating,    setGenerating]    = useState(false);
+  const [pdfToast,      setPdfToast]      = useState<PdfToastState>("idle");
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 
-  /** Fetch all data and build the PDF blob. */
-  async function buildBlob(): Promise<Blob | null> {
+  // Remembers last-used sections so the modal re-opens with the same state.
+  const lastSectionsRef  = useRef<ReportSections>({ ...ALL_SECTIONS_ON });
+  // Remembers last action + sections so retryLast() works after an error.
+  const retryActionRef   = useRef<PendingAction>(null);
+  const retrySectionsRef = useRef<ReportSections>({ ...ALL_SECTIONS_ON });
+
+  /** Fetch all data and build the PDF blob with the given section toggles. */
+  async function buildBlob(sections: ReportSections): Promise<Blob | null> {
     if (!client) return null;
 
     // Fetch most-recent submitted assessment response (enriched with template name).
     const responses = await getSubmittedResponsesWithTemplateNames(client.email);
     const latest    = responses[0] ?? null;
 
-    // Load full Q&A if a submitted response exists.
-    const response = latest ? await getResponse(latest.id) : null;
+    // Load the full response whenever Assessment Summary or Q&A is enabled —
+    // Assessment Summary uses the live score/risk/diagnosis from the response too.
+    const needsResponse = sections.assessmentSummary || sections.qa;
+    const response = (latest && needsResponse) ? await getResponse(latest.id) : null;
 
     // Build template name string (language-aware).
     const templateName = latest
@@ -65,21 +80,21 @@ export function useClientReport(client: Client | null, isAr: boolean) {
         templateName={templateName}
         logoUrl={logoUrl}
         generatedAt={generatedAt}
+        sections={sections}
       />
     ).toBlob();
   }
 
   /** Download the PDF as a file. */
-  async function handleExport(): Promise<void> {
+  async function runExport(sections: ReportSections): Promise<void> {
     if (!client || generating) return;
-    lastActionRef.current = "export";
     setGenerating(true);
     setPdfToast("generating");
     try {
-      const blob = await buildBlob();
+      const blob = await buildBlob(sections);
       if (!blob) { setPdfToast("idle"); return; }
-      const url = URL.createObjectURL(blob);
-      const a   = document.createElement("a");
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
       const date = new Date().toISOString().split("T")[0];
       a.href     = url;
       a.download = `${client.fullName.replace(/\s+/g, "_")}_Report_${date}.pdf`;
@@ -97,13 +112,12 @@ export function useClientReport(client: Client | null, isAr: boolean) {
   }
 
   /** Open the PDF in a new tab so the user can print from the browser. */
-  async function handlePrint(): Promise<void> {
+  async function runPrint(sections: ReportSections): Promise<void> {
     if (!client || generating) return;
-    lastActionRef.current = "print";
     setGenerating(true);
     setPdfToast("generating");
     try {
-      const blob = await buildBlob();
+      const blob = await buildBlob(sections);
       if (!blob) { setPdfToast("idle"); return; }
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
@@ -118,10 +132,46 @@ export function useClientReport(client: Client | null, isAr: boolean) {
     }
   }
 
-  /** Retry the last failed action. */
+  /** Open the section-picker modal for export. */
+  function handleExport(): void {
+    if (!client || generating) return;
+    setPendingAction("export");
+  }
+
+  /** Open the section-picker modal for print. */
+  function handlePrint(): void {
+    if (!client || generating) return;
+    setPendingAction("print");
+  }
+
+  /**
+   * Called when the user confirms sections in the modal.
+   * Closes the modal and kicks off generation.
+   */
+  async function confirmGenerate(sections: ReportSections): Promise<void> {
+    const action = pendingAction;
+    // Save for retry and for next modal open.
+    lastSectionsRef.current  = { ...sections };
+    retryActionRef.current   = action;
+    retrySectionsRef.current = { ...sections };
+    // Close modal immediately so the generating overlay takes over.
+    setPendingAction(null);
+    if (action === "export") await runExport(sections);
+    else if (action === "print") await runPrint(sections);
+  }
+
+  /** Dismiss the modal without generating. */
+  function cancelModal(): void {
+    setPendingAction(null);
+  }
+
+  /** Retry the last failed action with the same sections. */
   function retryLast(): void {
-    if (lastActionRef.current === "export") handleExport();
-    else if (lastActionRef.current === "print") handlePrint();
+    const action   = retryActionRef.current;
+    const sections = retrySectionsRef.current;
+    retryActionRef.current = action; // keep it
+    if (action === "export") runExport(sections);
+    else if (action === "print") runPrint(sections);
   }
 
   /** Dismiss an error toast manually. */
@@ -129,5 +179,17 @@ export function useClientReport(client: Client | null, isAr: boolean) {
     setPdfToast("idle");
   }
 
-  return { generating, handleExport, handlePrint, pdfToast, retryLast, dismissToast };
+  return {
+    generating,
+    handleExport,
+    handlePrint,
+    pdfToast,
+    retryLast,
+    dismissToast,
+    // Modal state
+    pendingAction,
+    lastSections: lastSectionsRef,
+    confirmGenerate,
+    cancelModal,
+  };
 }

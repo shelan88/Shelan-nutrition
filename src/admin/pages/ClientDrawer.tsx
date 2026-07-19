@@ -29,6 +29,7 @@ import { deleteClient, archiveClient, updateClient } from "@/admin/repositories/
 import NutritionPlansTab from "./NutritionPlansTab";
 import FullAssessmentModal from "@/admin/components/FullAssessmentModal";
 import { useClientReport } from "@/admin/hooks/useClientReport";
+import type { ReportSections, SectionKey } from "@/admin/utils/clinicReport";
 
 // ─── Risk helpers ──────────────────────────────────────────────────────────────
 
@@ -103,6 +104,165 @@ function SectionHead({ icon: Icon, title }: { icon: React.ElementType; title: st
 // ─── Divider ──────────────────────────────────────────────────────────────────
 function Divider() {
   return <div className="my-6 border-t border-[var(--admin-border)]" />;
+}
+
+// ─── Report Sections Modal ────────────────────────────────────────────────────
+
+const SECTION_META: { key: SectionKey; labelEn: string; labelAr: string }[] = [
+  { key: "clientInfo",        labelEn: "Client Information",   labelAr: "معلومات المريض"       },
+  { key: "assessmentSummary", labelEn: "Assessment Summary",   labelAr: "ملخص التقييم"         },
+  { key: "healthIndicators",  labelEn: "Health Indicators",    labelAr: "المؤشرات الصحية"       },
+  { key: "diagnoses",         labelEn: "Diagnoses",            labelAr: "التشخيصات"            },
+  { key: "qa",                labelEn: "Assessment Q&A",       labelAr: "أسئلة التقييم وإجاباته" },
+  { key: "nutritionPlan",     labelEn: "Nutrition Plan",       labelAr: "خطة التغذية"           },
+  { key: "consultations",     labelEn: "Consultations",        labelAr: "الاستشارات"            },
+  { key: "medicalNotes",      labelEn: "Medical Notes",        labelAr: "الملاحظات الطبية"      },
+];
+
+interface ReportSectionsModalProps {
+  isAr:            boolean;
+  initialSections: ReportSections;
+  action:          "export" | "print";
+  onConfirm:       (sections: ReportSections) => void;
+  onCancel:        () => void;
+}
+
+function ReportSectionsModal({ isAr, initialSections, action, onConfirm, onCancel }: ReportSectionsModalProps) {
+  const [sections, setSections] = useState<ReportSections>({ ...initialSections });
+
+  const allChecked = Object.values(sections).every(Boolean);
+
+  function toggleAll() {
+    const next = !allChecked;
+    setSections(Object.fromEntries(SECTION_META.map(({ key }) => [key, next])) as ReportSections);
+  }
+
+  function toggle(key: SectionKey) {
+    setSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  const atLeastOne = Object.values(sections).some(Boolean);
+
+  return (
+    /* Backdrop */
+    <motion.div
+      key="report-modal-backdrop"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      className="absolute inset-0 z-30 flex items-center justify-center p-6"
+      style={{ background: "rgba(0,0,0,0.35)", backdropFilter: "blur(3px)" }}
+      onClick={onCancel}
+    >
+      <motion.div
+        key="report-modal-panel"
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 8 }}
+        transition={{ duration: 0.18 }}
+        className="w-full max-w-sm bg-[var(--admin-surface)] rounded-2xl shadow-2xl border border-[var(--admin-border)] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-border)]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary-pink/15 to-lavender-purple/15 flex items-center justify-center">
+              {action === "print"
+                ? <Printer size={13} className="text-primary-pink" strokeWidth={2} />
+                : <Download size={13} className="text-primary-pink" strokeWidth={2} />}
+            </div>
+            <p className="text-[13.5px] font-bold text-[var(--admin-text)]">
+              {isAr ? "اختيار أقسام التقرير" : "Choose Report Sections"}
+            </p>
+          </div>
+          <button
+            onClick={onCancel}
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] transition-colors"
+            aria-label={isAr ? "إغلاق" : "Close"}
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Section list */}
+        <div className="px-5 py-4 space-y-1.5 max-h-80 overflow-y-auto no-scrollbar">
+          {/* Select all row */}
+          <button
+            onClick={toggleAll}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[var(--admin-hover-bg)] transition-colors group text-start"
+          >
+            <span className={`w-4.5 h-4.5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+              allChecked
+                ? "bg-lavender-purple border-lavender-purple"
+                : "border-[var(--admin-border)] group-hover:border-lavender-purple/50"
+            }`} style={{ width: 18, height: 18 }}>
+              {allChecked && (
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </span>
+            <span className="text-[12px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider">
+              {isAr ? "تحديد الكل" : "Select All"}
+            </span>
+          </button>
+
+          <div className="border-t border-[var(--admin-border)] my-1" />
+
+          {SECTION_META.map(({ key, labelEn, labelAr }) => {
+            const checked = sections[key];
+            return (
+              <button
+                key={key}
+                onClick={() => toggle(key)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--admin-hover-bg)] transition-colors group text-start"
+              >
+                <span className={`rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                  checked
+                    ? "bg-lavender-purple border-lavender-purple"
+                    : "border-[var(--admin-border)] group-hover:border-lavender-purple/50"
+                }`} style={{ width: 18, height: 18 }}>
+                  {checked && (
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </span>
+                <span className={`text-[13px] font-semibold transition-colors ${
+                  checked ? "text-[var(--admin-text)]" : "text-[var(--admin-text-faint)]"
+                }`}>
+                  {isAr ? labelAr : labelEn}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-[var(--admin-border)] bg-[var(--admin-hover-bg)]">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 text-[12.5px] font-semibold rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-muted)] hover:bg-[var(--admin-surface)] transition-all"
+          >
+            {isAr ? "إلغاء" : "Cancel"}
+          </button>
+          <button
+            onClick={() => onConfirm(sections)}
+            disabled={!atLeastOne}
+            className="flex items-center gap-2 px-4 py-2 text-[12.5px] font-semibold rounded-lg bg-primary-pink text-white hover:bg-primary-pink/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {action === "print"
+              ? <Printer size={13} strokeWidth={2} />
+              : <Download size={13} strokeWidth={2} />}
+            {action === "print"
+              ? (isAr ? "طباعة" : "Print PDF")
+              : (isAr ? "تصدير" : "Export PDF")}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -478,7 +638,12 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
     }
   }
 
-  const { generating: generatingPdf, handleExport, handlePrint, pdfToast, retryLast, dismissToast } = useClientReport(client, isAr);
+  const {
+    generating: generatingPdf,
+    handleExport, handlePrint,
+    pdfToast, retryLast, dismissToast,
+    pendingAction, lastSections, confirmGenerate, cancelModal,
+  } = useClientReport(client, isAr);
 
   async function handleViewFullAssessment() {
     if (!client) return;
@@ -1052,6 +1217,20 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
                     </button>
                   </div>
                 </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* ── Report sections modal (section picker before PDF gen) ── */}
+            <AnimatePresence>
+              {pendingAction && (
+                <ReportSectionsModal
+                  key="report-sections-modal"
+                  isAr={isAr}
+                  initialSections={lastSections.current}
+                  action={pendingAction}
+                  onConfirm={confirmGenerate}
+                  onCancel={cancelModal}
+                />
               )}
             </AnimatePresence>
 

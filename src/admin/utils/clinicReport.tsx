@@ -81,6 +81,32 @@ const C = {
 };
 
 // ─── Public types ─────────────────────────────────────────────────────────────
+
+/** Keys for each toggleable report section. */
+export type SectionKey =
+  | "clientInfo"
+  | "assessmentSummary"
+  | "healthIndicators"
+  | "diagnoses"
+  | "qa"
+  | "nutritionPlan"
+  | "consultations"
+  | "medicalNotes";
+
+export type ReportSections = Record<SectionKey, boolean>;
+
+/** All sections enabled — use as default. */
+export const ALL_SECTIONS_ON: ReportSections = {
+  clientInfo:        true,
+  assessmentSummary: true,
+  healthIndicators:  true,
+  diagnoses:         true,
+  qa:                true,
+  nutritionPlan:     true,
+  consultations:     true,
+  medicalNotes:      true,
+};
+
 export interface ReportData {
   client:       Client;
   isAr:         boolean;
@@ -88,6 +114,8 @@ export interface ReportData {
   templateName: string;
   logoUrl:      string;
   generatedAt:  string;
+  /** Which sections to include. Defaults to all enabled if omitted. */
+  sections?:    ReportSections;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -703,8 +731,11 @@ export default function ClinicReportDocument({
   templateName,
   logoUrl,
   generatedAt,
+  sections: sectionsProp,
 }: ReportData) {
   const clientName = isAr ? client.fullNameAr : client.fullName;
+  // Fall back to all-on when no sections prop is provided.
+  const sec: ReportSections = sectionsProp ?? ALL_SECTIONS_ON;
 
   return (
     <Document
@@ -723,32 +754,42 @@ export default function ClinicReportDocument({
         />
         <ReportFooter isAr={isAr} />
 
-        {/* ── Content sections ── */}
-        <ClientInfoSection client={client} isAr={isAr} />
+        {/* ── Content sections — each gated by its toggle ── */}
+        {sec.clientInfo && (
+          <ClientInfoSection client={client} isAr={isAr} />
+        )}
 
-        <AssessmentSummarySection client={client} response={response} isAr={isAr} />
+        {sec.assessmentSummary && (
+          <AssessmentSummarySection client={client} response={response} isAr={isAr} />
+        )}
 
-        <HealthIndicatorsSection client={client} isAr={isAr} />
+        {sec.healthIndicators && (
+          <HealthIndicatorsSection client={client} isAr={isAr} />
+        )}
 
-        <DiagnosesSection client={client} isAr={isAr} />
+        {sec.diagnoses && (
+          <DiagnosesSection client={client} isAr={isAr} />
+        )}
 
-        {response && response.answers.length > 0 && (
+        {sec.qa && response && response.answers.length > 0 && (
           <QASection response={response} templateName={templateName} isAr={isAr} />
         )}
 
-        {client.nutritionPlan && (
+        {sec.nutritionPlan && client.nutritionPlan && (
           <NutritionSection plan={client.nutritionPlan} isAr={isAr} />
         )}
 
-        {client.consultations?.length > 0 && (
+        {sec.consultations && client.consultations?.length > 0 && (
           <ConsultationsSection consultations={client.consultations} isAr={isAr} />
         )}
 
-        <MedicalNotesSection
-          notesEn={client.medicalNotes}
-          notesAr={client.medicalNotesAr}
-          isAr={isAr}
-        />
+        {sec.medicalNotes && (
+          <MedicalNotesSection
+            notesEn={client.medicalNotes}
+            notesAr={client.medicalNotesAr}
+            isAr={isAr}
+          />
+        )}
       </Page>
     </Document>
   );
