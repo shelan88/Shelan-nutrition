@@ -1,12 +1,14 @@
 /**
  * MediaLibraryPage — File upload and management page.
+ * Upload zone uses the shared FileDropZone component (unified upload system).
  */
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import PageHeader from "../components/PageHeader";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { uploadFile, deleteMediaFile, getMediaLibrary } from "@/admin/repositories/storage.repository";
+import { FileDropZone } from "@/shared/components/upload";
 import type { MediaLibraryRow } from "@/types/database.types";
 
 const fadeUp = (delay = 0) => ({
@@ -28,10 +30,10 @@ function formatDate(iso: string): string {
 type FilterTab = "all" | "image" | "document" | "video";
 
 const FILTER_TABS: { key: FilterTab; label: string; labelAr: string }[] = [
-  { key: "all", label: "All", labelAr: "الكل" },
-  { key: "image", label: "Images", labelAr: "صور" },
-  { key: "document", label: "Documents", labelAr: "مستندات" },
-  { key: "video", label: "Videos", labelAr: "فيديو" },
+  { key: "all",      label: "All",       labelAr: "الكل"     },
+  { key: "image",    label: "Images",    labelAr: "صور"      },
+  { key: "document", label: "Documents", labelAr: "مستندات"  },
+  { key: "video",    label: "Videos",    labelAr: "فيديو"    },
 ];
 
 function MediaCard({ item, onDelete, lang }: { item: MediaLibraryRow; onDelete: (id: string, url: string) => void; lang: string }) {
@@ -103,12 +105,9 @@ function MediaCard({ item, onDelete, lang }: { item: MediaLibraryRow; onDelete: 
 
 export default function MediaLibraryPage() {
   const { lang } = useLanguage();
-  const [items, setItems] = useState<MediaLibraryRow[]>([]);
+  const [items,  setItems]  = useState<MediaLibraryRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
   const [filter, setFilter] = useState<FilterTab>("all");
-  const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadItems = useCallback(async () => {
     setLoading(true);
@@ -120,20 +119,28 @@ export default function MediaLibraryPage() {
 
   useEffect(() => { loadItems(); }, [loadItems]);
 
-  const handleFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    setUploading(true);
-    for (let i = 0; i < files.length; i++) {
-      await uploadFile(files[i]);
-    }
-    setUploading(false);
-    loadItems();
-  };
-
   const handleDelete = async (id: string, url: string) => {
     await deleteMediaFile(id, url);
     setItems(prev => prev.filter(i => i.id !== id));
   };
+
+  /**
+   * Called by FileDropZone.onSuccess for each uploaded file.
+   * Fetches the newly-created media_library row by refreshing the list.
+   */
+  async function handleUploadSuccess() {
+    await loadItems();
+  }
+
+  /**
+   * The upload function passed to FileDropZone.
+   * Calls the storage repository which writes to the media_library table.
+   * Returns the public URL (or null on failure).
+   */
+  async function uploadFn(file: File): Promise<string | null> {
+    const row = await uploadFile(file);
+    return row?.url ?? null;
+  }
 
   return (
     <div>
@@ -142,41 +149,18 @@ export default function MediaLibraryPage() {
         description={lang === "ar" ? "رفع وإدارة الصور والمستندات ومقاطع الفيديو." : "Upload and manage images, documents, and videos."}
       />
 
-      {/* Upload Zone */}
+      {/* Upload Zone — unified FileDropZone component */}
       <motion.div {...fadeUp(0)} className="mb-6">
-        <div
-          onClick={() => fileInputRef.current?.click()}
-          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={e => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
-          className={`rounded-2xl border-2 border-dashed cursor-pointer transition-all py-12 flex flex-col items-center justify-center gap-3 ${
-            dragOver
-              ? "border-primary-pink bg-pink-50/40"
-              : "border-[var(--admin-border)] hover:border-primary-pink/40 hover:bg-[var(--admin-hover-bg)]"
-          }`}
-        >
-          {uploading ? (
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-10 h-10 border-2 border-primary-pink/20 border-t-primary-pink rounded-full animate-spin" />
-              <p className="text-[13px] font-medium text-[var(--admin-text-muted)]">{lang === "ar" ? "جارٍ الرفع…" : "Uploading…"}</p>
-            </div>
-          ) : (
-            <>
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-pink/10 to-lavender-purple/10 flex items-center justify-center">
-                <Plus size={22} className="text-primary-pink" />
-              </div>
-              <p className="text-[14px] font-semibold text-[var(--admin-text)]">{lang === "ar" ? "أفلت الملفات هنا أو اضغط للتصفح" : "Drop files here or click to browse"}</p>
-              <p className="text-[12px] text-[var(--admin-text-faint)]">{lang === "ar" ? "صور، ملفات PDF، فيديو — حتى 50 MB لكل ملف" : "Images, PDFs, Videos — up to 50 MB each"}</p>
-            </>
-          )}
-        </div>
-        <input
-          ref={fileInputRef}
-          type="file"
+        <FileDropZone
+          upload={uploadFn}
+          onSuccess={handleUploadSuccess}
           accept="image/*,application/pdf,video/*"
           multiple
-          className="hidden"
-          onChange={e => handleFiles(e.target.files)}
+          maxSizeMb={50}
+          lang={lang as "en" | "ar"}
+          label={lang === "ar" ? "أفلت الملفات هنا أو اضغط للتصفح" : "Drop files here or click to browse"}
+          hint={lang === "ar" ? "صور، ملفات PDF، فيديو — حتى 50 MB لكل ملف" : "Images, PDFs, Videos — up to 50 MB each"}
+          className="py-2"
         />
       </motion.div>
 

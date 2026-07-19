@@ -10,16 +10,17 @@
  *  • File management modal (upload PDF / images / documents)
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, BookOpen, Edit2, Copy, Archive, Trash2, History,
-  ChevronDown, ChevronUp, X, Save, Loader2, Upload, FileText,
+  ChevronDown, ChevronUp, X, Save, Loader2, FileText,
   Image as ImageIcon, File as FileIcon, Paperclip, RotateCcw,
   Droplets, Footprints, Dumbbell, Pill, ClipboardList,
   Sun, Sunset, Moon, Coffee, Apple, UtensilsCrossed,
   Download, AlertTriangle, CheckCircle, Printer, Send as SendIcon,
 } from "lucide-react";
+import { FileDropZone } from "@/shared/components/upload";
 import {
   getClientNutritionPlans,
   getNutritionPlanHistory,
@@ -818,24 +819,12 @@ function FilesModal({
   isAr: boolean;
   onClose: () => void;
 }) {
-  const [files, setFiles]       = useState<NutritionPlanFileRow[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [files, setFiles]     = useState<NutritionPlanFileRow[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     getPlanFiles(plan.id).then((f) => { setFiles(f); setLoading(false); });
   }, [plan.id]);
-
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    const result = await uploadPlanFile(plan.id, clientId, file);
-    if (result) setFiles((prev) => [result, ...prev]);
-    setUploading(false);
-    if (fileRef.current) fileRef.current.value = "";
-  }
 
   async function handleDelete(f: NutritionPlanFileRow) {
     if (!window.confirm(isAr ? "هل تريدين حذف هذا الملف؟" : "Delete this file?")) return;
@@ -846,43 +835,29 @@ function FilesModal({
   const fileIcon = (type: NutritionPlanFileRow["file_type"]) =>
     type === "image" ? ImageIcon : type === "pdf" ? FileText : FileIcon;
 
+  /** Upload fn passed to FileDropZone — calls repo and updates file list */
+  async function handleFileUpload(file: File): Promise<string | null> {
+    const result = await uploadPlanFile(plan.id, clientId, file);
+    if (result) setFiles((prev) => [result, ...prev]);
+    return result?.url ?? null;
+  }
+
   return (
     <ModalShell
       title={isAr ? "ملفات الخطة" : "Plan Files"}
       subtitle={plan.name}
       onClose={onClose}
     >
-      {/* Upload zone */}
+      {/* Upload zone — unified FileDropZone */}
       <div className="mb-4">
-        <input
-          ref={fileRef}
-          type="file"
+        <FileDropZone
+          upload={handleFileUpload}
           accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xlsx,.csv"
-          onChange={handleUpload}
-          className="hidden"
-          id="plan-file-upload"
+          maxSizeMb={50}
+          lang={isAr ? "ar" : "en"}
+          label={isAr ? "اضغطي لرفع ملف (PDF، صورة، مستند)" : "Click to upload (PDF, image, document)"}
+          hint={isAr ? "الحجم الأقصى 50 MB" : "Max 50 MB"}
         />
-        <label
-          htmlFor="plan-file-upload"
-          className={`
-            flex items-center gap-3 w-full border-2 border-dashed rounded-xl p-4
-            cursor-pointer transition-colors text-center justify-center
-            ${uploading
-              ? "border-[var(--admin-border)] opacity-60 pointer-events-none"
-              : "border-[var(--admin-border)] hover:border-primary-pink/40 hover:bg-primary-pink/[0.02]"}
-          `}
-        >
-          {uploading ? (
-            <Loader2 size={15} className="animate-spin text-[var(--admin-text-faint)]" />
-          ) : (
-            <Upload size={15} strokeWidth={1.8} className="text-[var(--admin-text-faint)]" />
-          )}
-          <span className="text-[12.5px] text-[var(--admin-text-muted)] font-medium">
-            {uploading
-              ? (isAr ? "جارٍ الرفع..." : "Uploading...")
-              : (isAr ? "اضغطي لرفع ملف (PDF، صورة، مستند)" : "Click to upload (PDF, image, document)")}
-          </span>
-        </label>
       </div>
 
       {/* File list */}

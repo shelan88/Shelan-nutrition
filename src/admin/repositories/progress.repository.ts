@@ -3,9 +3,12 @@
  *
  * Supabase wrapper for progress_entries and progress_photos tables.
  * Also handles timeline event insertion on create.
+ *
+ * Storage operations use the unified upload service from @/lib/upload.
  */
 
 import { supabase } from "@/lib/supabase";
+import { uploadToStorage, deleteFromStorage, safeName } from "@/lib/upload";
 import { appendTimelineEvent } from "@/admin/repositories/clients.repository";
 import type { ProgressEntryRow, ProgressPhotoRow } from "@/types/database.types";
 
@@ -112,17 +115,13 @@ export async function createProgressEntry(
     return null;
   }
 
-  // Add timeline event
   const today = new Date().toISOString().slice(0, 10);
-  let eventText = "Progress Recorded";
+  let eventText   = "Progress Recorded";
   let eventTextAr = "تم تسجيل التقدم";
 
   if (input.weight_kg && previousWeight) {
-    const diff = (input.weight_kg - previousWeight).toFixed(1);
-    const sign = parseFloat(diff) > 0 ? "+" : "";
     eventText   = `Progress Recorded · Weight ${previousWeight} → ${input.weight_kg} kg`;
     eventTextAr = `تم تسجيل التقدم · الوزن ${previousWeight} → ${input.weight_kg} كجم`;
-    void diff; void sign;
   } else if (input.weight_kg) {
     eventText   = `Progress Recorded · Weight ${input.weight_kg} kg`;
     eventTextAr = `تم تسجيل التقدم · الوزن ${input.weight_kg} كجم`;
@@ -218,21 +217,22 @@ export async function uploadEntryPhoto(
   photoType: ProgressPhotoRow["photo_type"],
   file: File,
 ): Promise<ProgressPhotoRow | null> {
-  const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const path = `progress/${clientId}/${entryId}/${photoType}_${Date.now()}_${safe}`;
+  const path = `progress/${clientId}/${entryId}/${photoType}_${Date.now()}_${safeName(file.name)}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from("media")
-    .upload(path, file, { upsert: true });
+  const { url: publicUrl, error: uploadError } = await uploadToStorage(file, {
+    path,
+    upsert:      true,
+    compress:    true,
+    maxWidthPx:  1200,
+    allowedTypes: ["image/*"],
+  });
 
-  if (uploadError) {
-    console.error("[progress] uploadEntryPhoto:", uploadError.message);
+  if (uploadError || !publicUrl) {
+    console.error("[progress] uploadEntryPhoto:", uploadError);
     return null;
   }
 
-  const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
-
-  // Delete existing photo of this type for this entry (replace)
+  // Replace existing photo of same type for this entry
   const { data: existing } = await supabase
     .from("progress_photos")
     .select("id, url")
@@ -251,7 +251,7 @@ export async function uploadEntryPhoto(
       entry_id:   entryId,
       client_id:  clientId,
       photo_type: photoType,
-      url:        urlData.publicUrl,
+      url:        publicUrl,
     })
     .select()
     .single();
@@ -267,16 +267,13 @@ export async function deleteEntryPhoto(
   photoId: string,
   url: string,
 ): Promise<boolean> {
-  const marker = `/storage/v1/object/public/media/`;
-  const idx = url.indexOf(marker);
-  if (idx >= 0) {
-    const storagePath = url.slice(idx + marker.length);
-    await supabase.storage.from("media").remove([storagePath]);
-  }
+  await deleteFromStorage(url);
+
   const { error } = await supabase
     .from("progress_photos")
     .delete()
     .eq("id", photoId);
+
   if (error) { console.error("[progress] deleteEntryPhoto:", error.message); return false; }
   return true;
 }

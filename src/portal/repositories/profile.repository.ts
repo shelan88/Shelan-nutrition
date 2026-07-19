@@ -7,18 +7,17 @@
  * updateOwnProfile  → calls the SECURITY DEFINER RPC `update_own_client_profile`
  *                     which targets rows via auth.uid() inside the function body,
  *                     bypassing the RLS surface on the clients table entirely.
- *                     This eliminates the "0 rows" / RLS mismatch failures that
- *                     occur when the JS client calls .update().eq("id", …).single().
  *
- * uploadAvatar      → storage upload ONLY. Does NOT write to the clients table.
- *                     The caller (handleSave) passes the returned URL to
- *                     updateOwnProfile so both happen in one atomic RPC call.
+ * uploadAvatar      → storage upload ONLY via the unified upload service.
+ *                     Does NOT write to the clients table.
+ *                     Caller passes the returned URL to updateOwnProfile.
  *
  * avatar_url in DB  → stored WITHOUT a cache-buster. Cache-busters are appended
  *                     at render time so stored URLs remain clean and reusable.
  */
 
 import { supabase } from "@/lib/supabase";
+import { uploadToStorage } from "@/lib/upload";
 import type { ClientRow } from "@/types/database.types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -65,13 +64,10 @@ export async function getOwnProfile(): Promise<ClientRow | null> {
 }
 
 // ─── Update own profile (SECURITY DEFINER RPC) ───────────────────────────────
-// Uses the update_own_client_profile RPC which targets the row via auth.uid()
-// inside the function body — bypasses RLS entirely. Never hides the real error.
 
 export async function updateOwnProfile(
   updates: ProfileUpdate,
 ): Promise<ProfileUpdateResult> {
-  // Convert empty-string date to null so Postgres DATE cast doesn't fail
   const dob = updates.date_of_birth === "" ? null : (updates.date_of_birth ?? null);
 
   const { data, error } = await supabase.rpc("update_own_client_profile", {
@@ -83,7 +79,7 @@ export async function updateOwnProfile(
     p_date_of_birth:      dob,
     p_preferred_language: updates.preferred_language ?? "en",
     p_bio:                updates.bio                ?? null,
-    p_avatar_url:         updates.avatar_url         ?? null, // null = keep existing
+    p_avatar_url:         updates.avatar_url         ?? null,
   });
 
   if (error) {
@@ -91,7 +87,6 @@ export async function updateOwnProfile(
     return { data: null, error: error.message };
   }
 
-  // RPC returns SETOF clients — Supabase JS returns an array
   const row = Array.isArray(data) ? (data[0] ?? null) : (data ?? null);
   if (!row) {
     const msg = "Profile update returned no rows — user may not have a linked client record";
@@ -103,9 +98,7 @@ export async function updateOwnProfile(
 }
 
 // ─── Avatar upload (storage only) ─────────────────────────────────────────────
-// Uploads the file to Supabase Storage and returns the clean public URL.
-// Does NOT write to the clients table — pass the returned URL to updateOwnProfile.
-// The URL is stored WITHOUT a cache-buster; add one at render time if needed.
+// Uses the unified upload service with compression (max 400px wide).
 
 export async function uploadAvatar(
   userId: string,
@@ -114,22 +107,23 @@ export async function uploadAvatar(
   const ext  = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const path = `avatars/${userId}/avatar.${ext}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from("media")
-    .upload(path, file, {
-      upsert:       true,
-      contentType:  file.type || "image/jpeg",
-      cacheControl: "3600",
-    });
+  const { url, error } = await uploadToStorage(file, {
+    path,
+    upsert:      true,
+    compress:    true,
+    maxWidthPx:  400,
+    quality:     0.88,
+    maxSizeMb:   10,
+    allowedTypes: ["image/*"],
+    cacheControl: "3600",
+  });
 
-  if (uploadError) {
-    console.error("[portal/profile] uploadAvatar storage error:", uploadError.message);
-    return { url: null, error: uploadError.message };
+  if (error || !url) {
+    console.error("[portal/profile] uploadAvatar:", error);
+    return { url: null, error: error ?? "Upload failed" };
   }
 
-  const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
-  // Return the clean URL — no cache-buster — so the DB stores a stable value
-  return { url: urlData.publicUrl, error: null };
+  return { url, error: null };
 }
 
 // ─── Delete account (soft — marks Inactive + clears user_id link) ─────────────

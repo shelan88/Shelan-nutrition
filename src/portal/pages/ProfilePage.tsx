@@ -1,10 +1,15 @@
 /**
  * Portal — My Profile
  * Allows the client to view and edit their own profile information.
+ *
+ * Avatar upload uses the shared <ImageUpload> component which provides:
+ *   • Immediate FileReader-based preview
+ *   • Progress overlay during upload
+ *   • Error display with retry
  */
 
-import { useState, useRef, useEffect } from "react";
-import { Camera, Save, CheckCircle2, AlertCircle, User, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Save, CheckCircle2, AlertCircle, User, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useClientProfile } from "@/hooks/useClientProfile";
 import { useLanguage } from "@/context/LanguageContext";
@@ -13,6 +18,7 @@ import {
   uploadAvatar,
   type ProfileUpdate,
 } from "@/portal/repositories/profile.repository";
+import { ImageUpload } from "@/shared/components/upload";
 
 // ─── Style helpers ────────────────────────────────────────────────────────────
 const field =
@@ -80,7 +86,6 @@ function validatePhoneNumber(num: string): string | null {
 /** Add a cache-buster to a Supabase storage URL so the browser reloads the image. */
 function withCacheBust(url: string | null | undefined): string | null {
   if (!url) return null;
-  // Strip any existing cache-buster before adding a fresh one
   const base = url.includes("?t=") ? url.split("?t=")[0] : url;
   return `${base}?t=${Date.now()}`;
 }
@@ -104,16 +109,13 @@ export default function ProfilePage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [phoneError,  setPhoneError]  = useState<string | null>(null);
 
-  // Avatar state — null means "use profile.avatar_url from DB"
-  const [avatarPreview,   setAvatarPreview]   = useState<string | null>(null);
-  const [avatarUploading, setAvatarUploading] = useState(false);
-
   // Save state
   const [saving,   setSaving]   = useState(false);
   const [toast,    setToast]    = useState<"success" | "error" | null>(null);
   const [toastMsg, setToastMsg] = useState("");
 
-  const fileRef = useRef<HTMLInputElement>(null);
+  // Track the live avatar URL so ImageUpload value stays updated after save
+  const [liveAvatarUrl, setLiveAvatarUrl] = useState<string | null>(null);
 
   // ── Populate form when profile first loads (or refreshes) ─────────────────
   useEffect(() => {
@@ -130,70 +132,12 @@ export default function ProfilePage() {
       preferred_language: profile.preferred_language ?? "en",
       bio:                profile.bio ?? "",
     });
-    // If a fresh profile row came back with an avatar_url, clear the local
-    // preview so the DB-backed URL is displayed instead
-    setAvatarPreview(null);
+    // Reset live avatar URL to DB-backed value on each profile refresh
+    setLiveAvatarUrl(profile.avatar_url ?? null);
   }, [profile]);
 
   const set = (key: keyof ProfileUpdate, value: unknown) =>
     setForm((prev) => ({ ...prev, [key]: value }));
-
-  // ── Avatar picker — auto-upload immediately on selection ─────────────────
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Reset input immediately so the same file can be re-selected if needed
-    e.target.value = "";
-
-    if (file.size > 5 * 1024 * 1024) {
-      showToast("error", isAr ? "الحجم الأقصى 5 ميغابايت" : "Max file size is 5 MB");
-      return;
-    }
-
-    // 1. Show local preview via FileReader (base64 data URL — works on
-    //    Samsung Browser and all mobile browsers, unlike blob: URLs).
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setAvatarPreview(ev.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-
-    // 2. Upload to Supabase Storage immediately (no need to press Save).
-    if (!user) return;
-    setAvatarUploading(true);
-
-    const { url, error: avatarErr } = await uploadAvatar(user.id, file);
-
-    if (avatarErr || !url) {
-      setAvatarUploading(false);
-      setAvatarPreview(null); // revert to existing avatar
-      showToast("error", isAr
-        ? `فشل رفع الصورة: ${avatarErr ?? "خطأ غير معروف"}`
-        : `Upload failed: ${avatarErr ?? "unknown error"}`);
-      return;
-    }
-
-    // 3. Persist the new URL to the DB via the SECURITY DEFINER RPC.
-    const { error: saveErr } = await updateOwnProfile({ avatar_url: url });
-    setAvatarUploading(false);
-
-    if (saveErr) {
-      showToast("error", isAr ? "فشل حفظ الصورة" : "Failed to save photo");
-      return;
-    }
-
-    // 4. Replace the blob preview with the real cache-busted storage URL.
-    setAvatarPreview(withCacheBust(url));
-
-    // 5. Tell the Navbar to refresh its avatar.
-    window.dispatchEvent(new CustomEvent("shelan:avatar-updated"));
-
-    showToast("success", isAr ? "تم تحديث الصورة بنجاح ✓" : "Photo updated successfully ✓");
-
-    // 6. Refresh profile so the hook holds the latest avatar_url.
-    refresh();
-  };
 
   // ── Toast helper ───────────────────────────────────────────────────────────
   const showToast = (kind: "success" | "error", msg: string) => {
@@ -201,6 +145,28 @@ export default function ProfilePage() {
     setToastMsg(msg);
     setTimeout(() => setToast(null), 5000);
   };
+
+  // ── Avatar: upload fn passed to ImageUpload ────────────────────────────────
+  // Returns the public URL (string) or null on failure.
+  async function handleAvatarUpload(file: File): Promise<string | null> {
+    if (!user) return null;
+    const { url, error: avatarErr } = await uploadAvatar(user.id, file);
+    if (avatarErr || !url) return null;
+    return url;
+  }
+
+  // ── Avatar: success handler — persist URL to DB ────────────────────────────
+  async function handleAvatarSuccess(url: string) {
+    const { error: saveErr } = await updateOwnProfile({ avatar_url: url });
+    if (saveErr) {
+      showToast("error", isAr ? "فشل حفظ الصورة" : "Failed to save photo");
+      return;
+    }
+    setLiveAvatarUrl(withCacheBust(url));
+    window.dispatchEvent(new CustomEvent("shelan:avatar-updated"));
+    showToast("success", isAr ? "تم تحديث الصورة بنجاح ✓" : "Photo updated successfully ✓");
+    refresh();
+  }
 
   // ── Save ───────────────────────────────────────────────────────────────────
   const handleSave = async (e: React.FormEvent) => {
@@ -214,17 +180,13 @@ export default function ProfilePage() {
     setSaving(true);
 
     try {
-      // ── 1. Combine phone fields ────────────────────────────────────────────
       const digits = phoneNumber.replace(/[\s\-().]/g, "");
       const combinedPhone = digits ? `${dialCode}${digits}` : null;
 
-      // ── 2. Update profile via SECURITY DEFINER RPC ─────────────────────────
-      // avatar_url is intentionally omitted (null) — it's now handled
-      // immediately inside handleAvatarChange, not on Save.
       const updates: ProfileUpdate = {
         ...form,
         phone:      combinedPhone,
-        avatar_url: null, // keep existing — avatar already saved on selection
+        avatar_url: null, // avatar already saved immediately on selection
       };
 
       const { data: saved, error: saveErr } = await updateOwnProfile(updates);
@@ -236,10 +198,7 @@ export default function ProfilePage() {
         return;
       }
 
-      // ── 3. Signal Navbar to re-fetch (in case name changed) ───────────────
       window.dispatchEvent(new CustomEvent("shelan:avatar-updated"));
-
-      // ── 4. Re-sync local profile state ────────────────────────────────────
       refresh();
 
       showToast("success", isAr
@@ -281,10 +240,6 @@ export default function ProfilePage() {
     );
   }
 
-  // avatarPreview   → local blob OR freshly-uploaded URL (with cache-buster)
-  // profile.avatar_url → DB-backed URL (shown once preview is cleared after refresh)
-  const avatarSrc = avatarPreview ?? withCacheBust(profile.avatar_url);
-
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <form onSubmit={handleSave} className="max-w-2xl">
@@ -294,76 +249,48 @@ export default function ProfilePage() {
 
       {/* ── Avatar ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-4 mb-8">
-        <div className="relative group shrink-0">
-          {/* Image layer — shown when avatarSrc is valid */}
-          {avatarSrc && (
-            <img
-              src={avatarSrc}
-              alt={isAr ? "الصورة الشخصية" : "Avatar"}
-              className="w-20 h-20 rounded-full object-cover border-2 border-white/20"
-              onError={(e) => {
-                // Broken URL — hide img so the initials span shows through
-                (e.currentTarget as HTMLImageElement).style.display = "none";
-              }}
-            />
-          )}
-
-          {/* Initials layer — always present underneath; hidden by img when loaded */}
-          {!avatarSrc && (
-            <span
-              className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white"
-              style={{ background: "linear-gradient(135deg,#e91e8c 0%,#c084fc 100%)" }}
-            >
-              {profile.initials ?? <User size={28} />}
-            </span>
-          )}
-
-          {/* Upload progress overlay */}
-          {avatarUploading && (
-            <div className="absolute inset-0 rounded-full flex items-center justify-center bg-black/60">
-              <div className="w-6 h-6 rounded-full border-2 border-white border-t-transparent animate-spin" />
-            </div>
-          )}
-
-          {/* Hover overlay — tap to change (hidden while uploading) */}
-          {!avatarUploading && (
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity"
-              aria-label={isAr ? "تغيير الصورة" : "Change photo"}
-            >
-              <Camera size={20} className="text-white" />
-            </button>
-          )}
+        {/* ImageUpload: circle shape, 80×80, handles preview + progress + retry */}
+        <div className="w-20 h-20 shrink-0">
+          <ImageUpload
+            value={liveAvatarUrl}
+            upload={handleAvatarUpload}
+            onSuccess={handleAvatarSuccess}
+            onError={(msg) => showToast("error", msg)}
+            shape="circle"
+            maxSizeMb={5}
+            lang={lang as "en" | "ar"}
+            fallback={
+              profile.initials ? (
+                <span
+                  className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white"
+                  style={{ background: "linear-gradient(135deg,#e91e8c 0%,#c084fc 100%)" }}
+                >
+                  {profile.initials}
+                </span>
+              ) : (
+                <span
+                  className="w-20 h-20 rounded-full flex items-center justify-center"
+                  style={{ background: "linear-gradient(135deg,#e91e8c 0%,#c084fc 100%)" }}
+                >
+                  <User size={28} className="text-white" />
+                </span>
+              )
+            }
+            className="w-20 h-20"
+          />
         </div>
 
         <div>
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={avatarUploading}
-            className="text-sm font-medium text-primary-pink hover:text-light-pink transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {avatarUploading
-              ? (isAr ? "جاري الرفع…" : "Uploading…")
-              : (isAr ? "تغيير الصورة" : "Change Photo")}
-          </button>
+          <p className="text-sm font-medium text-ivory/70">
+            {isAr ? "الصورة الشخصية" : "Profile Photo"}
+          </p>
           <p className="text-xs text-ivory/40 mt-0.5">
             {isAr ? "JPG أو PNG أو WebP · الحجم الأقصى 5 ميغابايت" : "JPG, PNG or WebP · max 5 MB"}
           </p>
           <p className="text-xs text-ivory/30 mt-0.5">
-            {isAr ? "تُحفظ الصورة تلقائياً عند الاختيار" : "Saved automatically when selected"}
+            {isAr ? "اضغط على الصورة لتغييرها" : "Tap the photo to change it"}
           </p>
         </div>
-
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          onChange={handleAvatarChange}
-          className="hidden"
-        />
       </div>
 
       {/* ── Email (read-only) ───────────────────────────────────────────────── */}
@@ -421,65 +348,66 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* ── Date of birth + Gender ──────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label className={lbl}>{isAr ? "تاريخ الميلاد" : "Date of Birth"}</label>
-          <input
-            type="date"
-            value={form.date_of_birth ?? ""}
-            onChange={(e) => set("date_of_birth", e.target.value || null)}
-            className={`${field} [color-scheme:dark]`}
-          />
-        </div>
-        <div>
-          <label className={lbl}>{isAr ? "الجنس" : "Gender"}</label>
-          <select
-            value={form.gender ?? ""}
-            onChange={(e) => set("gender", e.target.value || null)}
-            className={field}
-          >
-            <option value="">{isAr ? "اختر…" : "Select…"}</option>
-            <option value="Female">{isAr ? "أنثى" : "Female"}</option>
-            <option value="Male">{isAr ? "ذكر" : "Male"}</option>
-          </select>
-        </div>
-      </div>
-
-      {/* ── Country + City ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label className={lbl}>{isAr ? "الدولة" : "Country"}</label>
-          <select
-            value={form.location ?? ""}
-            onChange={(e) => set("location", e.target.value)}
-            className={field}
-          >
-            <option value="">{isAr ? "اختر…" : "Select…"}</option>
-            {COUNTRIES.map((c) => (
-              <option key={c} value={c}>{isAr ? (COUNTRIES_AR[c] ?? c) : c}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={lbl}>{isAr ? "المدينة" : "City"}</label>
-          <input
-            type="text"
-            value={form.city ?? ""}
-            onChange={(e) => set("city", e.target.value)}
-            placeholder={isAr ? "مدينتك" : "Your city"}
-            className={field}
-          />
-        </div>
-      </div>
-
-      {/* ── Preferred language ───────────────────────────────────────────────── */}
+      {/* ── Gender ───────────────────────────────────────────────────────────── */}
       <div className="mb-4">
-        <label className={lbl}>{isAr ? "اللغة المفضلة" : "Preferred Language"}</label>
+        <label className={lbl}>{isAr ? "الجنس" : "Gender"}</label>
+        <select
+          value={form.gender ?? ""}
+          onChange={(e) => set("gender", e.target.value || null)}
+          className={`${field} cursor-pointer`}
+        >
+          <option value="">{isAr ? "يفضّل عدم الإفصاح" : "Prefer not to say"}</option>
+          <option value="Female">{isAr ? "أنثى" : "Female"}</option>
+          <option value="Male">{isAr ? "ذكر" : "Male"}</option>
+          <option value="Other">{isAr ? "أخرى" : "Other"}</option>
+        </select>
+      </div>
+
+      {/* ── Date of Birth ────────────────────────────────────────────────────── */}
+      <div className="mb-4">
+        <label className={lbl}>{isAr ? "تاريخ الميلاد" : "Date of Birth"}</label>
+        <input
+          type="date"
+          value={form.date_of_birth ?? ""}
+          onChange={(e) => set("date_of_birth", e.target.value)}
+          className={field}
+        />
+      </div>
+
+      {/* ── Location / Country ──────────────────────────────────────────────── */}
+      <div className="mb-4">
+        <label className={lbl}>{isAr ? "الدولة" : "Country"}</label>
+        <select
+          value={form.location ?? ""}
+          onChange={(e) => set("location", e.target.value || null)}
+          className={`${field} cursor-pointer`}
+        >
+          <option value="">{isAr ? "اختر الدولة" : "Select country"}</option>
+          {COUNTRIES.map((c) => (
+            <option key={c} value={c}>{isAr ? (COUNTRIES_AR[c] ?? c) : c}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* ── City ──────────────────────────────────────────────────────────────── */}
+      <div className="mb-4">
+        <label className={lbl}>{isAr ? "المدينة" : "City"}</label>
+        <input
+          type="text"
+          value={form.city ?? ""}
+          onChange={(e) => set("city", e.target.value)}
+          placeholder={isAr ? "مثال: الكويت" : "e.g. Kuwait City"}
+          className={field}
+        />
+      </div>
+
+      {/* ── Preferred Language ──────────────────────────────────────────────── */}
+      <div className="mb-4">
+        <label className={lbl}>{isAr ? "لغة التواصل" : "Preferred Language"}</label>
         <select
           value={form.preferred_language ?? "en"}
           onChange={(e) => set("preferred_language", e.target.value)}
-          className={field}
+          className={`${field} cursor-pointer`}
         >
           {LANGUAGES.map((l) => (
             <option key={l.value} value={l.value}>{l.label}</option>
@@ -487,45 +415,40 @@ export default function ProfilePage() {
         </select>
       </div>
 
-      {/* ── Bio ─────────────────────────────────────────────────────────────── */}
+      {/* ── Bio ──────────────────────────────────────────────────────────────── */}
       <div className="mb-8">
-        <label className={lbl}>{isAr ? "نبذة / أهداف صحية" : "Bio / Health Goals"}</label>
+        <label className={lbl}>{isAr ? "نبذة عني" : "About Me"}</label>
         <textarea
-          rows={4}
+          rows={3}
           value={form.bio ?? ""}
           onChange={(e) => set("bio", e.target.value)}
-          placeholder={isAr
-            ? "شارك أهدافك الصحية أو أي ملاحظات لأخصائي التغذية…"
-            : "Share any health goals or notes for your nutritionist…"}
+          placeholder={isAr ? "أخبرينا عن نفسك…" : "Tell us a bit about yourself…"}
           className={`${field} resize-none`}
         />
       </div>
 
-      {/* ── Toast ───────────────────────────────────────────────────────────── */}
-      {toast && (
-        <div className={`flex items-start gap-2 text-sm px-4 py-3 rounded-xl mb-4 ${
-          toast === "success"
-            ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
-            : "bg-red-500/10 border border-red-500/20 text-red-400"
-        }`}>
-          {toast === "success"
-            ? <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
-            : <AlertCircle  size={16} className="mt-0.5 shrink-0" />}
-          <span className="break-words">{toastMsg}</span>
-        </div>
-      )}
-
-      {/* ── Submit ──────────────────────────────────────────────────────────── */}
+      {/* ── Save button ─────────────────────────────────────────────────────── */}
       <button
         type="submit"
         disabled={saving}
-        className={`flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple font-semibold text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:translate-y-0 ${isAr ? "flex-row-reverse" : ""}`}
+        className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-sm font-semibold shadow-lg hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <Save size={16} />
-        {saving
-          ? (isAr ? "جارٍ الحفظ…" : "Saving…")
-          : (isAr ? "حفظ التغييرات" : "Save Changes")}
+        <Save size={15} strokeWidth={2.2} />
+        {saving ? (isAr ? "جارٍ الحفظ…" : "Saving…") : (isAr ? "حفظ التغييرات" : "Save Changes")}
       </button>
+
+      {/* ── Toast ───────────────────────────────────────────────────────────── */}
+      {toast && (
+        <div className={`mt-4 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium
+          ${toast === "success"
+            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+            : "bg-red-500/10 text-red-400 border border-red-500/20"}`}>
+          {toast === "success"
+            ? <CheckCircle2 size={15} className="shrink-0" />
+            : <AlertCircle  size={15} className="shrink-0" />}
+          {toastMsg}
+        </div>
+      )}
     </form>
   );
 }

@@ -3,13 +3,20 @@
  *
  * Renders a URL text input + "Upload" button side-by-side.
  * On file selection: uploads to Supabase Storage via storage.repository,
- * shows an animated progress bar, then injects the returned public URL.
+ * shows a real percentage progress bar (via useUpload), then injects the
+ * returned public URL into the URL input.
  * For image accept types, shows a thumbnail preview below the field.
  * Shows a Remove (×) button when a value is present.
+ *
+ * External interface is UNCHANGED — all existing CMS pages that use
+ * <FileUploadField value onChange accept folder lang placeholder />
+ * need zero edits.
  */
-import { useRef, useState } from "react";
-import { Upload, X } from "lucide-react";
+import { useRef } from "react";
+import { Upload, X, RefreshCw } from "lucide-react";
 import { uploadFile } from "@/admin/repositories/storage.repository";
+import { useUpload } from "@/lib/upload";
+import UploadProgressBar from "@/shared/components/upload/UploadProgressBar";
 
 interface FileUploadFieldProps {
   /** Current URL value */
@@ -37,25 +44,16 @@ export default function FileUploadField({
   className,
 }: FileUploadFieldProps) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { run, uploading, progress, error, retry } = useUpload();
 
   const isImage = accept.includes("image");
 
   async function handleFile(file: File) {
-    setUploading(true);
-    setError(null);
-    const result = await uploadFile(file, folder);
-    setUploading(false);
-    if (result) {
-      onChange(result.url);
-    } else {
-      setError(
-        lang === "ar"
-          ? "فشل الرفع. حاولي مرة أخرى."
-          : "Upload failed. Please try again."
-      );
-    }
+    const url = await run(file, async (f) => {
+      const row = await uploadFile(f, folder);
+      return row?.url ?? null;
+    });
+    if (url) onChange(url);
   }
 
   const btnBase =
@@ -80,13 +78,13 @@ export default function FileUploadField({
         >
           <Upload size={13} />
           {uploading
-            ? lang === "ar" ? "جارٍ الرفع…" : "Uploading…"
-            : lang === "ar" ? "رفع" : "Upload"}
+            ? (lang === "ar" ? "جارٍ الرفع…" : "Uploading…")
+            : (lang === "ar" ? "رفع" : "Upload")}
         </button>
         {value && !uploading && (
           <button
             type="button"
-            onClick={() => { onChange(""); setError(null); }}
+            onClick={() => onChange("")}
             title={lang === "ar" ? "حذف" : "Remove"}
             className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--admin-border)] text-[var(--admin-text-faint)] hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors shrink-0"
           >
@@ -95,16 +93,29 @@ export default function FileUploadField({
         )}
       </div>
 
-      {/* Upload progress bar */}
+      {/* Upload progress bar — real percentage from useUpload */}
       {uploading && (
-        <div className="mt-2 h-0.5 rounded-full bg-[var(--admin-border)] overflow-hidden">
-          <div className="h-full w-full bg-gradient-to-r from-primary-pink to-lavender-purple animate-pulse" />
+        <div className="mt-2">
+          <UploadProgressBar
+            progress={progress > 0 ? progress : null}
+            className="h-0.5 rounded-full bg-[var(--admin-border)]"
+          />
         </div>
       )}
 
-      {/* Error message */}
-      {error && (
-        <p className="mt-1.5 text-[11px] text-red-500">{error}</p>
+      {/* Error message + retry */}
+      {error && !uploading && (
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <p className="text-[11px] text-red-500 flex-1">{error}</p>
+          <button
+            type="button"
+            onClick={() => retry().then((url) => { if (url) onChange(url); })}
+            className="flex items-center gap-1 text-[11px] font-semibold text-primary-pink hover:underline shrink-0"
+          >
+            <RefreshCw size={10} />
+            {lang === "ar" ? "إعادة" : "Retry"}
+          </button>
+        </div>
       )}
 
       {/* Image thumbnail preview */}
@@ -131,7 +142,7 @@ export default function FileUploadField({
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) handleFile(file);
-          e.target.value = ""; // allow re-selecting the same file
+          e.target.value = "";
         }}
       />
     </div>

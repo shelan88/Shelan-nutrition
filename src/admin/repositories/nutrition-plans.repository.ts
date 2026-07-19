@@ -7,9 +7,12 @@
  *   Each logical plan is identified by plan_group_id.
  *   Editing a plan's content inserts a new row (version++) — the old row is
  *   preserved verbatim as history. Status changes update the latest row in place.
+ *
+ * Storage operations use the unified upload service from @/lib/upload.
  */
 
 import { supabase } from "@/lib/supabase";
+import { uploadToStorage, deleteFromStorage, buildPath } from "@/lib/upload";
 import type { NutritionPlanRow, NutritionPlanFileRow } from "@/types/database.types";
 
 // ─── Re-exports ────────────────────────────────────────────────────────────────
@@ -42,8 +45,8 @@ export type MealsMap = Partial<Record<MealSlotKey, MealSlot>>;
 
 export interface NutritionPlanInput {
   client_id: string;
-  plan_group_id?: string;          // provided when creating a new version
-  version?: number;                // provided when creating a new version
+  plan_group_id?: string;
+  version?: number;
   name: string;
   description: string;
   start_date: string;
@@ -59,14 +62,9 @@ export interface NutritionPlanInput {
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
-/**
- * Returns the latest version of every plan group for a client,
- * ordered by updated_at DESC.
- */
 export async function getClientNutritionPlans(
   clientId: string,
 ): Promise<NutritionPlanRow[]> {
-  // Fetch all rows for the client, then filter to latest version per group
   const { data, error } = await supabase
     .from("nutrition_plans")
     .select("*")
@@ -79,7 +77,6 @@ export async function getClientNutritionPlans(
     return [];
   }
 
-  // Keep only the first (= highest version) row per group
   const seen = new Set<string>();
   const latest: NutritionPlanRow[] = [];
   for (const row of data ?? []) {
@@ -89,15 +86,11 @@ export async function getClientNutritionPlans(
     }
   }
 
-  // Sort by updated_at DESC so most-recently-touched plans are first
   return latest.sort(
     (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
   );
 }
 
-/**
- * Returns ALL versions of a plan group, newest first.
- */
 export async function getNutritionPlanHistory(
   planGroupId: string,
 ): Promise<NutritionPlanRow[]> {
@@ -114,9 +107,6 @@ export async function getNutritionPlanHistory(
   return (data ?? []) as NutritionPlanRow[];
 }
 
-/**
- * Returns a single plan row by id.
- */
 export async function getNutritionPlan(
   planId: string,
 ): Promise<NutritionPlanRow | null> {
@@ -135,15 +125,12 @@ export async function getNutritionPlan(
 
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
-/**
- * Creates a brand-new plan (version 1, fresh plan_group_id).
- */
 export async function createNutritionPlan(
   input: NutritionPlanInput,
 ): Promise<NutritionPlanRow | null> {
   const payload = {
     client_id:                  input.client_id,
-    plan_group_id:              input.plan_group_id ?? undefined, // DB default = new UUID
+    plan_group_id:              input.plan_group_id ?? undefined,
     version:                    1,
     name:                       input.name,
     description:                input.description || null,
@@ -171,10 +158,6 @@ export async function createNutritionPlan(
   return data as NutritionPlanRow;
 }
 
-/**
- * Creates a new version of an existing plan (preserves the old row).
- * Returns the new version row.
- */
 export async function updateNutritionPlan(
   current: NutritionPlanRow,
   input: Omit<NutritionPlanInput, "client_id" | "plan_group_id" | "version">,
@@ -188,10 +171,6 @@ export async function updateNutritionPlan(
   return createNutritionPlan(newVersion);
 }
 
-/**
- * Updates the status of a plan in-place (no new version created).
- * Status changes (archive, complete, restore) are workflow state — not content.
- */
 export async function setNutritionPlanStatus(
   planId: string,
   status: NutritionPlanRow["status"],
@@ -208,9 +187,6 @@ export async function setNutritionPlanStatus(
   return true;
 }
 
-/**
- * Duplicates the latest version of a plan as a new plan group (version 1, draft).
- */
 export async function duplicateNutritionPlan(
   source: NutritionPlanRow,
   clientId: string,
@@ -232,16 +208,12 @@ export async function duplicateNutritionPlan(
   return createNutritionPlan(input);
 }
 
-/**
- * Permanently deletes a single plan row.
- * Only allowed for draft status (enforced in UI; guard here too).
- */
 export async function deleteNutritionPlan(planId: string): Promise<boolean> {
   const { error } = await supabase
     .from("nutrition_plans")
     .delete()
     .eq("id", planId)
-    .eq("status", "draft"); // safety guard
+    .eq("status", "draft");
 
   if (error) {
     console.error("[nutrition-plans] deleteNutritionPlan:", error.message);
@@ -273,20 +245,18 @@ export async function uploadPlanFile(
   clientId: string,
   file: File,
 ): Promise<NutritionPlanFileRow | null> {
-  // Upload to Supabase Storage under nutrition-plans/{planId}/
-  const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const path = `nutrition-plans/${planId}/${Date.now()}_${safe}`;
+  const path = buildPath(`nutrition-plans/${planId}`, file.name);
 
-  const { error: uploadError } = await supabase.storage
-    .from("media")
-    .upload(path, file, { upsert: false });
+  const { url: publicUrl, error: uploadError } = await uploadToStorage(file, {
+    path,
+    upsert: false,
+    maxSizeMb: 50,
+  });
 
-  if (uploadError) {
-    console.error("[nutrition-plans] upload:", uploadError.message);
+  if (uploadError || !publicUrl) {
+    console.error("[nutrition-plans] uploadPlanFile:", uploadError);
     return null;
   }
-
-  const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
 
   const fileType: NutritionPlanFileRow["file_type"] =
     file.type === "application/pdf"  ? "pdf"
@@ -299,7 +269,7 @@ export async function uploadPlanFile(
       plan_id:   planId,
       client_id: clientId,
       filename:  file.name,
-      url:       urlData.publicUrl,
+      url:       publicUrl,
       file_type: fileType,
       size:      file.size,
     })
@@ -317,13 +287,7 @@ export async function deletePlanFile(
   fileId: string,
   url: string,
 ): Promise<boolean> {
-  // Remove from storage
-  const marker = `/storage/v1/object/public/media/`;
-  const idx = url.indexOf(marker);
-  if (idx >= 0) {
-    const storagePath = url.slice(idx + marker.length);
-    await supabase.storage.from("media").remove([storagePath]);
-  }
+  await deleteFromStorage(url);
 
   const { error } = await supabase
     .from("nutrition_plan_files")
