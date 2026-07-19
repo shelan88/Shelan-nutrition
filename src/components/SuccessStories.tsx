@@ -109,7 +109,7 @@ export default function SuccessStories() {
   };
 
   return (
-    <section id="success-stories" className="py-24 bg-white">
+    <section id="success-stories" className="py-24 bg-[#F9FAFB]">
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <p className="uppercase tracking-[0.2em] text-xs font-semibold text-primary-pink mb-3">

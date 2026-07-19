@@ -38,7 +38,7 @@ export default function FAQ() {
   const toggle = (i: number) => setOpenIndex(openIndex === i ? null : i);
 
   return (
-    <section id="faq" className="py-24 bg-light-pink/25">
+    <section id="faq" className="py-24 bg-[#F9FAFB]">
       <div className="max-w-3xl mx-auto px-6 lg:px-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

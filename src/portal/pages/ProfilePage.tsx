@@ -221,8 +221,7 @@ export default function ProfilePage() {
 
       const updates: ProfileUpdate = {
         ...form,
-        phone:      combinedPhone,
-        avatar_url: null, // avatar already saved immediately on selection
+        phone: combinedPhone,
       };
 
       const { data: saved, error: saveErr } = await updateOwnProfile(updates);
@@ -284,7 +283,12 @@ export default function ProfilePage() {
       </h1>
 
       {/* ── Avatar ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-4 mb-8">
+      {/* Event isolation: prevents Samsung Internet from triggering form submit when file dialog closes */}
+      <div
+        className="flex items-center gap-4 mb-8"
+        onClick={(e) => e.stopPropagation()}
+        onChange={(e) => e.stopPropagation()}
+      >
         {/* ImageUpload: circle shape, 80×80, handles preview + progress + retry */}
         <div className="w-20 h-20 shrink-0">
           <ImageUpload
