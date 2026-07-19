@@ -253,14 +253,19 @@ export async function uploadPlanFile(
     maxSizeMb: 50,
   });
 
-  if (uploadError || !publicUrl) {
-    console.error("[nutrition-plans] uploadPlanFile:", uploadError);
-    return null;
+  if (!publicUrl) {
+    // Throw so useUpload's catch block surfaces the real error in the UI
+    // instead of showing a generic "Upload failed" message.
+    const msg = uploadError ?? "Storage upload failed";
+    console.error("[nutrition-plans] uploadPlanFile storage:", msg);
+    throw new Error(msg);
   }
 
+  // Derive file_type from the resolved MIME type when file.type may be empty.
+  const mime = file.type || "";
   const fileType: NutritionPlanFileRow["file_type"] =
-    file.type === "application/pdf"  ? "pdf"
-    : file.type.startsWith("image/") ? "image"
+    mime === "application/pdf"  ? "pdf"
+    : mime.startsWith("image/") ? "image"
     : "document";
 
   const { data, error: dbError } = await supabase
@@ -278,7 +283,9 @@ export async function uploadPlanFile(
 
   if (dbError) {
     console.error("[nutrition-plans] nutrition_plan_files insert:", dbError.message);
-    return null;
+    // Orphaned storage object — best-effort cleanup, then surface the real error
+    await deleteFromStorage(publicUrl);
+    throw new Error(dbError.message);
   }
   return data as NutritionPlanFileRow;
 }

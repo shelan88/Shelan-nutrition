@@ -205,8 +205,17 @@ export async function uploadToStorage(
 
     lastError = uploadErr.message;
     console.error(`[upload] attempt ${attempt + 1}/${maxAttempts} failed:`, uploadErr.message);
-    const isFatal = uploadErr.message.includes("already exists") ||
-                    uploadErr.message.includes("Duplicate");
+    // Errors that will never succeed on retry — break immediately
+    const msg = uploadErr.message.toLowerCase();
+    const isFatal =
+      msg.includes("already exists") ||
+      msg.includes("duplicate") ||
+      msg.includes("security policy") ||      // RLS violation
+      msg.includes("unauthorized") ||          // missing / expired JWT
+      msg.includes("jwt") ||                   // JWT errors
+      msg.includes("payload too large") ||     // file exceeds bucket limit
+      msg.includes("file size limit") ||       // Supabase size-limit wording
+      msg.includes("entity too large");        // HTTP 413 variant
     if (isFatal) break;
   }
 
