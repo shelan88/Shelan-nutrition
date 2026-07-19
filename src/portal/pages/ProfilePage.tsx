@@ -143,7 +143,9 @@ export default function ProfilePage() {
     if (avatarJustUploaded.current) {
       avatarJustUploaded.current = false;
     } else {
-      setLiveAvatarUrl(profile.avatar_url ?? null);
+      setLiveAvatarUrl(
+        profile.avatar_url ? withCacheBust(profile.avatar_url) : null,
+      );
     }
   }, [profile]);
 
