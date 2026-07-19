@@ -166,8 +166,27 @@ export default function ImageUpload({
     // subsequent reads (file.size, file.slice) would change or throw.
     console.log("[input] clearing e.target.value (was:", inputValue, ")");
     e.target.value = "";
-    console.log("[input] after clear: file.name =", file.name, "| file.size =", file.size,
-      "← if these changed after the clear, Samsung Internet is invalidating the File object");
+    // ── Post-clear slice check ────────────────────────────────────────────────
+    // Read 4 bytes AFTER e.target.value = "" to test whether Samsung Internet
+    // released the file handle when the input was cleared.
+    // Chrome: still returns the real magic bytes.
+    // Samsung Internet (if buggy): returns 00 00 00 00 — all zeros.
+    // This is the key comparison against the pre-clear slice logged above.
+    let postClearSlice = "(slice failed — file handle may have been released)";
+    try {
+      const postBuf = await file.slice(0, 4).arrayBuffer();
+      postClearSlice = Array.from(new Uint8Array(postBuf))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join(" ");
+    } catch (e2) {
+      postClearSlice = `(threw after clear: ${e2})`;
+    }
+    console.log("[input] after e.target.value=\"\" — file.name:", file.name,
+      "| file.size:", file.size,
+      "| first 4 bytes:", postClearSlice);
+    console.log("[input] ← if first 4 bytes are '00 00 00 00' but size > 0, " +
+      "Samsung Internet released the file handle when input.value was cleared. " +
+      "Exact line: ImageUpload.tsx:77  e.target.value = \"\"");
 
     // ════════════════════════════════════════════════════════════════════════
     // FORENSIC STEP 2 — client-side size guard (validateFile equivalent here)
@@ -188,16 +207,40 @@ export default function ImageUpload({
     // ════════════════════════════════════════════════════════════════════════
     console.log("[ImageUpload] BEFORE FileReader.readAsDataURL — file identity:", file.name, file.size);
     const reader = new FileReader();
+
+    reader.onloadstart = () => {
+      // ✓ FileReader.onloadstart — browser accepted the read request.
+      // If this never fires, the File object was already invalid before readAsDataURL().
+      console.log("[FileReader] onloadstart — browser accepted the read. file.size:", file.size);
+    };
+
     reader.onload  = (ev) => {
       const result = ev.target?.result as string;
-      console.log("[ImageUpload] FileReader.onload fired — result length:", result?.length ?? 0,
-        "| starts with:", result?.slice(0, 30));
+      console.log("[FileReader] onload — result length:", result?.length ?? 0,
+        "| data prefix:", result?.slice(0, 40),
+        result?.length === 0 || result === "data:application/octet-stream;base64,"
+          ? "⚠ EMPTY DATA URI — file contents were 0 bytes when FileReader read it"
+          : "");
       setPreview(result);
     };
-    reader.onerror = (ev) => {
-      console.error("[ImageUpload] ⚠ FileReader.onerror — Samsung Internet may have " +
-        "invalidated the File object by the time FileReader tried to read it:", ev);
+
+    reader.onabort = () => {
+      // Fires if the browser aborted the read mid-flight.
+      // Samsung Internet Browser may abort FileReader when the input element
+      // that owned the File becomes disabled (disabled={uploading} re-render).
+      console.error("[FileReader] ⚠ onabort — read was aborted mid-flight. " +
+        "Check whether setUploading(true) → React re-render → input disabled={true} " +
+        "fired between readAsDataURL() and onload. " +
+        "Exact suspects: useUpload.ts:43 setUploading(true), ImageUpload.tsx input disabled={uploading}");
     };
+
+    reader.onerror = (ev) => {
+      console.error("[FileReader] ⚠ onerror — FileReader failed to read the File. " +
+        "This confirms the File object was invalidated before the read completed. " +
+        "Most likely cause: e.target.value=\"\" on ImageUpload.tsx:77 released the " +
+        "file handle in Samsung Internet Browser.", ev);
+    };
+
     reader.readAsDataURL(file);
 
     // ════════════════════════════════════════════════════════════════════════
