@@ -139,9 +139,6 @@ export default function ImageUpload({
     console.groupEnd();
     // ════════════════════════════════════════════════════════════════════════
 
-    // Clear input so the same file can be re-selected next time
-    e.target.value = "";
-
     // Client-side size guard
     if (file.size > maxSizeMb * 1024 * 1024) {
       const msg = lang === "ar"
@@ -179,11 +176,16 @@ export default function ImageUpload({
       setPreview(null);
       const msg = lang === "ar" ? "فشل رفع الصورة" : "Image upload failed";
       onError?.(msg);
+      // Clear input value only after the upload attempt is fully settled
+      e.target.value = "";
       return;
     }
 
     setPreview(url);
     onSuccess?.(url);
+    // Clear input value only after FileReader + upload have both finished,
+    // so Samsung Internet cannot drop the temporary file pointer mid-flight
+    e.target.value = "";
   }
 
   // ── Retry handler ──────────────────────────────────────────────────────────
@@ -255,7 +257,6 @@ export default function ImageUpload({
           className={`absolute inset-0 w-full h-full opacity-0
             ${inactive ? "pointer-events-none cursor-default" : "cursor-pointer"}`}
           tabIndex={inactive ? -1 : 0}
-          disabled={inactive}
           onChange={handleChange}
         />
       </div>
