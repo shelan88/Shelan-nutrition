@@ -8,7 +8,7 @@
  *   • Error display with retry
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Save, CheckCircle2, AlertCircle, User, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useClientProfile } from "@/hooks/useClientProfile";
@@ -117,6 +117,11 @@ export default function ProfilePage() {
   // Track the live avatar URL so ImageUpload value stays updated after save
   const [liveAvatarUrl, setLiveAvatarUrl] = useState<string | null>(null);
 
+  // Guard against the profile-refresh cycle overwriting a freshly cache-busted URL.
+  // Set to true just before refresh() is called after an avatar upload; the next
+  // profile effect run clears it without resetting liveAvatarUrl.
+  const avatarJustUploaded = useRef(false);
+
   // ── Populate form when profile first loads (or refreshes) ─────────────────
   useEffect(() => {
     if (!profile) return;
@@ -132,8 +137,14 @@ export default function ProfilePage() {
       preferred_language: profile.preferred_language ?? "en",
       bio:                profile.bio ?? "",
     });
-    // Reset live avatar URL to DB-backed value on each profile refresh
-    setLiveAvatarUrl(profile.avatar_url ?? null);
+    // If an avatar upload just completed, liveAvatarUrl already holds the
+    // cache-busted URL — don't overwrite it with the un-busted DB value that
+    // arrives on the refresh() triggered by handleAvatarSuccess.
+    if (avatarJustUploaded.current) {
+      avatarJustUploaded.current = false;
+    } else {
+      setLiveAvatarUrl(profile.avatar_url ?? null);
+    }
   }, [profile]);
 
   const set = (key: keyof ProfileUpdate, value: unknown) =>
@@ -162,6 +173,9 @@ export default function ProfilePage() {
       showToast("error", isAr ? "فشل حفظ الصورة" : "Failed to save photo");
       return;
     }
+    // Set the guard BEFORE refresh() so the profile effect triggered by the
+    // re-fetch does not overwrite the cache-busted URL we're about to set.
+    avatarJustUploaded.current = true;
     setLiveAvatarUrl(withCacheBust(url));
     window.dispatchEvent(new CustomEvent("shelan:avatar-updated"));
     showToast("success", isAr ? "تم تحديث الصورة بنجاح ✓" : "Photo updated successfully ✓");
