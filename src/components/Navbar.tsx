@@ -117,10 +117,10 @@ export default function Navbar() {
     if (!pendingScroll || location.pathname !== "/") return;
     const id = pendingScroll;
     setPendingScroll(null);
-    // Small delay lets React finish painting the homepage before we scroll
+    // 400 ms lets the new page fully paint before we scroll
     setTimeout(() => {
       document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-    }, 120);
+    }, 400);
   }, [location.pathname, pendingScroll]);
 
   // Lock body scroll when overlay menu is open
@@ -225,7 +225,7 @@ export default function Navbar() {
   }, []);
 
   // Navigate to a hash section with smooth scroll.
-  // • Same page  → close menu + scroll immediately.
+  // • Same page  → close menu + wait for the 400 ms curtain exit, then scroll.
   // • Other page → close menu + navigate to "/" + scroll once homepage mounts.
   // • Plain route → close menu (Link handles navigation).
   function handleNavItemClick(href: string) {
@@ -233,9 +233,12 @@ export default function Navbar() {
     if (!href.startsWith("/#")) return;
     const sectionId = href.slice(2);
     if (location.pathname === "/") {
+      // 450 ms > 400 ms curtain exit — scroll only after the overlay is gone.
+      // On iOS, scrollIntoView fired while body.overflow is still "hidden" or
+      // while the fixed overlay is still mounted silently drops the scroll.
       setTimeout(() => {
         document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
-      }, 50);
+      }, 450);
     } else {
       setPendingScroll(sectionId);
       navigate("/");
