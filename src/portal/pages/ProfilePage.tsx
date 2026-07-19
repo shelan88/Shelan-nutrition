@@ -105,8 +105,8 @@ export default function ProfilePage() {
   const [phoneError,  setPhoneError]  = useState<string | null>(null);
 
   // Avatar state — null means "use profile.avatar_url from DB"
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [avatarFile,    setAvatarFile]    = useState<File | null>(null);
+  const [avatarPreview,   setAvatarPreview]   = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   // Save state
   const [saving,   setSaving]   = useState(false);
@@ -138,19 +138,61 @@ export default function ProfilePage() {
   const set = (key: keyof ProfileUpdate, value: unknown) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
-  // ── Avatar picker ──────────────────────────────────────────────────────────
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ── Avatar picker — auto-upload immediately on selection ─────────────────
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Reset input immediately so the same file can be re-selected if needed
+    e.target.value = "";
+
     if (file.size > 5 * 1024 * 1024) {
       showToast("error", isAr ? "الحجم الأقصى 5 ميغابايت" : "Max file size is 5 MB");
       return;
     }
-    setAvatarFile(file);
-    // Show local blob preview immediately
-    setAvatarPreview(URL.createObjectURL(file));
-    // Reset the input so the same file can be selected again if needed
-    e.target.value = "";
+
+    // 1. Show local preview via FileReader (base64 data URL — works on
+    //    Samsung Browser and all mobile browsers, unlike blob: URLs).
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setAvatarPreview(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // 2. Upload to Supabase Storage immediately (no need to press Save).
+    if (!user) return;
+    setAvatarUploading(true);
+
+    const { url, error: avatarErr } = await uploadAvatar(user.id, file);
+
+    if (avatarErr || !url) {
+      setAvatarUploading(false);
+      setAvatarPreview(null); // revert to existing avatar
+      showToast("error", isAr
+        ? `فشل رفع الصورة: ${avatarErr ?? "خطأ غير معروف"}`
+        : `Upload failed: ${avatarErr ?? "unknown error"}`);
+      return;
+    }
+
+    // 3. Persist the new URL to the DB via the SECURITY DEFINER RPC.
+    const { error: saveErr } = await updateOwnProfile({ avatar_url: url });
+    setAvatarUploading(false);
+
+    if (saveErr) {
+      showToast("error", isAr ? "فشل حفظ الصورة" : "Failed to save photo");
+      return;
+    }
+
+    // 4. Replace the blob preview with the real cache-busted storage URL.
+    setAvatarPreview(withCacheBust(url));
+
+    // 5. Tell the Navbar to refresh its avatar.
+    window.dispatchEvent(new CustomEvent("shelan:avatar-updated"));
+
+    showToast("success", isAr ? "تم تحديث الصورة بنجاح ✓" : "Photo updated successfully ✓");
+
+    // 6. Refresh profile so the hook holds the latest avatar_url.
+    refresh();
   };
 
   // ── Toast helper ───────────────────────────────────────────────────────────
@@ -172,30 +214,17 @@ export default function ProfilePage() {
     setSaving(true);
 
     try {
-      // ── 1. Upload avatar to Storage (if a new file was selected) ───────────
-      let newAvatarUrl: string | null = null;
-
-      if (avatarFile) {
-        const { url, error: avatarErr } = await uploadAvatar(user.id, avatarFile);
-        if (avatarErr || !url) {
-          showToast("error", isAr
-            ? `فشل رفع الصورة: ${avatarErr ?? "خطأ غير معروف"}`
-            : `Avatar upload failed: ${avatarErr ?? "unknown error"}`);
-          setSaving(false);
-          return;
-        }
-        newAvatarUrl = url; // clean URL, no cache-buster
-      }
-
-      // ── 2. Combine phone fields ────────────────────────────────────────────
+      // ── 1. Combine phone fields ────────────────────────────────────────────
       const digits = phoneNumber.replace(/[\s\-().]/g, "");
       const combinedPhone = digits ? `${dialCode}${digits}` : null;
 
-      // ── 3. Update profile via SECURITY DEFINER RPC ─────────────────────────
+      // ── 2. Update profile via SECURITY DEFINER RPC ─────────────────────────
+      // avatar_url is intentionally omitted (null) — it's now handled
+      // immediately inside handleAvatarChange, not on Save.
       const updates: ProfileUpdate = {
         ...form,
         phone:      combinedPhone,
-        avatar_url: newAvatarUrl, // null = RPC keeps existing avatar_url
+        avatar_url: null, // keep existing — avatar already saved on selection
       };
 
       const { data: saved, error: saveErr } = await updateOwnProfile(updates);
@@ -207,22 +236,10 @@ export default function ProfilePage() {
         return;
       }
 
-      // ── 4. Update avatar display immediately ───────────────────────────────
-      if (newAvatarUrl) {
-        // Show the freshly uploaded image right away (cache-busted)
-        setAvatarPreview(withCacheBust(newAvatarUrl));
-        setAvatarFile(null);
-      }
-
-      // ── 5. Signal Navbar to re-fetch avatar ───────────────────────────────
-      // The Navbar reads avatar_url from the DB — dispatch the event after the
-      // RPC write has committed so the re-fetch sees the new URL.
+      // ── 3. Signal Navbar to re-fetch (in case name changed) ───────────────
       window.dispatchEvent(new CustomEvent("shelan:avatar-updated"));
 
-      // ── 6. Re-sync local profile state ────────────────────────────────────
-      // refresh() bumps the hook rev counter, triggering a fresh DB fetch.
-      // The useEffect([profile]) will fire and call setAvatarPreview(null),
-      // which lets the DB-backed URL take over once the hook resolves.
+      // ── 4. Re-sync local profile state ────────────────────────────────────
       refresh();
 
       showToast("success", isAr
@@ -277,18 +294,22 @@ export default function ProfilePage() {
 
       {/* ── Avatar ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-4 mb-8">
-        <div className="relative group">
-          {avatarSrc ? (
+        <div className="relative group shrink-0">
+          {/* Image layer — shown when avatarSrc is valid */}
+          {avatarSrc && (
             <img
               src={avatarSrc}
               alt={isAr ? "الصورة الشخصية" : "Avatar"}
               className="w-20 h-20 rounded-full object-cover border-2 border-white/20"
               onError={(e) => {
-                // If the image URL is broken, fall back to initials
+                // Broken URL — hide img so the initials span shows through
                 (e.currentTarget as HTMLImageElement).style.display = "none";
               }}
             />
-          ) : (
+          )}
+
+          {/* Initials layer — always present underneath; hidden by img when loaded */}
+          {!avatarSrc && (
             <span
               className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white"
               style={{ background: "linear-gradient(135deg,#e91e8c 0%,#c084fc 100%)" }}
@@ -296,32 +317,44 @@ export default function ProfilePage() {
               {profile.initials ?? <User size={28} />}
             </span>
           )}
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
-            aria-label={isAr ? "تغيير الصورة" : "Change photo"}
-          >
-            <Camera size={20} className="text-white" />
-          </button>
+
+          {/* Upload progress overlay */}
+          {avatarUploading && (
+            <div className="absolute inset-0 rounded-full flex items-center justify-center bg-black/60">
+              <div className="w-6 h-6 rounded-full border-2 border-white border-t-transparent animate-spin" />
+            </div>
+          )}
+
+          {/* Hover overlay — tap to change (hidden while uploading) */}
+          {!avatarUploading && (
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity"
+              aria-label={isAr ? "تغيير الصورة" : "Change photo"}
+            >
+              <Camera size={20} className="text-white" />
+            </button>
+          )}
         </div>
 
         <div>
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="text-sm font-medium text-primary-pink hover:text-light-pink transition-colors"
+            disabled={avatarUploading}
+            className="text-sm font-medium text-primary-pink hover:text-light-pink transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {isAr ? "تغيير الصورة" : "Change Photo"}
+            {avatarUploading
+              ? (isAr ? "جاري الرفع…" : "Uploading…")
+              : (isAr ? "تغيير الصورة" : "Change Photo")}
           </button>
           <p className="text-xs text-ivory/40 mt-0.5">
             {isAr ? "JPG أو PNG أو WebP · الحجم الأقصى 5 ميغابايت" : "JPG, PNG or WebP · max 5 MB"}
           </p>
-          {avatarFile && (
-            <p className="text-xs text-emerald-400 mt-0.5">
-              {isAr ? `✓ ${avatarFile.name} جاهزة للرفع` : `✓ ${avatarFile.name} ready to upload`}
-            </p>
-          )}
+          <p className="text-xs text-ivory/30 mt-0.5">
+            {isAr ? "تُحفظ الصورة تلقائياً عند الاختيار" : "Saved automatically when selected"}
+          </p>
         </div>
 
         <input
