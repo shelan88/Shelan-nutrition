@@ -6,12 +6,14 @@
  *   - handleExport()  → downloads a PDF file
  *   - handlePrint()   → opens the PDF in a new tab for browser printing
  *   - generating      → boolean spinner state for both buttons
+ *   - pdfToast        → toast state: "idle" | "generating" | "error"
+ *   - retryLast()     → retries the last failed action
  *
  * Graceful fallback: if no submitted assessment response exists in Supabase,
  * the PDF is generated with client info + health indicators only (no Q&A).
  */
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { pdf } from "@react-pdf/renderer";
 import ClinicReportDocument from "@/admin/utils/clinicReport";
 import type { Client } from "@/admin/data/clients";
@@ -20,8 +22,12 @@ import {
   getResponse,
 } from "@/admin/repositories/assessment-responses.repository";
 
+export type PdfToastState = "idle" | "generating" | "error";
+
 export function useClientReport(client: Client | null, isAr: boolean) {
-  const [generating, setGenerating] = useState(false);
+  const [generating,   setGenerating]   = useState(false);
+  const [pdfToast,     setPdfToast]     = useState<PdfToastState>("idle");
+  const lastActionRef = useRef<"export" | "print" | null>(null);
 
   /** Fetch all data and build the PDF blob. */
   async function buildBlob(): Promise<Blob | null> {
@@ -66,10 +72,12 @@ export function useClientReport(client: Client | null, isAr: boolean) {
   /** Download the PDF as a file. */
   async function handleExport(): Promise<void> {
     if (!client || generating) return;
+    lastActionRef.current = "export";
     setGenerating(true);
+    setPdfToast("generating");
     try {
       const blob = await buildBlob();
-      if (!blob) return;
+      if (!blob) { setPdfToast("idle"); return; }
       const url = URL.createObjectURL(blob);
       const a   = document.createElement("a");
       const date = new Date().toISOString().split("T")[0];
@@ -79,8 +87,10 @@ export function useClientReport(client: Client | null, isAr: boolean) {
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      setPdfToast("idle");
     } catch (err) {
       console.error("[useClientReport] export failed:", err);
+      setPdfToast("error");
     } finally {
       setGenerating(false);
     }
@@ -89,20 +99,35 @@ export function useClientReport(client: Client | null, isAr: boolean) {
   /** Open the PDF in a new tab so the user can print from the browser. */
   async function handlePrint(): Promise<void> {
     if (!client || generating) return;
+    lastActionRef.current = "print";
     setGenerating(true);
+    setPdfToast("generating");
     try {
       const blob = await buildBlob();
-      if (!blob) return;
+      if (!blob) { setPdfToast("idle"); return; }
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
       // Keep the blob alive for 60 s so the new tab can fully load before revoke.
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      setPdfToast("idle");
     } catch (err) {
       console.error("[useClientReport] print failed:", err);
+      setPdfToast("error");
     } finally {
       setGenerating(false);
     }
   }
 
-  return { generating, handleExport, handlePrint };
+  /** Retry the last failed action. */
+  function retryLast(): void {
+    if (lastActionRef.current === "export") handleExport();
+    else if (lastActionRef.current === "print") handlePrint();
+  }
+
+  /** Dismiss an error toast manually. */
+  function dismissToast(): void {
+    setPdfToast("idle");
+  }
+
+  return { generating, handleExport, handlePrint, pdfToast, retryLast, dismissToast };
 }

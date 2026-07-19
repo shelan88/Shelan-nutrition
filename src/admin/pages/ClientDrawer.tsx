@@ -478,7 +478,7 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
     }
   }
 
-  const { generating: generatingPdf, handleExport, handlePrint } = useClientReport(client, isAr);
+  const { generating: generatingPdf, handleExport, handlePrint, pdfToast, retryLast, dismissToast } = useClientReport(client, isAr);
 
   async function handleViewFullAssessment() {
     if (!client) return;
@@ -1051,6 +1051,67 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
                       {editSaving ? (isAr ? "جاري الحفظ…" : "Saving…") : (isAr ? "حفظ التغييرات" : "Save Changes")}
                     </button>
                   </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* ── PDF generating overlay ────────────────────────────── */}
+            <AnimatePresence>
+              {generatingPdf && (
+                <motion.div
+                  key="pdf-overlay"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4"
+                  style={{ background: "rgba(var(--admin-surface-rgb, 255,255,255), 0.82)", backdropFilter: "blur(6px)" }}
+                  aria-busy="true"
+                  aria-label={isAr ? "جارٍ إنشاء التقرير" : "Generating PDF"}
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-pink/15 to-lavender-purple/15 flex items-center justify-center shadow-sm">
+                    <Loader2 size={26} className="animate-spin text-primary-pink" strokeWidth={2} />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[14px] font-bold text-[var(--admin-text)]">
+                      {isAr ? "جارٍ إنشاء التقرير…" : "Generating your report…"}
+                    </p>
+                    <p className="text-[12px] text-[var(--admin-text-faint)] mt-1">
+                      {isAr ? "قد يستغرق هذا بضع ثوانٍ" : "This may take a few seconds"}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* ── PDF error toast ───────────────────────────────────── */}
+            <AnimatePresence>
+              {pdfToast === "error" && (
+                <motion.div
+                  key="pdf-error-toast"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 12 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute bottom-5 start-1/2 -translate-x-1/2 rtl:translate-x-1/2 z-20 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-lg border border-red-200 text-[13px] font-semibold whitespace-nowrap bg-[var(--admin-surface)] text-red-600"
+                  style={{ boxShadow: "0 4px 24px 0 rgba(0,0,0,0.12)" }}
+                  role="alert"
+                >
+                  <AlertTriangle size={15} className="shrink-0 text-red-500" strokeWidth={2} />
+                  <span>{isAr ? "فشل إنشاء التقرير" : "Failed to generate report"}</span>
+                  <button
+                    onClick={retryLast}
+                    className="ms-1 underline underline-offset-2 text-primary-pink hover:text-primary-pink/80 transition-colors font-bold"
+                  >
+                    {isAr ? "إعادة المحاولة" : "Retry"}
+                  </button>
+                  <button
+                    onClick={dismissToast}
+                    aria-label={isAr ? "إغلاق" : "Dismiss"}
+                    className="ms-1 w-5 h-5 flex items-center justify-center rounded-full text-[var(--admin-text-faint)] hover:text-[var(--admin-text)] transition-colors"
+                  >
+                    <XIcon size={12} strokeWidth={2.5} />
+                  </button>
                 </motion.div>
               )}
             </AnimatePresence>
