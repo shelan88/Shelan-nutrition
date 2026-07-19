@@ -148,6 +148,9 @@ const IND_FALLBACK: IndicatorTheme = { dot: C.faint, text: C.muted, bg: C.bg };
 
 function resolveAnswer(ans: AnswerWithQuestion, isAr: boolean): string {
   const { answer_text, answer_json, question } = ans;
+  // Guard: if the question was deleted from the template after the response was
+  // submitted, the join returns undefined. Fall back to raw answer text.
+  if (!question) return answer_text ?? "—";
   const { type, options } = question;
 
   if (!answer_text && !answer_json) return "—";
@@ -413,9 +416,12 @@ function ClientInfoSection({ client, isAr }: { client: Client; isAr: boolean }) 
 function AssessmentSummarySection({
   client, response, isAr,
 }: { client: Client; response: ResponseWithAnswers | null; isAr: boolean }) {
-  // Prefer live DB data; fall back to CRM summary
+  // Prefer live DB data; fall back to CRM summary.
+  // Only use client.riskLevel as fallback when the client has a real assessment
+  // record — otherwise every new client (riskLevel defaults to "Low" in the DB)
+  // would show a spurious "Low Risk" badge with no score or diagnosis.
   const score       = response?.score           ?? client.assessment?.score         ?? null;
-  const riskLevel   = response?.risk_level       ?? client.riskLevel                 ?? null;
+  const riskLevel   = response?.risk_level       ?? (client.assessment ? client.riskLevel : null) ?? null;
   const riskPct     = response?.risk_percentage  ?? client.assessment?.riskPercentage ?? null;
   const diagnosis   = isAr
     ? (response?.diagnosis_category_ar ?? client.assessment?.diagnosisCategoryAr ?? "")
@@ -526,8 +532,10 @@ function DiagnosesSection({ client, isAr }: { client: Client; isAr: boolean }) {
 function QASection({
   response, templateName, isAr,
 }: { response: ResponseWithAnswers; templateName: string; isAr: boolean }) {
-  const { answers } = response;
-  if (!answers?.length) return null;
+  // Filter out any answer whose question was deleted from the template after
+  // submission — those have question === undefined from the repository join.
+  const answers = (response.answers ?? []).filter((a) => a.question != null);
+  if (!answers.length) return null;
 
   return (
     <View style={S.card} wrap>
@@ -594,11 +602,14 @@ function NutritionSection({ plan, isAr }: { plan: NutritionPlan; isAr: boolean }
         {t("Period", "الفترة", isAr)}: {plan.startDate} → {plan.endDate}
       </Text>
 
-      {/* Calories */}
-      <View style={[S.calRow, { flexDirection: isAr ? "row-reverse" : "row" }]}>
-        <Text style={S.calNum}>{plan.calories}</Text>
-        <Text style={S.calLabel}>{t("kcal / day", "سعرة / يوم", isAr)}</Text>
-      </View>
+      {/* Calories — only shown when a real value is stored (v2 schema stores
+           calories per meal, so plan-level calories may be 0 / omitted) */}
+      {plan.calories > 0 && (
+        <View style={[S.calRow, { flexDirection: isAr ? "row-reverse" : "row" }]}>
+          <Text style={S.calNum}>{plan.calories}</Text>
+          <Text style={S.calLabel}>{t("kcal / day", "سعرة / يوم", isAr)}</Text>
+        </View>
+      )}
 
       {/* Macros */}
       {plan.macros?.length ? (
