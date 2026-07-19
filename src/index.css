@@ -251,6 +251,27 @@ body {
 .admin-shell.dark .border-red-200          { border-color: rgba(239,  68,  68, 0.30)  !important; }
 .admin-shell.dark .border-amber-200        { border-color: rgba(245, 158,  11, 0.30)  !important; }
 
+/* White surfaces — cards, tables, panels — must map to the dark surface token */
+.admin-shell.dark .bg-white               { background-color: var(--admin-surface)    !important; }
+.admin-shell.dark .hover\:bg-white:hover  { background-color: var(--admin-surface)    !important; }
+
+/* Light text colours that disappear on dark backgrounds */
+.admin-shell.dark .text-gray-700          { color: var(--admin-text)       !important; }
+.admin-shell.dark .text-gray-800,
+.admin-shell.dark .text-gray-900          { color: var(--admin-text)       !important; }
+.admin-shell.dark .text-gray-400          { color: var(--admin-text-faint) !important; }
+
+/* Input / select / textarea backgrounds */
+.admin-shell.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.admin-shell.dark select,
+.admin-shell.dark textarea {
+  background-color: rgba(167, 139, 250, 0.06) !important;
+  color: var(--admin-text) !important;
+  border-color: var(--admin-border-strong) !important;
+}
+.admin-shell.dark input::placeholder,
+.admin-shell.dark textarea::placeholder { color: var(--admin-text-faint) !important; }
+
 /* Scrollbar — subtle styling in dark mode */
 .admin-shell.dark ::-webkit-scrollbar              { width: 6px; height: 6px; }
 .admin-shell.dark ::-webkit-scrollbar-track        { background: transparent; }

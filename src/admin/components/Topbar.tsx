@@ -2,23 +2,28 @@
  * Topbar — admin portal top navigation bar.
  *
  * Left:   Hamburger (mobile) + Breadcrumbs
- * Center: (reserved for global search — currently icon only)
  * Right:  Search · Notifications · Language · Theme · User menu
  *
- * All interactive elements are presentational stubs — no live data yet.
- * To connect: replace notification count with Supabase realtime subscription.
+ * Implemented controls:
+ *  - Search   → GlobalSearchModal (clients / bookings / assessments / plans)
+ *              also opens on Cmd/Ctrl + K
+ *  - Bell     → inline dropdown with empty state (no fake data)
+ *  - Theme    → toggles dark/light via AdminContext (persisted in localStorage)
+ *  - Language → toggles AR/EN via LanguageContext
+ *  - User     → dropdown with profile link + sign-out
  */
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu, Search, Bell, Sun, Moon, ChevronDown,
-  ChevronRight, LogOut, User, ExternalLink,
+  ChevronRight, LogOut, User, ExternalLink, BellOff,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAdmin } from "../context/AdminContext";
-import { NAV_ITEMS, PAGE_META } from "../data/navigation";
+import { PAGE_META } from "../data/navigation";
 import { supabase } from "@/lib/supabase";
+import GlobalSearchModal from "./GlobalSearchModal";
 
 // ─── Breadcrumb builder ───────────────────────────────────────────────────────
 function useBreadcrumbs(lang: "en" | "ar") {
@@ -51,7 +56,6 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
   const ref      = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  // Load the authenticated admin's real name and email from Supabase Auth
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
@@ -75,7 +79,6 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Compute initials from real name / email
   const nameParts = adminName.trim().split(/\s+/).filter(Boolean);
   const inits =
     nameParts.length >= 2
@@ -86,12 +89,12 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
 
   const items = lang === "ar"
     ? [
-        { icon: User,         label: "الملف الشخصي", href: "/admin/profile"  },
-        { icon: ExternalLink, label: "الموقع العام",  href: "/", external: true },
+        { icon: User,         label: "الملف الشخصي", href: "/admin/profile",  external: false },
+        { icon: ExternalLink, label: "الموقع العام",  href: "/",              external: true  },
       ]
     : [
-        { icon: User,         label: "Profile",        href: "/admin/profile"  },
-        { icon: ExternalLink, label: "View public site", href: "/", external: true },
+        { icon: User,         label: "Profile",          href: "/admin/profile", external: false },
+        { icon: ExternalLink, label: "View public site",  href: "/",             external: true  },
       ];
 
   return (
@@ -115,8 +118,8 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
         {open && (
           <motion.div
             initial={{ opacity: 0, y: -6, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0,  scale: 1    }}
+            exit={{ opacity: 0,    y: -6, scale: 0.97 }}
             transition={{ duration: 0.15 }}
             className="
               absolute end-0 top-full mt-2 w-52 z-50
@@ -126,7 +129,6 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
               py-1.5 overflow-hidden
             "
           >
-            {/* User info */}
             <div className="px-4 py-3 border-b border-[var(--admin-border)]">
               <p className="text-[13px] font-semibold text-[var(--admin-text)]">
                 {adminName || "Admin"}
@@ -134,7 +136,6 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
               <p className="text-[11px] text-[var(--admin-text-faint)]">{adminEmail}</p>
             </div>
 
-            {/* Items */}
             <div className="py-1">
               {items.map((item) => {
                 const Icon = item.icon;
@@ -164,7 +165,6 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
               })}
             </div>
 
-            {/* Sign out */}
             <div className="border-t border-[var(--admin-border)] py-1">
               <button
                 type="button"
@@ -182,108 +182,200 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
   );
 }
 
+// ─── Notifications dropdown ───────────────────────────────────────────────────
+// No real notification system exists yet.  We show an honest empty state
+// rather than fabricating counts or mock data.
+function NotificationsDropdown({ lang }: { lang: "en" | "ar" }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={lang === "ar" ? "الإشعارات" : "Notifications"}
+        aria-expanded={open}
+        className={`
+          relative w-8 h-8 flex items-center justify-center rounded-lg transition-colors
+          ${open
+            ? "bg-[var(--admin-active-bg)] text-[var(--admin-text-muted)]"
+            : "text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] hover:text-[var(--admin-text-muted)]"
+          }
+        `}
+      >
+        <Bell size={16} strokeWidth={1.8} />
+        {/* No badge — no real data */}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0,  scale: 1    }}
+            exit={{ opacity: 0,    y: -6, scale: 0.97 }}
+            transition={{ duration: 0.15 }}
+            className="
+              absolute end-0 top-full mt-2 w-72 z-50
+              bg-[var(--admin-surface)] rounded-xl
+              border border-[var(--admin-border)]
+              shadow-xl shadow-black/10
+              overflow-hidden
+            "
+          >
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-[var(--admin-border)]">
+              <p className="text-[13px] font-semibold text-[var(--admin-text)]">
+                {lang === "ar" ? "الإشعارات" : "Notifications"}
+              </p>
+            </div>
+
+            {/* Empty state */}
+            <div className="px-4 py-8 flex flex-col items-center gap-3 text-center">
+              <div className="w-10 h-10 rounded-full bg-[var(--admin-hover-bg)] flex items-center justify-center">
+                <BellOff size={18} className="text-[var(--admin-text-faint)]" strokeWidth={1.6} />
+              </div>
+              <div>
+                <p className="text-[13px] font-medium text-[var(--admin-text-muted)]">
+                  {lang === "ar" ? "لا توجد إشعارات" : "No notifications"}
+                </p>
+                <p className="text-[11px] text-[var(--admin-text-faint)] mt-0.5">
+                  {lang === "ar"
+                    ? "ستظهر الإشعارات هنا عند وصولها"
+                    : "Notifications will appear here when they arrive"}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ─── Main Topbar ──────────────────────────────────────────────────────────────
 export default function Topbar() {
   const { lang, toggleLang } = useLanguage();
   const { setMobileSidebarOpen, theme, toggleTheme } = useAdmin();
   const breadcrumbs = useBreadcrumbs(lang);
+  const [searchOpen, setSearchOpen] = useState(false);
 
-  // Notification count (placeholder — replace with Supabase realtime)
-  const notificationCount = NAV_ITEMS.find((i) => i.id === "messages")?.badge ?? "0";
+  // Cmd/Ctrl + K opens search from anywhere in the admin portal
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   return (
-    <header className="h-14 shrink-0 flex items-center justify-between px-4 sm:px-6 border-b border-[var(--admin-border)] bg-[var(--admin-surface)] z-10">
-      {/* Left: hamburger + breadcrumbs */}
-      <div className="flex items-center gap-3 min-w-0">
-        {/* Mobile hamburger */}
-        <button
-          type="button"
-          onClick={() => setMobileSidebarOpen(true)}
-          className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--admin-hover-bg)] text-[var(--admin-text-muted)] transition-colors"
-          aria-label="Open navigation"
-        >
-          <Menu size={18} />
-        </button>
+    <>
+      <header className="h-14 shrink-0 flex items-center justify-between px-4 sm:px-6 border-b border-[var(--admin-border)] bg-[var(--admin-surface)] z-10">
+        {/* Left: hamburger + breadcrumbs */}
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={() => setMobileSidebarOpen(true)}
+            className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--admin-hover-bg)] text-[var(--admin-text-muted)] transition-colors"
+            aria-label="Open navigation"
+          >
+            <Menu size={18} />
+          </button>
 
-        {/* Breadcrumbs */}
-        <nav aria-label="Admin breadcrumb" className="flex items-center gap-1 min-w-0">
-          {breadcrumbs.map((crumb, i) => (
-            <span key={i} className="flex items-center gap-1 min-w-0">
-              {i > 0 && (
-                <ChevronRight size={12} className="text-[var(--admin-text-faint)] shrink-0 rtl:rotate-180" />
-              )}
-              {i < breadcrumbs.length - 1 ? (
-                <Link
-                  to={crumb.href}
-                  className="text-[12px] text-[var(--admin-text-muted)] hover:text-primary-pink transition-colors whitespace-nowrap"
-                >
-                  {crumb.label}
-                </Link>
-              ) : (
-                <span className="text-[12px] font-medium text-[var(--admin-text)] truncate">
-                  {crumb.label}
-                </span>
-              )}
-            </span>
-          ))}
-        </nav>
-      </div>
+          <nav aria-label="Admin breadcrumb" className="flex items-center gap-1 min-w-0">
+            {breadcrumbs.map((crumb, i) => (
+              <span key={i} className="flex items-center gap-1 min-w-0">
+                {i > 0 && (
+                  <ChevronRight size={12} className="text-[var(--admin-text-faint)] shrink-0 rtl:rotate-180" />
+                )}
+                {i < breadcrumbs.length - 1 ? (
+                  <Link
+                    to={crumb.href}
+                    className="text-[12px] text-[var(--admin-text-muted)] hover:text-primary-pink transition-colors whitespace-nowrap"
+                  >
+                    {crumb.label}
+                  </Link>
+                ) : (
+                  <span className="text-[12px] font-medium text-[var(--admin-text)] truncate">
+                    {crumb.label}
+                  </span>
+                )}
+              </span>
+            ))}
+          </nav>
+        </div>
 
-      {/* Right: actions */}
-      <div className="flex items-center gap-1 shrink-0">
-        {/* Search */}
-        <button
-          type="button"
-          aria-label="Search"
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] hover:text-[var(--admin-text-muted)] transition-colors"
-        >
-          <Search size={16} strokeWidth={1.8} />
-        </button>
+        {/* Right: actions */}
+        <div className="flex items-center gap-1 shrink-0">
 
-        {/* Divider */}
-        <div className="w-px h-5 bg-[var(--admin-border)] mx-1" />
+          {/* Search — opens GlobalSearchModal */}
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            aria-label={lang === "ar" ? "بحث (⌘K)" : "Search (⌘K)"}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] hover:text-[var(--admin-text-muted)] transition-colors"
+          >
+            <Search size={16} strokeWidth={1.8} />
+          </button>
 
-        {/* Notification bell */}
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="relative w-8 h-8 flex items-center justify-center rounded-lg text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] hover:text-[var(--admin-text-muted)] transition-colors"
-        >
-          <Bell size={16} strokeWidth={1.8} />
-          {parseInt(notificationCount) > 0 && (
-            <span className="absolute top-1 end-1 w-2 h-2 rounded-full bg-primary-pink border-2 border-[var(--admin-surface)]" />
-          )}
-        </button>
+          {/* Divider */}
+          <div className="w-px h-5 bg-[var(--admin-border)] mx-1" />
 
-        {/* Language toggle */}
-        <button
-          type="button"
-          onClick={toggleLang}
-          aria-label="Toggle language"
-          className="h-8 px-2.5 rounded-lg text-[11px] font-semibold text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] hover:text-[var(--admin-text)] transition-colors tracking-wide"
-        >
-          {lang === "en" ? "AR" : "EN"}
-        </button>
+          {/* Notifications — real empty state, no fabricated badge */}
+          <NotificationsDropdown lang={lang} />
 
-        {/* Theme toggle */}
-        <button
-          type="button"
-          onClick={toggleTheme}
-          aria-label="Toggle theme"
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] hover:text-[var(--admin-text-muted)] transition-colors"
-        >
-          {theme === "light"
-            ? <Sun size={15} strokeWidth={1.8} />
-            : <Moon size={15} strokeWidth={1.8} />
-          }
-        </button>
+          {/* Language toggle */}
+          <button
+            type="button"
+            onClick={toggleLang}
+            aria-label="Toggle language"
+            className="h-8 px-2.5 rounded-lg text-[11px] font-semibold text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)] hover:text-[var(--admin-text)] transition-colors tracking-wide"
+          >
+            {lang === "en" ? "AR" : "EN"}
+          </button>
 
-        {/* Divider */}
-        <div className="w-px h-5 bg-[var(--admin-border)] mx-1" />
+          {/* Theme toggle — persisted to localStorage via AdminContext */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={lang === "ar"
+              ? (theme === "light" ? "تفعيل الوضع الداكن" : "تفعيل الوضع الفاتح")
+              : (theme === "light" ? "Switch to dark mode" : "Switch to light mode")
+            }
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] hover:text-[var(--admin-text-muted)] transition-colors"
+          >
+            {theme === "light"
+              ? <Moon size={15} strokeWidth={1.8} />
+              : <Sun  size={15} strokeWidth={1.8} />
+            }
+          </button>
 
-        {/* User menu */}
-        <UserMenu lang={lang} />
-      </div>
-    </header>
+          {/* Divider */}
+          <div className="w-px h-5 bg-[var(--admin-border)] mx-1" />
+
+          {/* User menu */}
+          <UserMenu lang={lang} />
+        </div>
+      </header>
+
+      {/* Global search modal — rendered outside header to avoid z-index stacking */}
+      <GlobalSearchModal
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        lang={lang}
+      />
+    </>
   );
 }
