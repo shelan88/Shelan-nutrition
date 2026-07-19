@@ -76,6 +76,21 @@ export default function ImageUpload({
     if (!file) return;
     e.target.value = ""; // allow re-selecting the same file
 
+    // ── Samsung Internet / Android diagnostic ─────────────────────────────────
+    // Logs the raw File object as the browser hands it to JS — before any MIME
+    // sniffing, compression, or validation. Compare these values between Chrome
+    // Android and Samsung Internet to isolate browser-specific File differences.
+    console.group("[ImageUpload] file-selection diagnostic");
+    console.log("file.name           :", file.name);
+    console.log("file.type           :", file.type          || "(empty string — Samsung Gallery may omit MIME)");
+    console.log("file.size           :", file.size, "bytes", file.size === 0 ? "⚠ ZERO BYTES" : "");
+    console.log("file.lastModified   :", file.lastModified, `(${new Date(file.lastModified).toISOString()})`);
+    console.log("file instanceof File:", file instanceof File);
+    console.log("file.constructor    :", file.constructor?.name ?? "(unknown)");
+    console.log("navigator.userAgent :", navigator.userAgent);
+    console.groupEnd();
+    // ─────────────────────────────────────────────────────────────────────────
+
     // Client-side size guard
     if (file.size > maxSizeMb * 1024 * 1024) {
       const msg = lang === "ar"
