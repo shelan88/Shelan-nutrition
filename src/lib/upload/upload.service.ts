@@ -33,6 +33,10 @@ async function sniffMimeType(file: File): Promise<string> {
     gif:  "image/gif",
     heic: "image/heic",
     heif: "image/heif",
+    mp4:  "video/mp4",
+    m4v:  "video/mp4",
+    mov:  "video/quicktime",
+    webm: "video/webm",
   };
 
   try {
@@ -52,6 +56,16 @@ async function sniffMimeType(file: File): Promise<string> {
     ) return "image/webp";
     // GIF: GIF87a or GIF89a
     if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46) return "image/gif";
+    // WEBM: 1A 45 DF A3 (EBML header)
+    if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return "video/webm";
+    // MP4 / MOV / M4V: ISO Base Media File Format — "ftyp" box at offset 4
+    // bytes [4..7] = 'f','t','y','p'; bytes [8..11] = major brand
+    if (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
+      // MOV brand: "qt  " (QuickTime)
+      if (b[8] === 0x71 && b[9] === 0x74 && b[10] === 0x20 && b[11] === 0x20) return "video/quicktime";
+      // All other ftyp brands (isom, mp41, mp42, M4V , avc1, …) → MP4
+      return "video/mp4";
+    }
   } catch {
     // If reading fails, fall through to extension lookup
   }
