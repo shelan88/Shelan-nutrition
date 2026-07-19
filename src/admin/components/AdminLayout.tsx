@@ -20,7 +20,7 @@
  *   Done — no other file changes needed.
  */
 import { Routes, Route } from "react-router-dom";
-import { AdminProvider } from "../context/AdminContext";
+import { AdminProvider, useAdmin } from "../context/AdminContext";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import ContentContainer from "./ContentContainer";
@@ -45,10 +45,26 @@ import ClientProfilePage from "../pages/ClientProfilePage";
 import AdminProfilePage from "../pages/AdminProfilePage";
 import AdminSettingsPage from "../pages/AdminSettingsPage";
 
+/**
+ * AdminShellInner — reads `theme` from AdminContext (must sit inside
+ * <AdminProvider>) and applies the `dark` class to `.admin-shell` so that
+ * all `var(--admin-*)` CSS-variable overrides and scoped dark-mode rules
+ * in index.css activate immediately on the first render (no flash, because
+ * the theme is read synchronously from localStorage by the context).
+ */
+function AdminShellInner({ children }: { children: React.ReactNode }) {
+  const { theme } = useAdmin();
+  return (
+    <div className={`admin-shell flex h-screen overflow-hidden${theme === "dark" ? " dark" : ""}`}>
+      {children}
+    </div>
+  );
+}
+
 export default function AdminLayout() {
   return (
     <AdminProvider>
-      <div className="admin-shell flex h-screen overflow-hidden">
+      <AdminShellInner>
         {/* Sidebar — sticky left panel */}
         <Sidebar />
 
@@ -96,7 +112,7 @@ export default function AdminLayout() {
             </Routes>
           </ContentContainer>
         </div>
-      </div>
+      </AdminShellInner>
     </AdminProvider>
   );
 }

@@ -265,7 +265,7 @@ export default function Topbar() {
           {lang === "en" ? "AR" : "EN"}
         </button>
 
-        {/* Theme toggle (prepared — no dark theme styles yet) */}
+        {/* Theme toggle */}
         <button
           type="button"
           onClick={toggleTheme}

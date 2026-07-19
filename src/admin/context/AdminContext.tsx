@@ -4,7 +4,10 @@
  * Provides:
  *  - sidebarCollapsed   desktop sidebar toggle (icon-only mode)
  *  - mobileSidebarOpen  mobile overlay drawer toggle
- *  - theme              light | dark (prepared — no dark styles yet)
+ *  - theme              light | dark — persisted to localStorage; AdminLayout
+ *                       applies class="dark" to .admin-shell so all
+ *                       var(--admin-*) CSS tokens and scoped overrides in
+ *                       index.css activate without flash on page load.
  *
  * Future: add user session, permissions, notification count.
  */

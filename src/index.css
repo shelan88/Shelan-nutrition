@@ -196,6 +196,67 @@ body {
   min-height: 100vh;
 }
 
+/* ─── Admin Portal Shell — Dark Theme ────────────────────────────────────────
+   Activated by adding class="dark" to .admin-shell (AdminLayout reads theme
+   from AdminContext and toggles this class). All structural elements already
+   use var(--admin-*) tokens, so re-declaring them here is enough to repaint
+   the entire shell. Only the semantic design tokens change; layout tokens
+   (--admin-sidebar-w, --admin-topbar-h) are intentionally left unchanged.   */
+.admin-shell.dark {
+  --admin-bg:            #0d0b18;
+  --admin-surface:       #161228;
+  --admin-border:        rgba(167, 139, 250, 0.10);
+  --admin-border-strong: rgba(167, 139, 250, 0.18);
+  --admin-text:          #ede8ff;
+  --admin-text-muted:    #9b8fba;
+  --admin-text-faint:    #56496f;
+  --admin-active-bg:     rgba(243,  94, 152, 0.10);
+  --admin-active-border: rgba(243,  94, 152, 0.38);
+  --admin-hover-bg:      rgba(167, 139, 250, 0.07);
+}
+
+/* ── Hardcoded Tailwind status/badge colour overrides in dark mode ────────────
+   Components use "50" backgrounds + "600/700" text for status chips, KPI
+   trend badges, schedule rows, etc. These look washed-out on a dark surface,
+   so we swap them for translucent tinted variants that match the dark palette.
+   !important is required to beat Tailwind's static class specificity.         */
+
+/* Tinted status backgrounds */
+.admin-shell.dark .bg-gray-50              { background-color: rgba(167, 139, 250, 0.05) !important; }
+.admin-shell.dark .bg-emerald-50           { background-color: rgba( 16, 185, 129, 0.12) !important; }
+.admin-shell.dark .bg-red-50               { background-color: rgba(239,  68,  68, 0.12) !important; }
+.admin-shell.dark .bg-amber-50             { background-color: rgba(245, 158,  11, 0.12) !important; }
+.admin-shell.dark .bg-blue-50              { background-color: rgba( 59, 130, 246, 0.12) !important; }
+.admin-shell.dark .bg-purple-50            { background-color: rgba(167, 139, 250, 0.12) !important; }
+
+/* Readable status text */
+.admin-shell.dark .text-gray-500,
+.admin-shell.dark .text-gray-600           { color: var(--admin-text-muted) !important; }
+.admin-shell.dark .text-emerald-600,
+.admin-shell.dark .text-emerald-700        { color: #6ee7b7 !important; }
+.admin-shell.dark .text-red-500,
+.admin-shell.dark .text-red-600            { color: #fca5a5 !important; }
+.admin-shell.dark .text-amber-600,
+.admin-shell.dark .text-amber-700          { color: #fcd34d !important; }
+.admin-shell.dark .text-blue-600           { color: #93c5fd !important; }
+.admin-shell.dark .text-purple-600         { color: #c4b5fd !important; }
+
+/* Hover states */
+.admin-shell.dark .hover\:bg-red-50:hover  { background-color: rgba(239,  68,  68, 0.10) !important; }
+.admin-shell.dark .hover\:bg-gray-100:hover{ background-color: var(--admin-hover-bg)     !important; }
+
+/* Light border colours in tables / dividers */
+.admin-shell.dark .border-gray-100         { border-color: var(--admin-border)        !important; }
+.admin-shell.dark .border-gray-200         { border-color: var(--admin-border-strong) !important; }
+.admin-shell.dark .border-red-200          { border-color: rgba(239,  68,  68, 0.30)  !important; }
+.admin-shell.dark .border-amber-200        { border-color: rgba(245, 158,  11, 0.30)  !important; }
+
+/* Scrollbar — subtle styling in dark mode */
+.admin-shell.dark ::-webkit-scrollbar              { width: 6px; height: 6px; }
+.admin-shell.dark ::-webkit-scrollbar-track        { background: transparent; }
+.admin-shell.dark ::-webkit-scrollbar-thumb        { background: rgba(167, 139, 250, 0.18); border-radius: 99px; }
+.admin-shell.dark ::-webkit-scrollbar-thumb:hover  { background: rgba(167, 139, 250, 0.30); }
+
 /* Reset public-site heading styles inside admin */
 .admin-shell h1,
 .admin-shell h2,
