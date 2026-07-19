@@ -22,11 +22,12 @@ import {
   Flame, Wheat, Droplets, Paperclip,
   Image as ImageIcon, FlaskConical,
   ShieldCheck, Stethoscope, Lock, Printer, Download,
-  Edit2, Archive, Trash2, ArrowLeftRight, Save, X as XIcon,
+  Edit2, Archive, Trash2, ArrowLeftRight, Save, X as XIcon, Loader2,
 } from "lucide-react";
 import type { Client, TimelineType, FileType, RiskIndicatorLevel, Gender, ClientStatus } from "../data/clients";
 import { deleteClient, archiveClient, updateClient } from "@/admin/repositories/clients.repository";
 import NutritionPlansTab from "./NutritionPlansTab";
+import FullAssessmentModal from "@/admin/components/FullAssessmentModal";
 
 // ─── Risk helpers ──────────────────────────────────────────────────────────────
 
@@ -417,6 +418,11 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
   const [actioning, setActioning] = useState<string | null>(null);
   const [tab, setTab] = useState<"profile" | "assessments" | "nutrition">("profile");
 
+  // ── Full assessment modal ───────────────────────────────────────────────────
+  interface ViewingAssessment { responseId: string; templateNameEn: string; templateNameAr: string | null; }
+  const [viewingAssessment,      setViewingAssessment]      = useState<ViewingAssessment | null>(null);
+  const [loadingViewAssessment,  setLoadingViewAssessment]  = useState(false);
+
   // ── Edit mode ──────────────────────────────────────────────────────────────
   const [editMode,  setEditMode]  = useState(false);
   const [editForm,  setEditForm]  = useState<EditForm | null>(null);
@@ -473,6 +479,21 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
 
   function handlePrint() {
     window.print();
+  }
+
+  async function handleViewFullAssessment() {
+    if (!client) return;
+    setLoadingViewAssessment(true);
+    const responses = await getSubmittedResponsesWithTemplateNames(client.email);
+    setLoadingViewAssessment(false);
+    if (responses.length > 0) {
+      const latest = responses[0]; // sorted most-recent-first by the repository
+      setViewingAssessment({
+        responseId:     latest.id,
+        templateNameEn: latest.template_name_en,
+        templateNameAr: latest.template_name_ar,
+      });
+    }
   }
 
   // Reset scroll position on each new client
@@ -692,9 +713,19 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
                         </div>
                       </div>
                     </div>
-                    <button className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white border border-[var(--admin-border)] text-[12.5px] font-semibold text-primary-pink hover:bg-primary-pink hover:text-white hover:border-primary-pink transition-all">
-                      {isAr ? "عرض التقييم الكامل" : "View Full Assessment"}
-                      <ChevronRight size={13} className="rtl:rotate-180" />
+                    <button
+                      onClick={handleViewFullAssessment}
+                      disabled={loadingViewAssessment}
+                      className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white border border-[var(--admin-border)] text-[12.5px] font-semibold text-primary-pink hover:bg-primary-pink hover:text-white hover:border-primary-pink transition-all disabled:opacity-60 disabled:cursor-wait"
+                    >
+                      {loadingViewAssessment ? (
+                        <Loader2 size={13} className="animate-spin" />
+                      ) : (
+                        <>
+                          {isAr ? "عرض التقييم الكامل" : "View Full Assessment"}
+                          <ChevronRight size={13} className="rtl:rotate-180" />
+                        </>
+                      )}
                     </button>
                   </div>
                 ) : (
@@ -1029,6 +1060,17 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
               )}
             </AnimatePresence>
           </motion.div>
+
+          {/* Full Assessment Modal — opened from the Assessment Summary card in the Profile tab */}
+          {viewingAssessment && (
+            <FullAssessmentModal
+              responseId={viewingAssessment.responseId}
+              templateNameEn={viewingAssessment.templateNameEn}
+              templateNameAr={viewingAssessment.templateNameAr}
+              isAr={isAr}
+              onClose={() => setViewingAssessment(null)}
+            />
+          )}
         </>
       )}
     </AnimatePresence>
