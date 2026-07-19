@@ -16,7 +16,7 @@ import {
   Globe, X, UserCircle2, LayoutDashboard, LogOut,
   User, Calendar, ClipboardList, Utensils, TrendingUp, Folder, Settings, ChevronDown,
 } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/context/LanguageContext";
 import { pagesNav, authModal } from "@/content/content";
 import AuthModal from "@/components/AuthModal";
@@ -101,12 +101,27 @@ export default function Navbar() {
   const [avatarUrl,     setAvatarUrl]     = useState<string | null>(null);
   const [dbNavItems,    setDbNavItems]    = useState<DBNavItem[] | null>(null);
   const location = useLocation();
+  const navigate = useNavigate();
   const dropRef  = useRef<HTMLDivElement>(null);
+
+  // Tracks a section ID to scroll to once the homepage finishes mounting
+  const [pendingScroll, setPendingScroll] = useState<string | null>(null);
 
   const authT = authModal[lang];
 
   // Close menu on route change
   useEffect(() => { setOpen(false); setDropOpen(false); }, [location.pathname]);
+
+  // After navigating to "/" from another page, scroll to the pending section
+  useEffect(() => {
+    if (!pendingScroll || location.pathname !== "/") return;
+    const id = pendingScroll;
+    setPendingScroll(null);
+    // Small delay lets React finish painting the homepage before we scroll
+    setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    }, 120);
+  }, [location.pathname, pendingScroll]);
 
   // Lock body scroll when overlay menu is open
   useEffect(() => {
@@ -208,6 +223,24 @@ export default function Navbar() {
     window.addEventListener("shelan:avatar-updated", handler);
     return () => { cancelled = true; window.removeEventListener("shelan:avatar-updated", handler); };
   }, []);
+
+  // Navigate to a hash section with smooth scroll.
+  // • Same page  → close menu + scroll immediately.
+  // • Other page → close menu + navigate to "/" + scroll once homepage mounts.
+  // • Plain route → close menu (Link handles navigation).
+  function handleNavItemClick(href: string) {
+    setOpen(false);
+    if (!href.startsWith("/#")) return;
+    const sectionId = href.slice(2);
+    if (location.pathname === "/") {
+      setTimeout(() => {
+        document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
+      }, 50);
+    } else {
+      setPendingScroll(sectionId);
+      navigate("/");
+    }
+  }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -429,20 +462,35 @@ export default function Navbar() {
 
             <nav className="min-h-full flex flex-col items-center justify-center gap-5 sm:gap-6 text-center px-6 pt-28 pb-12">
               {/* Main site links */}
-              {items.map((item) =>
-                item.cta ? (
+              {items.map((item) => {
+                const isHash = item.href.startsWith("/#");
+                return item.cta ? (
                   <motion.div key={item.href} variants={linkVariants}>
                     <Link
                       to={item.href}
+                      onClick={() => handleNavItemClick(item.href)}
                       className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple font-heading text-base font-bold text-white shadow-lg shadow-deep-purple/30 hover:shadow-xl hover:shadow-deep-purple/40 hover:-translate-y-0.5 transition-all duration-300"
                     >
                       {item.label}
                     </Link>
                   </motion.div>
+                ) : isHash ? (
+                  /* Hash-anchor item — button handles scroll + menu close */
+                  <motion.div key={item.href} variants={linkVariants}>
+                    <button
+                      type="button"
+                      onClick={() => handleNavItemClick(item.href)}
+                      className="font-heading text-[1.3rem] sm:text-[1.4rem] font-bold transition-colors text-ivory hover:text-light-pink"
+                    >
+                      {item.label}
+                    </button>
+                  </motion.div>
                 ) : (
+                  /* Regular page link */
                   <motion.div key={item.href} variants={linkVariants}>
                     <Link
                       to={item.href}
+                      onClick={() => setOpen(false)}
                       className={`font-heading text-[1.3rem] sm:text-[1.4rem] font-bold transition-colors ${
                         location.pathname === item.href
                           ? "text-primary-pink"
@@ -452,8 +500,8 @@ export default function Navbar() {
                       {item.label}
                     </Link>
                   </motion.div>
-                )
-              )}
+                );
+              })}
 
               {/* Divider */}
               <motion.div variants={linkVariants} className="w-16 h-px bg-white/10 my-1" />
