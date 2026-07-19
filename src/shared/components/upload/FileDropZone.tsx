@@ -18,7 +18,7 @@
  * files and calls `upload` serially, notifying `onSuccess` per file.
  */
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Upload, RefreshCw, AlertCircle } from "lucide-react";
 import { useUpload } from "@/lib/upload";
 import UploadProgressBar from "./UploadProgressBar";
@@ -55,6 +55,27 @@ export default function FileDropZone({
   const [dragOver, setDragOver] = useState(false);
   const [currentFile, setCurrentFile] = useState<File | null>(null);
 
+  // ── Forensic: detect component mount/unmount around the Gallery interaction ──
+  useEffect(() => {
+    console.log("[FileDropZone] MOUNTED — ref attached:", !!fileRef.current);
+    return () => {
+      console.warn("[FileDropZone] UNMOUNTED — if this fires while Samsung Gallery " +
+        "is open, the component is being destroyed before onChange can fire.");
+    };
+  }, []);
+
+  // ── Forensic: detect when the input element itself is recreated by React ─────
+  const prevInputRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    if (prevInputRef.current && prevInputRef.current !== fileRef.current) {
+      console.error("[FileDropZone] ⚠ INPUT ELEMENT WAS RECREATED by React — " +
+        "fileRef.current identity changed between renders. A new <input> DOM node " +
+        "now exists. If this fires after Samsung Gallery closes, React unmounted " +
+        "and remounted the input before onChange could deliver the file.");
+    }
+    prevInputRef.current = fileRef.current;
+  });
+
   const defaultLabel = lang === "ar"
     ? "أفلت الملفات هنا أو اضغط للتصفح"
     : "Drop files here or click to browse";
@@ -65,34 +86,66 @@ export default function FileDropZone({
 
   // ── Upload a single file ───────────────────────────────────────────────────
   async function processFile(file: File) {
-    // ── Samsung Internet / Android diagnostic ─────────────────────────────────
-    console.group("[FileDropZone] file-selection diagnostic");
-    console.log("file.name           :", file.name);
-    console.log("file.type           :", file.type          || "(empty string — Samsung Gallery may omit MIME)");
-    console.log("file.size           :", file.size, "bytes", file.size === 0 ? "⚠ ZERO BYTES" : "");
-    console.log("file.lastModified   :", file.lastModified, `(${new Date(file.lastModified).toISOString()})`);
-    console.log("file instanceof File:", file instanceof File);
-    console.log("file.constructor    :", file.constructor?.name ?? "(unknown)");
-    console.log("navigator.userAgent :", navigator.userAgent);
-    console.groupEnd();
-    // ─────────────────────────────────────────────────────────────────────────
 
+    // ════════════════════════════════════════════════════════════════════════
+    // FORENSIC STEP 1 — File object at the moment processFile is called.
+    // This runs from handleFiles, which runs from the input's onChange.
+    // ════════════════════════════════════════════════════════════════════════
+    let objectKeys: string[] = [];
+    try { objectKeys = Object.keys(file); } catch { objectKeys = ["(Object.keys threw)"]; }
+
+    let slicePreview = "(slice failed)";
+    try {
+      const buf = await file.slice(0, 16).arrayBuffer();
+      slicePreview = Array.from(new Uint8Array(buf))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join(" ");
+    } catch (sliceErr) {
+      slicePreview = `(slice threw: ${sliceErr})`;
+    }
+
+    console.group("[FileDropZone] processFile — file forensics");
+    console.log("[input] navigator.userAgent  :", navigator.userAgent);
+    console.log("[input] file instanceof File :", file instanceof File);
+    console.log("[input] constructor.name     :", file.constructor?.name ?? "(unknown)");
+    console.log("[input] file.name            :", file.name);
+    console.log("[input] file.type            :", file.type || "(empty — MIME omitted by Samsung Gallery)");
+    console.log("[input] file.size            :", file.size, "bytes",
+      file.size === 0 ? "⚠ ZERO BYTES — Android content URI may not have resolved" : "");
+    console.log("[input] file.lastModified    :", file.lastModified,
+      `(${new Date(file.lastModified).toISOString()})`);
+    console.log("[input] Object.keys(file)    :", objectKeys.length ? objectKeys : "(none — File properties are non-enumerable, this is normal)");
+    console.log("[input] file.slice(0,16) hex :", slicePreview);
+    console.groupEnd();
+    // ════════════════════════════════════════════════════════════════════════
+
+    // ════════════════════════════════════════════════════════════════════════
+    // FORENSIC STEP 2 — size guard (mirrors validateFile in upload.service.ts)
+    // ════════════════════════════════════════════════════════════════════════
+    console.log("[FileDropZone] BEFORE size guard — file.size:", file.size, "| maxSizeMb:", maxSizeMb);
     if (file.size > maxSizeMb * 1024 * 1024) {
       const msg = lang === "ar"
         ? `الملف كبير جداً (الحد الأقصى ${maxSizeMb} MB)`
         : `File too large (max ${maxSizeMb} MB)`;
-      console.warn("[FileDropZone] client-side size check failed:", msg);
+      console.warn("[FileDropZone] size guard REJECTED:", msg);
       onError?.(msg);
       return;
     }
+    console.log("[FileDropZone] AFTER size guard — passed");
 
     setCurrentFile(file);
+
+    // ════════════════════════════════════════════════════════════════════════
+    // FORENSIC STEP 3 — upload.run()
+    // ════════════════════════════════════════════════════════════════════════
+    console.log("[FileDropZone] BEFORE upload.run() — file:", file.name, file.size, "bytes", file.type || "(no type)");
     const url = await run(file, upload);
-    console.log("[FileDropZone] run() result:", url);
+    console.log("[FileDropZone] AFTER upload.run() — returned url:", url);
 
     if (!url) {
       const msg = lang === "ar" ? "فشل رفع الملف" : "File upload failed";
-      console.error("[FileDropZone] upload returned null — calling onError");
+      console.error("[FileDropZone] upload.run() returned null/undefined — " +
+        "check upload.service.ts logs for the exact failure reason");
       onError?.(msg);
       return;
     }
@@ -104,6 +157,24 @@ export default function FileDropZone({
 
   // ── Handle file list (multiple or single) ─────────────────────────────────
   async function handleFiles(files: FileList | null) {
+    // ════════════════════════════════════════════════════════════════════════
+    // FORENSIC — onChange delivered to handleFiles
+    // ════════════════════════════════════════════════════════════════════════
+    console.group("[input] onChange fired (FileDropZone)");
+    console.log("[input] navigator.userAgent  :", navigator.userAgent);
+    console.log("[input] event.target.files   :", files);
+    console.log("[input] files === null        :", files === null);
+    console.log("[input] files.length         :", files?.length ?? "null");
+    console.log("[input] input.value          :", fileRef.current?.value || "(empty or already cleared)");
+    console.log("[input] input.accept         :", fileRef.current?.accept);
+    console.log("[input] input.disabled       :", fileRef.current?.disabled);
+    if (!files || files.length === 0) {
+      console.warn("[input] ⚠ FileList is null or empty — onChange fired with no files. " +
+        "Samsung Internet may have fired onChange on dismiss, or the FileList was " +
+        "cleared before this handler ran.");
+    }
+    console.groupEnd();
+
     if (!files || files.length === 0 || disabled || uploading) return;
     for (let i = 0; i < files.length; i++) {
       await processFile(files[i]);
@@ -134,7 +205,18 @@ export default function FileDropZone({
       {/* Drop zone */}
       <div
         className={zoneBase}
-        onClick={() => !uploading && fileRef.current?.click()}
+        onClick={() => {
+          if (uploading) return;
+          // ── Forensic: log the onClick that opens the file picker ─────────
+          console.group("[input] onClick fired — opening file picker (FileDropZone)");
+          console.log("[input] fileRef.current      :", fileRef.current);
+          console.log("[input] input.disabled       :", fileRef.current?.disabled);
+          console.log("[input] input.accept         :", fileRef.current?.accept);
+          console.log("[input] input.value (before) :", fileRef.current?.value || "(empty)");
+          console.log("[input] navigator.userAgent  :", navigator.userAgent);
+          console.groupEnd();
+          fileRef.current?.click();
+        }}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
@@ -197,6 +279,12 @@ export default function FileDropZone({
       )}
 
       {/* Hidden file input */}
+      {/*
+        NOTE: This input is always rendered (no conditional). Its key prop never
+        changes. React will update it in-place, not recreate the DOM node.
+        If the [FileDropZone] UNMOUNTED or INPUT ELEMENT WAS RECREATED warnings
+        appear in the console, that assumption is wrong.
+      */}
       <input
         ref={fileRef}
         type="file"
@@ -205,7 +293,13 @@ export default function FileDropZone({
         className="sr-only"
         tabIndex={-1}
         disabled={disabled || uploading}
-        onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }}
+        onChange={(e) => {
+          // Note: value is cleared AFTER handleFiles reads from e.target.files.
+          // handleFiles captures the FileList reference immediately, so clearing
+          // input.value here does not affect the File objects already in hand.
+          handleFiles(e.target.files);
+          e.target.value = "";
+        }}
       />
     </div>
   );
