@@ -20,7 +20,7 @@ import {
   X, User, MapPin, Phone, Mail, Calendar, FileText,
   AlertTriangle, CheckCircle2, Clock, ChevronRight,
   Flame, Wheat, Droplets, Paperclip,
-  Image as ImageIcon, FlaskConical,
+  Image as ImageIcon, FlaskConical, Film as FilmIcon, File as FileIcon,
   ShieldCheck, Stethoscope, Lock, Printer, Download,
   Edit2, Archive, Trash2, ArrowLeftRight, Save, X as XIcon, Loader2,
 } from "lucide-react";
@@ -54,9 +54,11 @@ const timelineIcon: Record<TimelineType, { icon: React.ElementType; color: strin
 
 // ─── File type icon ────────────────────────────────────────────────────────────
 const fileIcon: Record<FileType, { icon: React.ElementType; color: string }> = {
-  "PDF":        { icon: FileText,    color: "bg-red-100 text-red-500"     },
-  "Image":      { icon: ImageIcon,   color: "bg-blue-100 text-blue-500"  },
+  "PDF":        { icon: FileText,    color: "bg-red-100 text-red-500"        },
+  "Image":      { icon: ImageIcon,   color: "bg-blue-100 text-blue-500"     },
   "Lab Report": { icon: FlaskConical,color: "bg-purple-100 text-purple-600" },
+  "Video":      { icon: FilmIcon,    color: "bg-green-100 text-green-600"   },
+  "Document":   { icon: FileIcon,    color: "bg-gray-100 text-gray-500"     },
 };
 
 // ─── Score arc ─────────────────────────────────────────────────────────────────
