@@ -18,6 +18,7 @@ import {
   ClipboardList, Users, MessageSquare, Info, RefreshCw,
   CalendarCheck, UserCircle, Star, File as FileIcon, Image as ImageIcon,
   Plus, MoreHorizontal, Upload, Send, ChevronDown, ChevronUp, Trash2, Archive, Copy,
+  Film as FilmIcon, Eye, X as XIcon,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import PageHeader from "@/admin/components/PageHeader";
@@ -935,101 +936,191 @@ function FilesTab({
     setDeleting(null);
   }
 
+  const [previewFile, setPreviewFile] = useState<Client["files"][number] | null>(null);
+
+  function fileIcon(type: string) {
+    if (type === "Image") return ImageIcon;
+    if (type === "Video") return FilmIcon;
+    return FileIcon;
+  }
+
+  function canPreview(f: Client["files"][number]) {
+    return !!f.url && (f.type === "Image" || f.type === "Video" || f.type === "PDF");
+  }
+
   return (
-    <div className="space-y-4">
-      {/* Upload button */}
-      <div className="flex justify-end">
-        <label className={`
-          inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12.5px] font-semibold cursor-pointer
-          bg-primary-pink/10 text-primary-pink hover:bg-primary-pink/20 transition-colors
-          ${uploading ? "opacity-50 pointer-events-none" : ""}
-        `}>
-          {uploading ? (
-            <span className="w-3.5 h-3.5 rounded-full border-2 border-primary-pink border-t-transparent animate-spin" />
-          ) : (
-            <FileIcon size={13} strokeWidth={2} />
-          )}
-          {isAr ? (uploading ? "جارٍ الرفع…" : "رفع ملف") : (uploading ? "Uploading…" : "Upload File")}
-          <input
-            ref={fileInputRef}
-            id="files-tab-input"
-            type="file"
-            className="hidden"
-            disabled={uploading}
-            onChange={handleUpload}
+    <>
+      <div className="space-y-4">
+        {/* Upload button */}
+        <div className="flex justify-end">
+          <label className={`
+            inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12.5px] font-semibold cursor-pointer
+            bg-primary-pink/10 text-primary-pink hover:bg-primary-pink/20 transition-colors
+            ${uploading ? "opacity-50 pointer-events-none" : ""}
+          `}>
+            {uploading ? (
+              <span className="w-3.5 h-3.5 rounded-full border-2 border-primary-pink border-t-transparent animate-spin" />
+            ) : (
+              <FileIcon size={13} strokeWidth={2} />
+            )}
+            {isAr ? (uploading ? "جارٍ الرفع…" : "رفع ملف") : (uploading ? "Uploading…" : "Upload File")}
+            <input
+              ref={fileInputRef}
+              id="files-tab-input"
+              type="file"
+              className="hidden"
+              accept=".pdf,.jpg,.jpeg,.png,.webp,.mp4,.mov"
+              disabled={uploading}
+              onChange={handleUpload}
+            />
+          </label>
+        </div>
+
+        {files.length === 0 ? (
+          <EmptyState
+            icon={FileIcon}
+            label={isAr ? "لا توجد ملفات مرفوعة بعد" : "No files uploaded yet"}
+            action={{
+              label: isAr ? "رفع ملف" : "Upload File",
+              htmlFor: "files-tab-input",
+            }}
           />
-        </label>
+        ) : (
+          <div className="space-y-2">
+            {files.map((f) => {
+              const Icon = fileIcon(f.type);
+              const isDeleting = deleting === f.id;
+              return (
+                <div
+                  key={f.id}
+                  className={`
+                    flex items-center gap-3 p-3.5 rounded-xl
+                    border border-[var(--admin-border)] hover:bg-[var(--admin-hover-bg)] transition-colors
+                    ${isDeleting ? "opacity-50" : ""}
+                  `}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-[var(--admin-hover-bg)] border border-[var(--admin-border)] flex items-center justify-center shrink-0">
+                    <Icon size={15} strokeWidth={1.8} className="text-[var(--admin-text-muted)]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold text-[var(--admin-text)] truncate">{f.name}</p>
+                    <p className="text-[11.5px] text-[var(--admin-text-faint)]">
+                      {f.type} · {f.size} · {fmtDate(f.uploadedAt, isAr)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {/* Preview */}
+                    {canPreview(f) && (
+                      <button
+                        onClick={() => setPreviewFile(f)}
+                        title={isAr ? "معاينة" : "Preview"}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--admin-text-faint)] hover:text-primary-pink hover:bg-primary-pink/8 transition-all"
+                      >
+                        <Eye size={14} strokeWidth={2} />
+                      </button>
+                    )}
+                    {/* Download */}
+                    {f.url ? (
+                      <a
+                        href={f.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download={f.name}
+                        title={isAr ? "تنزيل" : "Download"}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--admin-text-faint)] hover:text-primary-pink hover:bg-primary-pink/8 transition-all"
+                      >
+                        <DownloadIcon size={14} strokeWidth={2} />
+                      </a>
+                    ) : (
+                      <span
+                        title={isAr ? "الرابط غير متاح" : "No URL available"}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--admin-text-faint)]/30 cursor-default"
+                      >
+                        <DownloadIcon size={14} strokeWidth={2} />
+                      </span>
+                    )}
+                    {/* Delete */}
+                    <button
+                      onClick={() => handleDelete(f)}
+                      disabled={isDeleting}
+                      title={isAr ? "حذف" : "Delete"}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--admin-text-faint)] hover:text-red-500 hover:bg-red-50 transition-all"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {files.length === 0 ? (
-        <EmptyState
-          icon={FileIcon}
-          label={isAr ? "لا توجد ملفات مرفوعة بعد" : "No files uploaded yet"}
-          action={{
-            label: isAr ? "رفع ملف" : "Upload File",
-            htmlFor: "files-tab-input",
-          }}
-        />
-      ) : (
-        <div className="space-y-2">
-          {files.map((f) => {
-            const Icon = f.type === "Image" ? ImageIcon : FileIcon;
-            const isDeleting = deleting === f.id;
-            return (
-              <div
-                key={f.id}
-                className={`
-                  flex items-center gap-3 p-3.5 rounded-xl
-                  border border-[var(--admin-border)] hover:bg-[var(--admin-hover-bg)] transition-colors
-                  ${isDeleting ? "opacity-50" : ""}
-                `}
-              >
-                <div className="w-9 h-9 rounded-xl bg-[var(--admin-hover-bg)] border border-[var(--admin-border)] flex items-center justify-center shrink-0">
-                  <Icon size={15} strokeWidth={1.8} className="text-[var(--admin-text-muted)]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold text-[var(--admin-text)] truncate">{f.name}</p>
-                  <p className="text-[11.5px] text-[var(--admin-text-faint)]">
-                    {f.type} · {f.size} · {fmtDate(f.uploadedAt, isAr)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {f.url ? (
-                    <a
-                      href={f.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      download={f.name}
-                      title={isAr ? "تنزيل" : "Download"}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--admin-text-faint)] hover:text-primary-pink hover:bg-primary-pink/8 transition-all"
-                    >
-                      <DownloadIcon size={14} strokeWidth={2} />
-                    </a>
-                  ) : (
-                    <span
-                      title={isAr ? "الرابط غير متاح" : "No URL available"}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--admin-text-faint)]/30 cursor-default"
-                    >
-                      <DownloadIcon size={14} strokeWidth={2} />
-                    </span>
-                  )}
-                  <button
-                    onClick={() => handleDelete(f)}
-                    disabled={isDeleting}
-                    title={isAr ? "حذف" : "Delete"}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--admin-text-faint)] hover:text-red-500 hover:bg-red-50 transition-all"
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-                    </svg>
-                  </button>
-                </div>
+      {/* ── Preview Modal ─────────────────────────────────────────────────── */}
+      {previewFile && previewFile.url && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={() => setPreviewFile(null)}
+        >
+          <div
+            className="relative bg-[var(--admin-surface)] border border-[var(--admin-border)] rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--admin-border)] shrink-0">
+              <p className="text-[13px] font-semibold text-[var(--admin-text)] truncate pr-4">
+                {previewFile.name}
+              </p>
+              <div className="flex items-center gap-1 shrink-0">
+                <a
+                  href={previewFile.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download={previewFile.name}
+                  title={isAr ? "تنزيل" : "Download"}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--admin-text-faint)] hover:text-primary-pink hover:bg-primary-pink/8 transition-all"
+                >
+                  <DownloadIcon size={14} strokeWidth={2} />
+                </a>
+                <button
+                  onClick={() => setPreviewFile(null)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--admin-text-faint)] hover:text-[var(--admin-text)] hover:bg-[var(--admin-hover-bg)] transition-all"
+                >
+                  <XIcon size={16} strokeWidth={2} />
+                </button>
               </div>
-            );
-          })}
+            </div>
+            {/* Content */}
+            <div className="flex-1 overflow-auto flex items-center justify-center p-4 min-h-0">
+              {previewFile.type === "Image" && (
+                <img
+                  src={previewFile.url}
+                  alt={previewFile.name}
+                  className="max-w-full max-h-[70vh] rounded-lg object-contain"
+                />
+              )}
+              {previewFile.type === "Video" && (
+                <video
+                  src={previewFile.url}
+                  controls
+                  className="max-w-full max-h-[70vh] rounded-lg"
+                />
+              )}
+              {previewFile.type === "PDF" && (
+                <iframe
+                  src={previewFile.url}
+                  title={previewFile.name}
+                  className="w-full rounded-lg border border-[var(--admin-border)]"
+                  style={{ height: "70vh" }}
+                />
+              )}
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 

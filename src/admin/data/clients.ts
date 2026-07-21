@@ -11,7 +11,7 @@
 export type RiskLevel    = "Low" | "Medium" | "High";
 export type ClientStatus = "Active" | "Inactive" | "Waiting" | "Completed";
 export type Gender       = "Female" | "Male";
-export type FileType     = "PDF" | "Image" | "Lab Report";
+export type FileType     = "PDF" | "Image" | "Lab Report" | "Video" | "Document";
 export type TimelineType = "assessment" | "booking" | "consultation" | "plan" | "followup";
 export type RiskIndicatorLevel = "normal" | "warning" | "critical";
 

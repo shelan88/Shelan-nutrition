@@ -29,6 +29,8 @@ export async function uploadClientFile(
     ? "Image"
     : file.type === "application/pdf"
     ? "PDF"
+    : file.type.startsWith("video/")
+    ? "Video"
     : "Document";
 
   const { data: row, error: dbError } = await supabase
