@@ -23,6 +23,7 @@
 
 import { supabase } from "@/lib/supabase";
 import type { UploadOptions, UploadResult } from "./upload.types";
+import { dbg, dbgOk, dbgWarn, dbgError } from "@/shared/debug/uploadDebug";
 
 export const MEDIA_BUCKET = "media";
 
@@ -418,13 +419,24 @@ export async function uploadToStorage(
   console.log("[upload] upsert      :", upsert);
   // ───────────────────────────────────────────────────────────────────────────
 
+  // ── ON-SCREEN DBG ──────────────────────────────────────────────────────────
+  dbg("uploadToStorage ENTERED", `name="${file.name}" size=${file.size}B type="${file.type || "(empty)"}" bucket="${bucket}" path="${path}"`);
+  if (file.size === 0) dbgError("uploadToStorage: file.size is ZERO ⚠", "Content URI may not be readable yet");
+  // ───────────────────────────────────────────────────────────────────────────
+
   // 1. Resolve MIME type — sniff from magic numbers when file.type is absent,
   //    then normalise non-standard variants (e.g. Samsung Gallery's "image/jpg").
+  dbg("Step 1: resolving MIME type", `file.type="${file.type || "(empty)"}" — will sniff if empty`);
   const rawType     = file.type || (await sniffMimeType(file)) || "application/octet-stream";
   const resolvedType = normaliseMime(rawType);
   console.log("[upload] resolvedType:", resolvedType, rawType !== resolvedType ? `(normalised from "${rawType}")` : "");
   if (!file.type) {
     console.info(`[upload] sniffed/resolved MIME type "${resolvedType}" for "${file.name}"`);
+  }
+  if (rawType !== resolvedType) {
+    dbgWarn("MIME normalised", `"${rawType}" → "${resolvedType}"`);
+  } else {
+    dbg("MIME resolved", `"${resolvedType}"`);
   }
 
   // 2. Build a file with the resolved type for validation + upload.
@@ -434,13 +446,16 @@ export async function uploadToStorage(
     ? new File([file], file.name, { type: resolvedType })
     : file;
 
+  dbg("Step 2: validateFile", `size=${fileForValidation.size}B type="${fileForValidation.type}" maxSizeMb=${maxSizeMb} allowedTypes=${JSON.stringify(allowedTypes ?? "any")}`);
   const validationErr = validateFile(fileForValidation, maxSizeMb, allowedTypes);
   if (validationErr) {
     console.error("[upload] VALIDATION FAILED:", validationErr);
     console.groupEnd();
+    dbgError("Validation FAILED ✗", validationErr);
     return { url: null, path: null, error: validationErr };
   }
   console.log("[upload] validation  : PASSED");
+  dbgOk("Validation PASSED ✓");
 
   // 3. Start simulated progress (must come before compress so we can stop it on error)
   const stopProgress = onProgress ? simulateProgress(onProgress) : null;
@@ -450,34 +465,54 @@ export async function uploadToStorage(
   //    WebViews) — surface that as a user-visible error rather than crashing.
   let fileToUpload: File;
   if (compress && resolvedType.startsWith("image/")) {
+    dbg("Step 4: compressImage", `maxWidthPx=${maxWidthPx} quality=${quality}`);
     try {
       fileToUpload = await compressImage(fileForValidation, maxWidthPx, quality);
+      dbgOk("compressImage done", `${fileForValidation.size}B → ${fileToUpload.size}B type="${fileToUpload.type}"`);
     } catch (compressErr) {
       const msg = compressErr instanceof Error ? compressErr.message : "Image processing failed";
       console.error("[upload] compressImage THREW:", msg);
+      dbgError("compressImage THREW ✗", msg);
       stopProgress?.();
       console.groupEnd();
       return { url: null, path: null, error: msg };
     }
   } else {
+    dbg("Step 4: skipping compression", `compress=${compress} isImage=${resolvedType.startsWith("image/")}`);
     fileToUpload = fileForValidation;
   }
   console.log("[upload] fileToUpload:", fileToUpload.name, fileToUpload.size, "bytes", fileToUpload.type);
+  dbg("fileToUpload ready", `name="${fileToUpload.name}" size=${fileToUpload.size}B type="${fileToUpload.type}"`);
 
   // 5. Upload with retry
   let lastError = "Upload failed";
+  dbg("Step 5: upload loop", `maxAttempts=${maxAttempts} bucket="${bucket}" path="${path}"`);
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (attempt > 0) {
-      await new Promise((r) => setTimeout(r, 500 * 2 ** (attempt - 1)));
+      const delay = 500 * 2 ** (attempt - 1);
+      dbgWarn(`Retry delay before attempt ${attempt + 1}`, `${delay}ms`);
+      await new Promise((r) => setTimeout(r, delay));
     }
     console.log(`[upload] attempt ${attempt + 1}/${maxAttempts} — calling supabase.storage.from("${bucket}").upload("${path}", ...)`);
-    const uploadResponse = await supabase.storage
-      .from(bucket)
-      .upload(path, fileToUpload, {
-        upsert,
-        contentType: fileToUpload.type || resolvedType,
-        cacheControl,
-      });
+    dbg(`Supabase upload REQUEST STARTED (attempt ${attempt + 1}/${maxAttempts})`, `bucket="${bucket}" path="${path}" contentType="${fileToUpload.type || resolvedType}" upsert=${upsert}`);
+
+    let uploadResponse: Awaited<ReturnType<ReturnType<typeof supabase.storage.from>["upload"]>>;
+    try {
+      uploadResponse = await supabase.storage
+        .from(bucket)
+        .upload(path, fileToUpload, {
+          upsert,
+          contentType: fileToUpload.type || resolvedType,
+          cacheControl,
+        });
+      dbg(`Supabase upload RESPONDED (attempt ${attempt + 1})`, `error=${JSON.stringify(uploadResponse.error)} data=${JSON.stringify(uploadResponse.data)}`);
+    } catch (networkErr) {
+      const msg = networkErr instanceof Error ? networkErr.message : String(networkErr);
+      console.error(`[upload] attempt ${attempt + 1} network THREW:`, msg);
+      dbgError(`Supabase upload THREW (network/fetch error) ✗`, msg);
+      lastError = msg;
+      continue;
+    }
     console.log(`[upload] attempt ${attempt + 1} raw response:`, JSON.stringify(uploadResponse));
 
     const { error: uploadErr } = uploadResponse;
@@ -486,6 +521,7 @@ export async function uploadToStorage(
       onProgress?.(100);
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path);
       console.log("[upload] SUCCESS — publicUrl:", urlData.publicUrl);
+      dbgOk("Supabase upload SUCCESS ✓", urlData.publicUrl);
       console.groupEnd();
       return { url: urlData.publicUrl, path, error: null };
     }
@@ -503,12 +539,14 @@ export async function uploadToStorage(
       msg.includes("payload too large") ||     // file exceeds bucket limit
       msg.includes("file size limit") ||       // Supabase size-limit wording
       msg.includes("entity too large");        // HTTP 413 variant
+    dbgError(`Supabase upload ERROR (attempt ${attempt + 1}) ${isFatal ? "— FATAL, no retry" : "— will retry"}`, uploadErr.message);
     if (isFatal) break;
   }
 
   stopProgress?.();
   onProgress?.(0);
   console.error("[upload] ALL ATTEMPTS FAILED — final error:", lastError);
+  dbgError("ALL ATTEMPTS FAILED ✗", lastError);
   console.groupEnd();
   return { url: null, path: null, error: lastError };
 }

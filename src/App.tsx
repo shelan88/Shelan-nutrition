@@ -59,6 +59,7 @@ import SettingsPage from "@/portal/pages/SettingsPage";
 import AdminLoginPage from "@/admin/pages/LoginPage";
 import AdminLayout from "@/admin/components/AdminLayout";
 import AuthGuard from "@/admin/components/AuthGuard";
+import DebugPanel from "@/shared/debug/DebugPanel";
 
 /**
  * PublicLayout — wraps all public-facing pages with the shared site chrome.
@@ -136,6 +137,8 @@ export default function App() {
           {/* Public — wrapped in Navbar + Footer + chrome */}
           <Route path="/*" element={<PublicLayout />} />
         </Routes>
+        {/* ── TEMPORARY: upload debug panel ── remove when investigation done */}
+        <DebugPanel />
       </LanguageProvider>
     </BrowserRouter>
   );

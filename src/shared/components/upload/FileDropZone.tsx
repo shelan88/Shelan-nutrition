@@ -25,6 +25,7 @@ import { useRef, useState, useEffect } from "react";
 import { Upload, RefreshCw, AlertCircle } from "lucide-react";
 import { useUpload } from "@/lib/upload";
 import UploadProgressBar from "./UploadProgressBar";
+import { dbg, dbgOk, dbgWarn, dbgError } from "@/shared/debug/uploadDebug";
 
 interface FileDropZoneProps {
   upload: (file: File) => Promise<string | null>;
@@ -61,9 +62,11 @@ export default function FileDropZone({
   // ── Forensic: detect component mount/unmount around the Gallery interaction ──
   useEffect(() => {
     console.log("[FileDropZone] MOUNTED — ref attached:", !!fileRef.current);
+    dbg("FileDropZone MOUNTED", `ref attached: ${!!fileRef.current} | ua: ${navigator.userAgent.slice(0, 80)}`);
     return () => {
       console.warn("[FileDropZone] UNMOUNTED — if this fires while Samsung Gallery " +
         "is open, the component is being destroyed before onChange can fire.");
+      dbgWarn("FileDropZone UNMOUNTED ⚠", "If picker was open, onChange will never fire");
     };
   }, []);
 
@@ -73,6 +76,7 @@ export default function FileDropZone({
     if (prevInputRef.current && prevInputRef.current !== fileRef.current) {
       console.error("[FileDropZone] ⚠ INPUT ELEMENT WAS RECREATED by React — " +
         "fileRef.current identity changed between renders. A new <input> DOM node exists.");
+      dbgError("INPUT ELEMENT RECREATED ⚠", "React replaced the <input> DOM node — onChange on old element is dead");
     }
     prevInputRef.current = fileRef.current;
   });
@@ -112,10 +116,17 @@ export default function FileDropZone({
     console.groupEnd();
     // ════════════════════════════════════════════════════════════════════════
 
+    // ── DBG instrumentation ────────────────────────────────────────────────
+    dbg("processFile called", `name="${file.name}" size=${file.size}B type="${file.type || "(empty)"}"`);
+    if (file.size === 0) dbgError("File size is ZERO ⚠", "Android content URI resolved before bytes available");
+    dbg("File bytes[0..15]", slicePreview);
+    // ──────────────────────────────────────────────────────────────────────
+
     if (file.size > maxSizeMb * 1024 * 1024) {
       const msg = lang === "ar"
         ? `الملف كبير جداً (الحد الأقصى ${maxSizeMb} MB)`
         : `File too large (max ${maxSizeMb} MB)`;
+      dbgError("File too large — rejected before upload", `${(file.size / 1024 / 1024).toFixed(1)} MB > ${maxSizeMb} MB limit`);
       onError?.(msg);
       return;
     }
@@ -123,15 +134,18 @@ export default function FileDropZone({
     setCurrentFile(file);
 
     console.log("[FileDropZone] calling upload.run — file:", file.name, file.size, "bytes");
+    dbg("Calling useUpload.run()", `file="${file.name}"`);
     const url = await run(file, upload);
     console.log("[FileDropZone] upload.run returned:", url);
 
     if (!url) {
       const msg = lang === "ar" ? "فشل رفع الملف" : "File upload failed";
+      dbgError("useUpload.run() returned null", "upload fn returned null or threw — check entries above");
       onError?.(msg);
       return;
     }
 
+    dbgOk("useUpload.run() returned URL ✓", url.slice(0, 80));
     onSuccess?.(url, file);
     setCurrentFile(null);
   }
@@ -152,6 +166,21 @@ export default function FileDropZone({
     }
     console.groupEnd();
     // ════════════════════════════════════════════════════════════════════════
+
+    // ── DBG instrumentation ────────────────────────────────────────────────
+    const fileCount = files?.length ?? 0;
+    dbg("onChange fired ✓", `${fileCount} file(s) | disabled=${disabled} | uploading=${uploading}`);
+    if (!files || fileCount === 0) {
+      dbgWarn("onChange: FileList is null/empty ⚠", "Picker returned no files — common on Android");
+    } else {
+      for (let i = 0; i < fileCount; i++) {
+        const f = files[i];
+        dbg(`File [${i}]`, `name="${f.name}" size=${f.size}B type="${f.type || "(empty)"}" lastModified=${f.lastModified}`);
+      }
+    }
+    if (disabled)   dbgWarn("onChange: component is disabled — upload blocked");
+    if (uploading)  dbgWarn("onChange: upload already in progress — upload blocked");
+    // ──────────────────────────────────────────────────────────────────────
 
     if (!files || files.length === 0 || disabled || uploading) return;
     for (let i = 0; i < files.length; i++) {
@@ -229,15 +258,23 @@ export default function FileDropZone({
             ${inactive ? "pointer-events-none cursor-default" : "cursor-pointer"}`}
           tabIndex={inactive ? -1 : 0}
           disabled={inactive}
+          onClick={() => {
+            dbg("File picker opened ✓", `accept="${accept ?? "any"}" multiple=${multiple} inactive=${inactive}`);
+          }}
           onDragOver={(e) => { e.preventDefault(); if (!inactive) setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={(e) => {
             e.preventDefault();
             setDragOver(false);
+            dbg("File dropped (drag-and-drop)", `${e.dataTransfer.files.length} file(s)`);
             handleFiles(e.dataTransfer.files);
           }}
           onChange={(e) => {
-            handleFiles(e.target.files);
+            // NOTE: files extracted BEFORE resetting value — FileList is a live
+            // reference on Android and empties when e.target.value is cleared.
+            const extracted = e.target.files;
+            dbg("onChange event received", `files=${extracted?.length ?? "null"} (before value reset)`);
+            handleFiles(extracted);
             e.target.value = "";
           }}
         />

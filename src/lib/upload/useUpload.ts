@@ -10,6 +10,7 @@
  */
 
 import { useCallback, useRef, useState } from "react";
+import { dbg, dbgOk, dbgError } from "@/shared/debug/uploadDebug";
 
 /** Signature of the domain upload function the caller provides. */
 export type UploadFn = (file: File) => Promise<string | null>;
@@ -58,18 +59,21 @@ export function useUpload(): UseUploadReturn {
 
     try {
       console.log("[useUpload] calling upload fn for:", file.name, file.size, "bytes");
+      dbg("useUpload: calling upload fn", `file="${file.name}" size=${file.size}B`);
       const url = await fn(file);
       stopped = true;
       console.log("[useUpload] upload fn returned:", url);
 
       if (!url) {
         console.error("[useUpload] upload fn returned null — showing generic error");
+        dbgError("useUpload: upload fn returned null", "No URL returned — upload failed silently");
         setProgress(0);
         setError("Upload failed — please try again.");
         setUploading(false);
         return null;
       }
 
+      dbgOk("useUpload: upload fn returned URL ✓", url.slice(0, 80));
       setProgress(100);
       // Brief pause at 100% so the bar is visibly complete before hiding
       setTimeout(() => { setUploading(false); setProgress(0); }, 500);
@@ -78,6 +82,7 @@ export function useUpload(): UseUploadReturn {
       stopped = true;
       const msg = err instanceof Error ? err.message : "Upload failed";
       console.error("[useUpload] upload fn THREW:", msg, err);
+      dbgError("useUpload: upload fn THREW ✗", msg);
       setProgress(0);
       setError(msg);
       setUploading(false);
