@@ -188,14 +188,19 @@ export default function Programs() {
                   </ul>
                 )}
 
-                {/* CTA button — always rendered; falls back to "Learn More" when admin leaves cta_text blank.
-                    relative + z-10 keeps it above the stretched link so it can receive focus/hover independently. */}
-                <div className="relative z-10 mt-4 pt-4 border-t border-gray-100">
+                {/* CTA buttons — relative + z-10 keeps them above the stretched link so they receive focus/hover independently. */}
+                <div className="relative z-10 mt-4 pt-4 border-t border-gray-100 flex gap-2">
+                  <Link
+                    to={`/booking?program=${prog.id}`}
+                    className="flex-1 py-2.5 px-4 rounded-xl text-[13px] font-semibold text-white text-center bg-gradient-to-r from-primary-pink to-lavender-purple hover:opacity-90 transition-opacity shadow-sm"
+                  >
+                    {ctaText ?? (lang === "ar" ? "احجزي الآن" : "Book Now")}
+                  </Link>
                   <Link
                     to={`/programs/${prog.id}`}
-                    className="block w-full py-2.5 px-4 rounded-xl text-[13px] font-semibold text-white text-center bg-gradient-to-r from-primary-pink to-lavender-purple hover:opacity-90 transition-opacity shadow-sm"
+                    className="flex-1 py-2.5 px-4 rounded-xl text-[13px] font-semibold text-center border border-gray-200 text-body hover:bg-gray-50 transition-colors"
                   >
-                    {ctaText ?? (lang === "ar" ? "اعرف المزيد" : "Learn More")}
+                    {lang === "ar" ? "اعرف المزيد" : "Learn More"}
                   </Link>
                 </div>
               </motion.div>
