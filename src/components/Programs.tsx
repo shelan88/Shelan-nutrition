@@ -13,6 +13,15 @@ const PROGRAM_ICONS: Record<string, React.ElementType> = {
   Salad, HeartPulse, Sparkles, Star, Heart, Leaf, Apple, Dumbbell, Brain, Sun,
 };
 
+const DURATION_UNIT_LABELS: Record<string, { en: string; ar: string }> = {
+  minutes:  { en: "minutes",  ar: "دقائق"  },
+  hours:    { en: "hours",    ar: "ساعات"  },
+  days:     { en: "days",     ar: "أيام"   },
+  weeks:    { en: "weeks",    ar: "أسابيع" },
+  months:   { en: "months",   ar: "أشهر"   },
+  sessions: { en: "sessions", ar: "جلسات"  },
+};
+
 const cardAccents = [
   { border: "border-primary-pink/20",    badge: "bg-primary-pink/10 text-primary-pink",       dot: "bg-primary-pink"    },
   { border: "border-lavender-purple/20", badge: "bg-lavender-purple/10 text-lavender-purple",  dot: "bg-lavender-purple" },
@@ -158,7 +167,11 @@ export default function Programs() {
                   {prog.duration_weeks != null && (
                     <span className="flex items-center gap-1 text-[12px] font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600" dir="ltr">
                       <Clock size={11} strokeWidth={2} />
-                      <span dir={dir}>{prog.duration_weeks}{lang === "ar" ? " أسابيع" : " weeks"}</span>
+                      <span dir={dir}>
+                        {prog.duration_weeks}
+                        {" "}
+                        {DURATION_UNIT_LABELS[prog.duration_unit ?? "weeks"]?.[lang] ?? (lang === "ar" ? "أسابيع" : "weeks")}
+                      </span>
                     </span>
                   )}
                 </div>

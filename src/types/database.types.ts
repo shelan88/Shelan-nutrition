@@ -316,6 +316,7 @@ export interface ProgramRow {
   badge_ar: string | null;
   discount_enabled: boolean | null;
   discount_percent: number | null;
+  duration_unit:    string | null;   // e.g. "weeks" | "sessions" | "days" | "hours" | "months"
   active: boolean;
   sort_order: number | null;
   image_url: string | null;
