@@ -269,7 +269,7 @@ export interface SectionSettingsRow {
 }
 
 export async function getSectionSettings(
-  key: "qualifications" | "expertise"
+  key: "qualifications" | "expertise" | "certifications"
 ): Promise<SectionSettingsRow | null> {
   const { data, error } = await supabase
     .from("about_section_settings")
@@ -281,7 +281,7 @@ export async function getSectionSettings(
 }
 
 export async function updateSectionVisible(
-  key: "qualifications" | "expertise",
+  key: "qualifications" | "expertise" | "certifications",
   visible: boolean
 ): Promise<boolean> {
   const { error } = await supabase
