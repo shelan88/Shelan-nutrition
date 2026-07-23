@@ -323,6 +323,7 @@ function BookingSummary({
   onConfirm,
   confirmed,
   confirming,
+  lang,
 }: {
   service: CMSBookingService | undefined;
   date: string;
@@ -332,9 +333,11 @@ function BookingSummary({
   onConfirm: () => void;
   confirmed: boolean;
   confirming: boolean;
+  lang: string;
 }) {
+  const locale = lang === "ar" ? "ar-SA" : "en-US";
   const formattedDate = date
-    ? new Date(date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })
+    ? new Date(`${date}T12:00:00`).toLocaleDateString(locale, { weekday: "long", month: "long", day: "numeric", year: "numeric" })
     : "—";
 
   if (confirmed) {
@@ -636,6 +639,7 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
                 onConfirm={handleConfirm}
                 confirmed={confirmed}
                 confirming={confirming}
+                lang={lang}
               />
             )}
           </motion.div>
