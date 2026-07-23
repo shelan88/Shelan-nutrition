@@ -70,9 +70,8 @@ function initCertForm(): CertForm {
   };
 }
 
-// ── Settings form ─────────────────────────────────────────────────────────────
+// ── Settings form (heading / description / bg / note only — no visible flag) ──
 interface SettingsForm {
-  visible: boolean;
   heading_en: string;
   heading_ar: string;
   description_en: string;
@@ -84,7 +83,6 @@ interface SettingsForm {
 
 function initSettingsForm(): SettingsForm {
   return {
-    visible: true,
     heading_en: "", heading_ar: "",
     description_en: "", description_ar: "",
     bg_color: "#ffffff",
@@ -862,9 +860,10 @@ function SettingsSection({ L, fl }: SettingsSectionProps) {
   const [certRow, setCertRow] = useState<CertSettingsRow | null>(null);
   const [form, setFormState]  = useState<SettingsForm>(initSettingsForm());
 
-  // ── Section-level visibility (qualifications / expertise) ─────────────────
-  const [qualVisible, setQualVisible] = useState(true);
-  const [expVisible,  setExpVisible]  = useState(true);
+  // ── Section-level visibility — all three sections use about_section_settings ──
+  const [qualVisible,  setQualVisible]  = useState(true);
+  const [expVisible,   setExpVisible]   = useState(true);
+  const [certVisible,  setCertVisible]  = useState(true);
 
   const [loading,   setLoading]   = useState(true);
   const [saving,    setSaving]    = useState(false);
@@ -877,16 +876,16 @@ function SettingsSection({ L, fl }: SettingsSectionProps) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [certSettings, qualSettings, expSettings] = await Promise.all([
+    const [certSettings, qualSettings, expSettings, certSecSettings] = await Promise.all([
       getCertSettings(),
       getSectionSettings("qualifications"),
       getSectionSettings("expertise"),
+      getSectionSettings("certifications"),   // same table as the other two sections
     ]);
 
     setCertRow(certSettings);
     if (certSettings) {
       setFormState({
-        visible:        certSettings.visible,
         heading_en:     certSettings.heading_en,
         heading_ar:     certSettings.heading_ar,
         description_en: certSettings.description_en ?? "",
@@ -897,8 +896,9 @@ function SettingsSection({ L, fl }: SettingsSectionProps) {
       });
     }
 
-    setQualVisible(qualSettings?.visible ?? true);
-    setExpVisible(expSettings?.visible ?? true);
+    setQualVisible(qualSettings?.visible  ?? true);
+    setExpVisible(expSettings?.visible    ?? true);
+    setCertVisible(certSecSettings?.visible ?? true);
 
     setLoading(false);
   }, []);
@@ -912,10 +912,10 @@ function SettingsSection({ L, fl }: SettingsSectionProps) {
       // Section visibility flags
       updateSectionVisible("qualifications", qualVisible),
       updateSectionVisible("expertise",      expVisible),
-      // Certifications detailed settings
+      updateSectionVisible("certifications", certVisible),  // same system as the other two
+      // Certifications detailed settings (heading / description / bg / note only)
       certRow
         ? updateCertSettings(certRow.id, {
-            visible:        form.visible,
             heading_en:     form.heading_en,
             heading_ar:     form.heading_ar,
             description_en: form.description_en || null,
@@ -1049,8 +1049,8 @@ function SettingsSection({ L, fl }: SettingsSectionProps) {
               </p>
             </div>
             <VisibilityToggle
-              visible={form.visible}
-              onToggle={() => set("visible", !form.visible)}
+              visible={certVisible}
+              onToggle={() => setCertVisible((v) => !v)}
             />
           </div>
         </div>

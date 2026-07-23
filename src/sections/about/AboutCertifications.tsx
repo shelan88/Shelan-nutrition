@@ -12,6 +12,7 @@ import SectionHeader from "@/components/ui/SectionHeader";
 import {
   getActiveCertifications,
   getCertSettings,
+  getSectionSettings,
   type CertificationRow,
   type CertSettingsRow,
 } from "@/admin/repositories/aboutCms.repository";
@@ -102,23 +103,31 @@ export default function AboutCertifications({ certifications: legacyData }: Lega
   const { lang } = useLanguage();
   const isAr = lang === "ar";
 
-  const [items,    setItems]    = useState<CertificationRow[] | null>(null);
-  const [settings, setSettings] = useState<CertSettingsRow | null>(null);
-  const [loading,  setLoading]  = useState(true);
+  const [items,          setItems]          = useState<CertificationRow[] | null>(null);
+  const [settings,       setSettings]       = useState<CertSettingsRow | null>(null);
+  const [sectionVisible, setSectionVisible] = useState<boolean | null>(null); // null = still loading
+  const [loading,        setLoading]        = useState(true);
 
   useEffect(() => {
-    Promise.all([getActiveCertifications(), getCertSettings()])
-      .then(([certs, cfg]) => { setItems(certs); setSettings(cfg); })
-      .catch(() => { setItems(null); setSettings(null); })
+    Promise.all([
+      getActiveCertifications(),
+      getCertSettings(),
+      getSectionSettings("certifications"),  // same table as qualifications & expertise
+    ])
+      .then(([certs, cfg, secCfg]) => {
+        setItems(certs);
+        setSettings(cfg);
+        setSectionVisible(secCfg?.visible ?? true); // missing row → visible by default
+      })
+      .catch(() => { setItems(null); setSettings(null); setSectionVisible(true); })
       .finally(() => setLoading(false));
   }, []);
 
-  // While loading we don't yet know visibility — render nothing to avoid a
-  // flash-then-disappear if the section turns out to be hidden.
+  // Don't render anything until we know visibility (avoids flash-then-disappear).
   if (loading) return null;
 
-  // Section hidden by admin setting (null settings = no row = show by default).
-  if (settings !== null && !settings.visible) return null;
+  // Hidden by admin — section_key='certifications' in about_section_settings.
+  if (!sectionVisible) return null;
 
   // Heading / description: prefer DB settings, fall back to legacy prop, then hardcoded
   const heading = isAr
