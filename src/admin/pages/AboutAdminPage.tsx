@@ -864,8 +864,6 @@ function SettingsSection({ L, fl }: SettingsSectionProps) {
   const [form, setFormState]  = useState<SettingsForm>(initSettingsForm());
 
   // ── Section-level visibility (qualifications / expertise) ─────────────────
-  const [qualRow,     setQualRow]     = useState<SectionSettingsRow | null>(null);
-  const [expRow,      setExpRow]      = useState<SectionSettingsRow | null>(null);
   const [qualVisible, setQualVisible] = useState(true);
   const [expVisible,  setExpVisible]  = useState(true);
 
@@ -900,9 +898,7 @@ function SettingsSection({ L, fl }: SettingsSectionProps) {
       });
     }
 
-    setQualRow(qualSettings);
     setQualVisible(qualSettings?.visible ?? true);
-    setExpRow(expSettings);
     setExpVisible(expSettings?.visible ?? true);
 
     setLoading(false);
