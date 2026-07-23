@@ -9,6 +9,7 @@ import { Clock, Calendar, ArrowLeft, ArrowRight, Quote } from "lucide-react";
 import { Link } from "react-router-dom";
 import Tag from "@/components/ui/Tag";
 import type { CMSBlogPost, CMSArticleSection } from "@/types/cms.types";
+import { useLanguage } from "@/context/LanguageContext";
 
 // ── Article renderer ──────────────────────────────────────────────────────────
 
@@ -157,8 +158,9 @@ function RelatedPosts({
                   <span className="flex items-center gap-1 text-xs text-deep-purple/40">
                     <Clock size={11} /> {post.readTimeMinutes} {minReadLabel}
                   </span>
-                  <Link to={`/blog/${post.slug}`} className="text-xs font-semibold text-primary-pink hover:text-deep-purple transition-colors">
-                    {readMoreLabel} →
+                  <Link to={`/blog/${post.slug}`} className="inline-flex items-center gap-1 text-xs font-semibold text-primary-pink hover:text-deep-purple transition-colors">
+                    {readMoreLabel}
+                    <ArrowRight size={12} className="rtl:rotate-180" />
                   </Link>
                 </div>
               </div>
@@ -184,19 +186,18 @@ interface Props {
     backToBlog: string;
     publishedLabel: string;
   };
-  dir: "ltr" | "rtl";
 }
 
-export default function BlogArticleBody({ post, relatedPosts, strings, dir }: Props) {
+export default function BlogArticleBody({ post, relatedPosts, strings }: Props) {
+  const { lang } = useLanguage();
   const body = post.body ?? [];
 
-  const formattedDate = new Date(post.publishedAt).toLocaleDateString("en-US", {
+  const dateLocale = lang === "ar" ? "ar-SA" : "en-US";
+  const formattedDate = new Date(post.publishedAt).toLocaleDateString(dateLocale, {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
-
-  const BackArrow = dir === "rtl" ? ArrowRight : ArrowLeft;
 
   return (
     <>
@@ -210,7 +211,7 @@ export default function BlogArticleBody({ post, relatedPosts, strings, dir }: Pr
                 to="/blog"
                 className="inline-flex items-center gap-2 text-sm text-primary-pink font-medium hover:text-deep-purple transition-colors mb-8"
               >
-                <BackArrow size={15} className="rtl:rotate-180" />
+                <ArrowLeft size={15} className="rtl:rotate-180" />
                 {strings.backToBlog}
               </Link>
 

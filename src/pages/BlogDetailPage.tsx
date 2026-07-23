@@ -44,7 +44,7 @@ function mapPost(row: BlogPostRow, lang: string): CMSBlogPost {
 
 export default function BlogDetailPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { lang, dir } = useLanguage();
+  const { lang } = useLanguage();
   const str = blogStrings[lang];
 
   const [post, setPost] = useState<CMSBlogPost | null>(null);
@@ -180,7 +180,6 @@ export default function BlogDetailPage() {
           backToBlog: str.backToBlog,
           publishedLabel: str.publishedLabel,
         }}
-        dir={dir}
       />
 
       <CTABanner {...ctaData} />

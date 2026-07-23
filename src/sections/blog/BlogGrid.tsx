@@ -9,6 +9,7 @@ import { Search, Clock, Calendar, ArrowRight, ChevronLeft, ChevronRight } from "
 import { Link } from "react-router-dom";
 import Tag from "@/components/ui/Tag";
 import type { CMSBlogPost } from "@/types/cms.types";
+import { useLanguage } from "@/context/LanguageContext";
 
 const POSTS_PER_PAGE = 6;
 
@@ -34,7 +35,9 @@ function BlogCard({
   minReadLabel: string;
   index: number;
 }) {
-  const formattedDate = new Date(post.publishedAt).toLocaleDateString("en-US", {
+  const { lang } = useLanguage();
+  const dateLocale = lang === "ar" ? "ar-SA" : "en-US";
+  const formattedDate = new Date(post.publishedAt).toLocaleDateString(dateLocale, {
     month: "short",
     day: "numeric",
     year: "numeric",

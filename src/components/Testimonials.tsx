@@ -102,7 +102,7 @@ export default function Testimonials() {
               aria-label="Previous testimonials"
               className="w-12 h-12 rounded-full border border-soft-purple/25 flex items-center justify-center text-deep-purple hover:bg-primary-pink/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={20} className="rtl:rotate-180" />
             </button>
             <button
               onClick={() => scrollByCard(1)}
@@ -110,7 +110,7 @@ export default function Testimonials() {
               aria-label="Next testimonials"
               className="w-12 h-12 rounded-full border border-soft-purple/25 flex items-center justify-center text-deep-purple hover:bg-primary-pink/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
             >
-              <ChevronRight size={20} />
+              <ChevronRight size={20} className="rtl:rotate-180" />
             </button>
           </div>
         </div>

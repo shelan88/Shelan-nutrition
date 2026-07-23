@@ -7,6 +7,7 @@ import { Clock, ArrowRight, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import Tag from "@/components/ui/Tag";
 import type { CMSBlogPost } from "@/types/cms.types";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface Props {
   post: CMSBlogPost;
@@ -23,7 +24,9 @@ export default function BlogFeatured({
   minReadLabel,
   byLabel,
 }: Props) {
-  const formattedDate = new Date(post.publishedAt).toLocaleDateString("en-US", {
+  const { lang } = useLanguage();
+  const dateLocale = lang === "ar" ? "ar-SA" : "en-US";
+  const formattedDate = new Date(post.publishedAt).toLocaleDateString(dateLocale, {
     year: "numeric",
     month: "long",
     day: "numeric",
