@@ -47,6 +47,17 @@ export async function updateProgram(
   return true;
 }
 
+export async function getProgramById(id: string): Promise<ProgramRow | null> {
+  const { data, error } = await supabase
+    .from("programs")
+    .select("*")
+    .eq("id", id)
+    .eq("active", true)
+    .maybeSingle();
+  if (error) { console.error("[programs] getProgramById:", error.message); return null; }
+  return data ?? null;
+}
+
 export async function deleteProgram(id: string): Promise<boolean> {
   const { error } = await supabase.from("programs").delete().eq("id", id);
   if (error) { console.error("[programs] deleteProgram:", error.message); return false; }

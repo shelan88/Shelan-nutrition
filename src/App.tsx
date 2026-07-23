@@ -7,6 +7,7 @@
  *     /about         → AboutPage
  *     /services      → ServicesPage
  *     /services/:slug → ServiceDetailPage
+ *     /programs/:id  → ProgramDetailPage
  *     /blog          → BlogPage
  *     /blog/:slug    → BlogDetailPage
  *     /contact       → ContactPage
@@ -41,6 +42,7 @@ import BlogPage from "@/pages/BlogPage";
 import BlogDetailPage from "@/pages/BlogDetailPage";
 import ContactPage from "@/pages/ContactPage";
 import BookingPage from "@/pages/BookingPage";
+import ProgramDetailPage from "@/pages/ProgramDetailPage";
 import AssessmentPage from "@/pages/AssessmentPage";
 import AssessmentResponsePage from "@/pages/AssessmentResponsePage";
 import NotFoundPage from "@/pages/NotFoundPage";
@@ -77,6 +79,7 @@ function PublicLayout() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/services/:slug" element={<ServiceDetailPage />} />
+          <Route path="/programs/:id" element={<ProgramDetailPage />} />
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:slug" element={<BlogDetailPage />} />
           <Route path="/contact" element={<ContactPage />} />

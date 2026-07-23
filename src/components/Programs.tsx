@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   CheckCircle2, Clock, Tag,
@@ -170,9 +171,12 @@ export default function Programs() {
                 {/* CTA button */}
                 {ctaText && (
                   <div className="mt-4 pt-4 border-t border-gray-100">
-                    <button className="w-full py-2.5 px-4 rounded-xl text-[13px] font-semibold text-white bg-gradient-to-r from-primary-pink to-lavender-purple hover:opacity-90 transition-opacity shadow-sm">
+                    <Link
+                      to={`/programs/${prog.id}`}
+                      className="block w-full py-2.5 px-4 rounded-xl text-[13px] font-semibold text-white text-center bg-gradient-to-r from-primary-pink to-lavender-purple hover:opacity-90 transition-opacity shadow-sm"
+                    >
                       {ctaText}
-                    </button>
+                    </Link>
                   </div>
                 )}
               </motion.div>
