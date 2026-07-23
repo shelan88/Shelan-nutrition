@@ -46,6 +46,7 @@ import ClientProfilePage from "../pages/ClientProfilePage";
 import AdminProfilePage from "../pages/AdminProfilePage";
 import AdminSettingsPage from "../pages/AdminSettingsPage";
 import FreeGuideAdminPage from "../pages/FreeGuideAdminPage";
+import AboutAdminPage from "../pages/AboutAdminPage";
 
 /**
  * AdminShellInner — reads `theme` from AdminContext (must sit inside
@@ -81,6 +82,7 @@ export default function AdminLayout() {
 
               {/* Content — CMS-powered pages */}
               <Route path="website-settings"      element={<WebsiteSettingsPage />} />
+              <Route path="about-cms"             element={<AboutAdminPage />} />
               <Route path="social-media"          element={<SocialMediaAdminPage />} />
               <Route path="services"              element={<ServicesAdminPage />} />
               <Route path="blog"                  element={<BlogAdminPage />} />

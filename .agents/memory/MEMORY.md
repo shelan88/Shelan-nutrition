@@ -14,3 +14,4 @@
 - [Media Library restructure](media-library-restructure.md) — Media Library is now a read-only client browser; upload removed; client files stay in ClientProfilePage FilesTab; plan files stay in NutritionPlansTab; getClientFiles/getClientPlanFiles added to repositories.
 - [Android file picker unmounts FileDropZone](android-file-picker-unmount.md) — root cause: AuthGuard called setState("loading") inside onAuthStateChange; Supabase fires TOKEN_REFRESHED on visibilitychange, tearing down entire admin layout.
 - [Free Guide system + Nav architecture](free-guide-and-nav-architecture.md) — lead_emails+free_guide_settings tables; SECTION_HREFS canonical map in sectionAnchors.ts; Navbar derives hrefs from sectionId, never stores them.
+- [About page CMS](about-cms.md) — 4 tables (qualifications/expertise/certifications/cert_settings); logo-or-initials display mode; admin at /admin/about-cms; public components DB-driven with fallback.

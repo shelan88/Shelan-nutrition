@@ -3,6 +3,12 @@ import { motion } from "framer-motion";
 import { useLanguage } from "@/context/LanguageContext";
 import { about } from "@/content/content";
 import { getSetting } from "@/admin/repositories/settings.repository";
+import {
+  getActiveQualifications,
+  getActiveExpertise,
+  type QualificationRow,
+  type ExpertiseRow,
+} from "@/admin/repositories/aboutCms.repository";
 
 interface AboutSetting {
   name_en?: string;
@@ -17,32 +23,51 @@ interface AboutSetting {
 export default function About() {
   const { lang } = useLanguage();
   const t = about[lang];
+  const isAr = lang === "ar";
 
-  const [dbAbout, setDbAbout] = useState<AboutSetting | null>(null);
+  const [dbAbout,         setDbAbout]         = useState<AboutSetting | null>(null);
+  const [qualifications,  setQualifications]  = useState<QualificationRow[] | null>(null);
+  const [expertise,       setExpertise]       = useState<ExpertiseRow[] | null>(null);
 
   useEffect(() => {
-    getSetting("site.about")
-      .then((val) => {
-        if (val && typeof val === "object" && !Array.isArray(val)) {
-          setDbAbout(val as AboutSetting);
-        }
-      })
-      .catch(() => {/* silently fall back to content.ts */});
+    // Load all three sources in parallel
+    Promise.all([
+      getSetting("site.about"),
+      getActiveQualifications(),
+      getActiveExpertise(),
+    ]).then(([aboutVal, quals, exp]) => {
+      if (aboutVal && typeof aboutVal === "object" && !Array.isArray(aboutVal)) {
+        setDbAbout(aboutVal as AboutSetting);
+      }
+      setQualifications(quals.length > 0 ? quals : null);
+      setExpertise(exp.length > 0 ? exp : null);
+    }).catch(() => {/* silent fallback to content.ts */});
   }, []);
 
   // Resolve values: prefer DB, fall back to content.ts
-  const title = (lang === "ar" ? dbAbout?.title_ar : dbAbout?.title_en) || t.title;
-  const bioRaw = lang === "ar" ? dbAbout?.bio_ar : dbAbout?.bio_en;
+  const title      = (isAr ? dbAbout?.title_ar    : dbAbout?.title_en)    || t.title;
+  const bioRaw     = isAr  ? dbAbout?.bio_ar       : dbAbout?.bio_en;
   const bioParas: string[] = bioRaw
     ? bioRaw.split(/\n\n+/).filter(Boolean)
     : t.bio;
   const portraitSrc = dbAbout?.portrait_url || "/portrait.jpg";
 
+  // Qualifications: DB rows → or fall back to content.ts credentials
+  const qualItems: string[] = qualifications
+    ? qualifications.map(q => isAr ? q.text_ar : q.text_en)
+    : t.credentials;
+
+  // Expertise: DB rows → or fall back to an empty list (section hidden if empty)
+  const expItems: string[] = expertise
+    ? expertise.map(e => isAr ? e.text_ar : e.text_en)
+    : [];
+
   return (
     <section id="about" className="section-dark py-24 bg-gradient-to-b from-soft-pink via-primary-pink to-soft-purple">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 grid lg:grid-cols-2 gap-16 items-center">
+        {/* Portrait */}
         <motion.div
-          initial={{ opacity: 0, x: lang === "ar" ? 40 : -40 }}
+          initial={{ opacity: 0, x: isAr ? 40 : -40 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.7 }}
@@ -60,8 +85,9 @@ export default function About() {
           </div>
         </motion.div>
 
+        {/* Content */}
         <motion.div
-          initial={{ opacity: 0, x: lang === "ar" ? -40 : 40 }}
+          initial={{ opacity: 0, x: isAr ? -40 : 40 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.7 }}
@@ -75,23 +101,43 @@ export default function About() {
           </h2>
           <div className="space-y-4 mb-8">
             {bioParas.map((p: string, i: number) => (
-              <p key={i} className="text-body leading-relaxed">
-                {p}
-              </p>
+              <p key={i} className="text-body leading-relaxed">{p}</p>
             ))}
           </div>
 
-          <p className="text-sm font-semibold text-light-pink mb-3">
-            {t.credentialsLabel}
-          </p>
-          <ul className="space-y-2">
-            {t.credentials.map((c: string, i: number) => (
-              <li key={i} className="flex items-center gap-3 text-body">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary-pink shrink-0" />
-                {c}
-              </li>
-            ))}
-          </ul>
+          {/* Qualifications */}
+          {qualItems.length > 0 && (
+            <div className="mb-6">
+              <p className="text-sm font-semibold text-light-pink mb-3">
+                {isAr ? "المؤهلات" : t.credentialsLabel}
+              </p>
+              <ul className="space-y-2">
+                {qualItems.map((c, i) => (
+                  <li key={i} className="flex items-center gap-3 text-body">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary-pink shrink-0" />
+                    {c}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Areas of Expertise (only shown when DB has items) */}
+          {expItems.length > 0 && (
+            <div>
+              <p className="text-sm font-semibold text-light-pink mb-3">
+                {isAr ? "مجالات التخصص" : "Areas of Expertise"}
+              </p>
+              <ul className="space-y-2">
+                {expItems.map((e, i) => (
+                  <li key={i} className="flex items-center gap-3 text-body">
+                    <span className="w-1.5 h-1.5 rounded-full bg-lavender-purple shrink-0" />
+                    {e}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </motion.div>
       </div>
     </section>

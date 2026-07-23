@@ -56,6 +56,14 @@ export const NAV_ITEMS: NavItem[] = [
     group: "content",
   },
   {
+    id: "about-cms",
+    label: "About Page",
+    labelAr: "صفحة من أنا",
+    href: "/admin/about-cms",
+    iconName: "User",
+    group: "content",
+  },
+  {
     id: "services",
     label: "Services",
     labelAr: "الخدمات",
@@ -242,6 +250,13 @@ export const PAGE_META: Record<string, PageMeta> = {
     description: "Edit your public website content — hero, about, contact, and social media.",
     descriptionAr: "تعديل محتوى موقعك العام — الرئيسية، من أنا، التواصل، والتواصل الاجتماعي.",
     illustrationVariant: "builder",
+  },
+  "about-cms": {
+    title: "About Page",
+    titleAr: "صفحة من أنا",
+    description: "Manage qualifications, areas of expertise, and the certifications grid shown on the About page.",
+    descriptionAr: "إدارة المؤهلات ومجالات التخصص وشبكة الشهادات المعروضة في صفحة من أنا.",
+    illustrationVariant: "services",
   },
   services: {
     title: "Services",

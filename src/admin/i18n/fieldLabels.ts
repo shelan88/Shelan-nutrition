@@ -40,6 +40,7 @@ export const FIELD_LABELS: Record<string, { en: string; ar: string }> = {
   story:                { en: "Story",                       ar: "القصة"                          },
   bio:                  { en: "Bio",                         ar: "السيرة الذاتية"                  },
   notes:                { en: "Notes",                       ar: "ملاحظات"                         },
+  text:                 { en: "Text",                        ar: "النص"                            },
   instructions:         { en: "Instructions",                ar: "التعليمات"                       },
   points:               { en: "Points",                      ar: "النقاط"                         },
   items:                { en: "Items",                       ar: "العناصر"                         },
