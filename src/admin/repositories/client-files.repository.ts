@@ -56,6 +56,19 @@ export async function uploadClientFile(
   return row as UploadedFileRow;
 }
 
+export async function getClientFiles(clientId: string): Promise<UploadedFileRow[]> {
+  const { data, error } = await supabase
+    .from("uploaded_files")
+    .select("*")
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("[client-files] getClientFiles:", error.message);
+    return [];
+  }
+  return (data ?? []) as UploadedFileRow[];
+}
+
 export async function deleteClientFile(
   fileId: string,
   publicUrl: string | null,

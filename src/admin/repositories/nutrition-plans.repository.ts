@@ -19,6 +19,9 @@ import type { NutritionPlanRow, NutritionPlanFileRow } from "@/types/database.ty
 
 export type { NutritionPlanRow, NutritionPlanFileRow };
 
+/** NutritionPlanFileRow enriched with the parent plan's display name. */
+export type PlanFileWithName = NutritionPlanFileRow & { plan_name: string | null };
+
 // ─── Meal types ────────────────────────────────────────────────────────────────
 
 export const MEAL_SLOTS = [
@@ -292,6 +295,41 @@ export async function uploadPlanFile(
     throw new Error(dbError.message);
   }
   return data as NutritionPlanFileRow;
+}
+
+/**
+ * Returns all nutrition_plan_files for a given client across every plan,
+ * enriched with the plan's display name.
+ */
+export async function getClientPlanFiles(clientId: string): Promise<PlanFileWithName[]> {
+  // 1. Fetch all plan files for this client
+  const { data: files, error } = await supabase
+    .from("nutrition_plan_files")
+    .select("*")
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[nutrition-plans] getClientPlanFiles:", error.message);
+    return [];
+  }
+  if (!files?.length) return [];
+
+  // 2. Resolve plan names for the unique plan_ids in a single query
+  const planIds = [...new Set(files.map((f: NutritionPlanFileRow) => f.plan_id))];
+  const { data: plans } = await supabase
+    .from("nutrition_plans")
+    .select("id, name")
+    .in("id", planIds);
+
+  const nameById = new Map<string, string>(
+    (plans ?? []).map((p: { id: string; name: string }) => [p.id, p.name]),
+  );
+
+  return files.map((f: NutritionPlanFileRow) => ({
+    ...f,
+    plan_name: nameById.get(f.plan_id) ?? null,
+  }));
 }
 
 export async function deletePlanFile(
