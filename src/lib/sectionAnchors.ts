@@ -16,23 +16,27 @@
  */
 
 export const SECTION_HREFS: Record<string, string> = {
-  // ── Single-page anchor sections (scroll on home page) ─────────────────────
+  // ── Home-page anchor sections (smooth-scroll on "/") ─────────────────────
   "home":            "/",
-  "about":           "/#about",
-  "services":        "/#services",
   "programs":        "/#programs",
-  "consultations":   "/#consultations",   // ← was /#booking; Booking.tsx now uses id="consultations"
+  "consultations":   "/#consultations",
   "success-stories": "/#success-stories",
   "testimonials":    "/#testimonials",
   "info-hub":        "/#info-hub",
   "faq":             "/#faq",
   "free-guide":      "/#free-guide",
 
-  // ── Separate route pages ──────────────────────────────────────────────────
+  // ── Separate full route pages ─────────────────────────────────────────────
+  // About and Services have their own pages (/about, /services) — do NOT map
+  // them to anchors even though the homepage also renders those sections.
+  "about":           "/about",
+  "services":        "/services",
   "blog":            "/blog",
   "contact":         "/contact",
+  "assessment":      "/assessment",
 
-  // ── CTA (booking form page) ───────────────────────────────────────────────
+  // ── CTA route ─────────────────────────────────────────────────────────────
+  "booking":         "/booking",
   "booking-cta":     "/booking",
 };
 

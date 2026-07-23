@@ -260,7 +260,10 @@ export default function Navbar() {
         .sort((a, b) => a.order - b.order)
         .map(i => ({
           label: lang === "en" ? i.label_en : i.label_ar,
-          href:  i.sectionId ? getSectionHref(i.sectionId) : i.href,
+          // Always try the canonical SECTION_HREFS map first (by sectionId, then
+          // by item id as a fallback for older DB rows that predate sectionId).
+          // If neither key exists in the map, fall through to the stored href.
+          href:  getSectionHref(i.sectionId ?? i.id, i.href),
           cta:   i.cta ?? false,
         }))
     : pagesNav[lang];
