@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useCallback } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAdminLabels } from "@/admin/hooks/useAdminLabels";
 import PageHeader from "../components/PageHeader";
 import { motion, AnimatePresence } from "framer-motion";
 import { Save, ChevronUp, ChevronDown, Eye, EyeOff } from "lucide-react";
@@ -122,6 +123,7 @@ function SaveBar({ saved, saving, onSave, lang }: { saved: boolean; saving: bool
 
 export default function WebsiteSettingsPage() {
   const { lang } = useLanguage();
+  const fl = useAdminLabels();
   const [tab, setTab] = useState<Tab>("hero");
 
   // Per-tab form state
@@ -230,41 +232,41 @@ export default function WebsiteSettingsPage() {
               <div className="px-5 py-5 space-y-5">
                 <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">Hero Section</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Field label="Kicker (EN)">
+                  <Field label={fl("kicker") + " (EN)"}>
                     <Input value={hero.kicker_en} onChange={e => setHero(p => ({ ...p, kicker_en: e.target.value }))} placeholder="e.g. Holistic Nutrition" />
                   </Field>
-                  <Field label="Kicker (AR)">
+                  <Field label={fl("kicker") + " (AR)"}>
                     <Input dir="rtl" value={hero.kicker_ar} onChange={e => setHero(p => ({ ...p, kicker_ar: e.target.value }))} placeholder="مثال: التغذية الشمولية" />
                   </Field>
-                  <Field label="Heading (EN)">
+                  <Field label={fl("heading") + " (EN)"}>
                     <Input value={hero.heading_en} onChange={e => setHero(p => ({ ...p, heading_en: e.target.value }))} placeholder="Main headline in English" />
                   </Field>
-                  <Field label="Heading (AR)">
+                  <Field label={fl("heading") + " (AR)"}>
                     <Input dir="rtl" value={hero.heading_ar} onChange={e => setHero(p => ({ ...p, heading_ar: e.target.value }))} placeholder="العنوان الرئيسي بالعربية" />
                   </Field>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Field label="Subheading (EN)">
+                  <Field label={fl("subheading") + " (EN)"}>
                     <Textarea rows={3} value={hero.subheading_en} onChange={e => setHero(p => ({ ...p, subheading_en: e.target.value }))} placeholder="Supporting text in English" />
                   </Field>
-                  <Field label="Subheading (AR)">
+                  <Field label={fl("subheading") + " (AR)"}>
                     <Textarea dir="rtl" rows={3} value={hero.subheading_ar} onChange={e => setHero(p => ({ ...p, subheading_ar: e.target.value }))} placeholder="النص الداعم بالعربية" />
                   </Field>
                 </div>
                 <div className="border-t border-[var(--admin-border)] pt-6 mt-6">
                   <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">Primary CTA</p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Field label="Label (EN)"><Input value={hero.cta_primary_label_en} onChange={e => setHero(p => ({ ...p, cta_primary_label_en: e.target.value }))} placeholder="Book Now" /></Field>
-                    <Field label="Label (AR)"><Input dir="rtl" value={hero.cta_primary_label_ar} onChange={e => setHero(p => ({ ...p, cta_primary_label_ar: e.target.value }))} placeholder="احجزي الآن" /></Field>
-                    <Field label="Link (href)"><Input value={hero.cta_primary_href} onChange={e => setHero(p => ({ ...p, cta_primary_href: e.target.value }))} placeholder="/booking" /></Field>
+                    <Field label={fl("label") + " (EN)"}><Input value={hero.cta_primary_label_en} onChange={e => setHero(p => ({ ...p, cta_primary_label_en: e.target.value }))} placeholder="Book Now" /></Field>
+                    <Field label={fl("label") + " (AR)"}><Input dir="rtl" value={hero.cta_primary_label_ar} onChange={e => setHero(p => ({ ...p, cta_primary_label_ar: e.target.value }))} placeholder="احجزي الآن" /></Field>
+                    <Field label={fl("link") + " (href)"}><Input value={hero.cta_primary_href} onChange={e => setHero(p => ({ ...p, cta_primary_href: e.target.value }))} placeholder="/booking" /></Field>
                   </div>
                 </div>
                 <div className="border-t border-[var(--admin-border)] pt-6 mt-6">
                   <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">Secondary CTA</p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Field label="Label (EN)"><Input value={hero.cta_secondary_label_en} onChange={e => setHero(p => ({ ...p, cta_secondary_label_en: e.target.value }))} placeholder="Learn More" /></Field>
-                    <Field label="Label (AR)"><Input dir="rtl" value={hero.cta_secondary_label_ar} onChange={e => setHero(p => ({ ...p, cta_secondary_label_ar: e.target.value }))} placeholder="اعرفي المزيد" /></Field>
-                    <Field label="Link (href)"><Input value={hero.cta_secondary_href} onChange={e => setHero(p => ({ ...p, cta_secondary_href: e.target.value }))} placeholder="/about" /></Field>
+                    <Field label={fl("label") + " (EN)"}><Input value={hero.cta_secondary_label_en} onChange={e => setHero(p => ({ ...p, cta_secondary_label_en: e.target.value }))} placeholder="Learn More" /></Field>
+                    <Field label={fl("label") + " (AR)"}><Input dir="rtl" value={hero.cta_secondary_label_ar} onChange={e => setHero(p => ({ ...p, cta_secondary_label_ar: e.target.value }))} placeholder="اعرفي المزيد" /></Field>
+                    <Field label={fl("link") + " (href)"}><Input value={hero.cta_secondary_href} onChange={e => setHero(p => ({ ...p, cta_secondary_href: e.target.value }))} placeholder="/about" /></Field>
                   </div>
                 </div>
               </div>
@@ -278,16 +280,16 @@ export default function WebsiteSettingsPage() {
               <div className="px-5 py-5 space-y-5">
                 <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">About / Nutritionist Profile</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Field label="Name (EN)"><Input value={about.name_en} onChange={e => setAbout(p => ({ ...p, name_en: e.target.value }))} placeholder="Shelan" /></Field>
-                  <Field label="Name (AR)"><Input dir="rtl" value={about.name_ar} onChange={e => setAbout(p => ({ ...p, name_ar: e.target.value }))} placeholder="شيلان" /></Field>
-                  <Field label="Title (EN)"><Input value={about.title_en} onChange={e => setAbout(p => ({ ...p, title_en: e.target.value }))} placeholder="Certified Holistic Nutritionist" /></Field>
-                  <Field label="Title (AR)"><Input dir="rtl" value={about.title_ar} onChange={e => setAbout(p => ({ ...p, title_ar: e.target.value }))} placeholder="أخصائية تغذية شمولية معتمدة" /></Field>
+                  <Field label={fl("name") + " (EN)"}><Input value={about.name_en} onChange={e => setAbout(p => ({ ...p, name_en: e.target.value }))} placeholder="Shelan" /></Field>
+                  <Field label={fl("name") + " (AR)"}><Input dir="rtl" value={about.name_ar} onChange={e => setAbout(p => ({ ...p, name_ar: e.target.value }))} placeholder="شيلان" /></Field>
+                  <Field label={fl("title") + " (EN)"}><Input value={about.title_en} onChange={e => setAbout(p => ({ ...p, title_en: e.target.value }))} placeholder="Certified Holistic Nutritionist" /></Field>
+                  <Field label={fl("title") + " (AR)"}><Input dir="rtl" value={about.title_ar} onChange={e => setAbout(p => ({ ...p, title_ar: e.target.value }))} placeholder="أخصائية تغذية شمولية معتمدة" /></Field>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Field label="Bio (EN)"><Textarea rows={5} value={about.bio_en} onChange={e => setAbout(p => ({ ...p, bio_en: e.target.value }))} placeholder="Write bio in English…" /></Field>
-                  <Field label="Bio (AR)"><Textarea dir="rtl" rows={5} value={about.bio_ar} onChange={e => setAbout(p => ({ ...p, bio_ar: e.target.value }))} placeholder="اكتبي السيرة بالعربية…" /></Field>
+                  <Field label={fl("bio") + " (EN)"}><Textarea rows={5} value={about.bio_en} onChange={e => setAbout(p => ({ ...p, bio_en: e.target.value }))} placeholder="Write bio in English…" /></Field>
+                  <Field label={fl("bio") + " (AR)"}><Textarea dir="rtl" rows={5} value={about.bio_ar} onChange={e => setAbout(p => ({ ...p, bio_ar: e.target.value }))} placeholder="اكتبي السيرة بالعربية…" /></Field>
                 </div>
-                <Field label="Portrait Image URL">
+                <Field label={fl("portrait")}>
                   <FileUploadField value={about.portrait_url} onChange={(url) => setAbout(p => ({ ...p, portrait_url: url }))} folder="about" lang={lang} />
                   <p className="mt-1 text-[11px] text-[var(--admin-text-faint)]">Upload or paste a URL for the portrait image</p>
                 </Field>
@@ -302,14 +304,14 @@ export default function WebsiteSettingsPage() {
               <div className="px-5 py-5 space-y-5">
                 <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">Contact Information</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Field label="Phone"><Input type="tel" value={contact.phone} onChange={e => setContact(p => ({ ...p, phone: e.target.value }))} placeholder="+966 5x xxx xxxx" /></Field>
-                  <Field label="WhatsApp"><Input type="tel" value={contact.whatsapp} onChange={e => setContact(p => ({ ...p, whatsapp: e.target.value }))} placeholder="+966 5x xxx xxxx" /></Field>
-                  <Field label="Email"><Input type="email" value={contact.email} onChange={e => setContact(p => ({ ...p, email: e.target.value }))} placeholder="hello@shelan.com" /></Field>
-                  <Field label="Google Maps URL"><Input value={contact.map_url} onChange={e => setContact(p => ({ ...p, map_url: e.target.value }))} placeholder="https://maps.google.com/…" /></Field>
-                  <Field label="Address (EN)"><Input value={contact.address_en} onChange={e => setContact(p => ({ ...p, address_en: e.target.value }))} placeholder="Riyadh, Saudi Arabia" /></Field>
-                  <Field label="Address (AR)"><Input dir="rtl" value={contact.address_ar} onChange={e => setContact(p => ({ ...p, address_ar: e.target.value }))} placeholder="الرياض، المملكة العربية السعودية" /></Field>
-                  <Field label="Business Hours (EN)"><Input value={contact.hours_en} onChange={e => setContact(p => ({ ...p, hours_en: e.target.value }))} placeholder="Sun–Thu, 9 AM – 6 PM" /></Field>
-                  <Field label="Business Hours (AR)"><Input dir="rtl" value={contact.hours_ar} onChange={e => setContact(p => ({ ...p, hours_ar: e.target.value }))} placeholder="الأحد – الخميس، ٩ ص – ٦ م" /></Field>
+                  <Field label={fl("phone")}><Input type="tel" value={contact.phone} onChange={e => setContact(p => ({ ...p, phone: e.target.value }))} placeholder="+966 5x xxx xxxx" /></Field>
+                  <Field label={fl("whatsapp")}><Input type="tel" value={contact.whatsapp} onChange={e => setContact(p => ({ ...p, whatsapp: e.target.value }))} placeholder="+966 5x xxx xxxx" /></Field>
+                  <Field label={fl("email")}><Input type="email" value={contact.email} onChange={e => setContact(p => ({ ...p, email: e.target.value }))} placeholder="hello@shelan.com" /></Field>
+                  <Field label={fl("googleMapsUrl")}><Input value={contact.map_url} onChange={e => setContact(p => ({ ...p, map_url: e.target.value }))} placeholder="https://maps.google.com/…" /></Field>
+                  <Field label={fl("address") + " (EN)"}><Input value={contact.address_en} onChange={e => setContact(p => ({ ...p, address_en: e.target.value }))} placeholder="Riyadh, Saudi Arabia" /></Field>
+                  <Field label={fl("address") + " (AR)"}><Input dir="rtl" value={contact.address_ar} onChange={e => setContact(p => ({ ...p, address_ar: e.target.value }))} placeholder="الرياض، المملكة العربية السعودية" /></Field>
+                  <Field label={fl("businessHours") + " (EN)"}><Input value={contact.hours_en} onChange={e => setContact(p => ({ ...p, hours_en: e.target.value }))} placeholder="Sun–Thu, 9 AM – 6 PM" /></Field>
+                  <Field label={fl("businessHours") + " (AR)"}><Input dir="rtl" value={contact.hours_ar} onChange={e => setContact(p => ({ ...p, hours_ar: e.target.value }))} placeholder="الأحد – الخميس، ٩ ص – ٦ م" /></Field>
                 </div>
               </div>
               <SaveBar lang={lang} saved={saved} saving={saving} onSave={handleSave} />
@@ -392,7 +394,7 @@ export default function WebsiteSettingsPage() {
                       {/* Label inputs */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                         <div>
-                          <label className="block text-[10px] font-semibold text-[var(--admin-text-faint)] uppercase tracking-wide mb-1">Label (EN)</label>
+                          <label className="block text-[10px] font-semibold text-[var(--admin-text-faint)] uppercase tracking-wide mb-1">{fl("label")} (EN)</label>
                           <input
                             value={item.label_en}
                             onChange={e => setNavItems(prev => prev.map(n => n.id === item.id ? { ...n, label_en: e.target.value } : n))}
@@ -401,7 +403,7 @@ export default function WebsiteSettingsPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-semibold text-[var(--admin-text-faint)] uppercase tracking-wide mb-1">Label (AR)</label>
+                          <label className="block text-[10px] font-semibold text-[var(--admin-text-faint)] uppercase tracking-wide mb-1">{fl("label")} (AR)</label>
                           <input
                             dir="rtl"
                             value={item.label_ar}

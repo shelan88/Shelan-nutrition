@@ -1,4 +1,5 @@
 import { useLanguage } from "@/context/LanguageContext";
+import { useAdminLabels } from "@/admin/hooks/useAdminLabels";
 import PageHeader from "../components/PageHeader";
 import { motion } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
@@ -106,6 +107,7 @@ function formFromRow(row: BlogPostRow): FormState {
 
 export default function BlogAdminPage() {
   const { lang } = useLanguage();
+  const fl = useAdminLabels();
   const [view, setView] = useState<"list" | "edit">("list");
   const [editing, setEditing] = useState<BlogPostRow | null>(null);
   const [posts, setPosts] = useState<BlogPostRow[]>([]);
@@ -247,7 +249,7 @@ export default function BlogAdminPage() {
                   <p className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider mb-2">English</p>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Title EN</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("title")} (EN)</label>
                     <input
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                       value={form.title_en}
@@ -257,7 +259,7 @@ export default function BlogAdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Slug</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("slug")}</label>
                     <input
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                       value={form.slug}
@@ -267,7 +269,7 @@ export default function BlogAdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Excerpt EN</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("excerpt")} (EN)</label>
                     <textarea
                       rows={3}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
@@ -278,7 +280,7 @@ export default function BlogAdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Content EN</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("content")} (EN)</label>
                     <p className="text-[11px] text-[var(--admin-text-faint)] mb-1">Write content. Separate paragraphs with a blank line.</p>
                     <textarea
                       rows={10}
@@ -295,7 +297,7 @@ export default function BlogAdminPage() {
                   <p className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider mb-2">العربية</p>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Title AR</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("title")} (AR)</label>
                     <input
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                       value={form.title_ar}
@@ -305,7 +307,7 @@ export default function BlogAdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Category</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("category")}</label>
                     <input
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                       value={form.category}
@@ -316,7 +318,7 @@ export default function BlogAdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Excerpt AR</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("excerpt")} (AR)</label>
                     <textarea
                       rows={3}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
@@ -327,7 +329,7 @@ export default function BlogAdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Content AR</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("content")} (AR)</label>
                     <p className="text-[11px] text-[var(--admin-text-faint)] mb-1">اكتبي المحتوى. افصلي الفقرات بسطر فارغ.</p>
                     <textarea
                       rows={10}
@@ -350,7 +352,7 @@ export default function BlogAdminPage() {
             <div className="p-5 space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Cover Image URL</label>
+                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("coverImage")} URL</label>
                   <FileUploadField
                     value={form.cover_image}
                     onChange={(url) => setForm((f) => ({ ...f, cover_image: url }))}
@@ -358,7 +360,7 @@ export default function BlogAdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Tags (comma-separated)</label>
+                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("tags")} (comma-separated)</label>
                   <input
                     className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                     value={form.tags}
@@ -367,7 +369,7 @@ export default function BlogAdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Author Name</label>
+                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("authorName")}</label>
                   <input
                     className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                     value={form.author_name}
@@ -375,7 +377,7 @@ export default function BlogAdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Author Avatar URL</label>
+                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("authorAvatar")} URL</label>
                   <FileUploadField
                     value={form.author_avatar}
                     onChange={(url) => setForm((f) => ({ ...f, author_avatar: url }))}
@@ -384,7 +386,7 @@ export default function BlogAdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Read Time (minutes)</label>
+                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("readTime")} (minutes)</label>
                   <input
                     type="number"
                     min={1}
@@ -394,7 +396,7 @@ export default function BlogAdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Published At</label>
+                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("publishedAt")}</label>
                   <input
                     type="date"
                     className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
@@ -406,7 +408,7 @@ export default function BlogAdminPage() {
 
               {/* Accent selector */}
               <div>
-                <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Accent Gradient</label>
+                <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("accentGradient")}</label>
                 <div className="flex flex-wrap gap-2">
                   {ACCENTS.map((a) => {
                     const selected = form.accentFrom === a.from && form.accentTo === a.to;

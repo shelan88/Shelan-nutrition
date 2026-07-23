@@ -1,4 +1,5 @@
 import { useLanguage } from "@/context/LanguageContext";
+import { useAdminLabels } from "@/admin/hooks/useAdminLabels";
 import PageHeader from "../components/PageHeader";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
@@ -116,6 +117,7 @@ export default function SuccessStoriesAdminPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  const fl = useAdminLabels();
   const t = (en: string, ar: string) => (isAr ? ar : en);
 
   return (
@@ -351,7 +353,7 @@ export default function SuccessStoriesAdminPage() {
                 {/* Title */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelCls}>{t("Title (EN)", "العنوان (EN)")}</label>
+                    <label className={labelCls}>{fl("title")} (EN)</label>
                     <input
                       value={form.title_en ?? ""}
                       onChange={(e) => setField("title_en", e.target.value)}
@@ -360,7 +362,7 @@ export default function SuccessStoriesAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className={labelCls}>{t("Title (AR)", "العنوان (AR)")}</label>
+                    <label className={labelCls}>{fl("title")} (AR)</label>
                     <input
                       dir="rtl"
                       value={form.title_ar ?? ""}
@@ -375,7 +377,7 @@ export default function SuccessStoriesAdminPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className={labelCls}>
-                      {t("Client Name (EN) — optional", "اسم العميل (EN) — اختياري")}
+                      {fl("clientName")} (EN) — {isAr ? "اختياري" : "optional"}
                     </label>
                     <input
                       value={form.client_name_en ?? ""}
@@ -386,7 +388,7 @@ export default function SuccessStoriesAdminPage() {
                   </div>
                   <div>
                     <label className={labelCls}>
-                      {t("Client Name (AR) — optional", "اسم العميل (AR) — اختياري")}
+                      {fl("clientName")} (AR) — {isAr ? "اختياري" : "optional"}
                     </label>
                     <input
                       dir="rtl"
@@ -401,7 +403,7 @@ export default function SuccessStoriesAdminPage() {
                 {/* Story text */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelCls}>{t("Story (EN)", "القصة (EN)")}</label>
+                    <label className={labelCls}>{fl("story")} (EN)</label>
                     <textarea
                       rows={5}
                       value={form.story_en ?? ""}
@@ -411,7 +413,7 @@ export default function SuccessStoriesAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className={labelCls}>{t("Story (AR)", "القصة (AR)")}</label>
+                    <label className={labelCls}>{fl("story")} (AR)</label>
                     <textarea
                       dir="rtl"
                       rows={5}
@@ -426,7 +428,7 @@ export default function SuccessStoriesAdminPage() {
                 {/* Before / After images */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className={labelCls}>{t("Before Photo", "صورة قبل")}</label>
+                    <label className={labelCls}>{fl("beforePhoto")}</label>
                     <FileUploadField
                       value={form.before_image_url ?? ""}
                       onChange={(url) => setField("before_image_url", url)}
@@ -436,7 +438,7 @@ export default function SuccessStoriesAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className={labelCls}>{t("After Photo", "صورة بعد")}</label>
+                    <label className={labelCls}>{fl("afterPhoto")}</label>
                     <FileUploadField
                       value={form.after_image_url ?? ""}
                       onChange={(url) => setField("after_image_url", url)}
@@ -456,7 +458,7 @@ export default function SuccessStoriesAdminPage() {
                     {/* Publish Date */}
                     <div>
                       <label className={labelCls}>
-                        {t("Publish Date (optional)", "تاريخ النشر (اختياري)")}
+                        {fl("publishDate")} ({isAr ? "اختياري" : "optional"})
                       </label>
                       <input
                         type="date"
@@ -471,7 +473,7 @@ export default function SuccessStoriesAdminPage() {
                     {/* Sort Order */}
                     <div>
                       <label className={labelCls}>
-                        {t("Sort Order", "ترتيب العرض")}
+                        {fl("sortOrder")}
                       </label>
                       <input
                         type="number"

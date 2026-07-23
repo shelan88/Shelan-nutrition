@@ -1,4 +1,5 @@
 import { useLanguage } from "@/context/LanguageContext";
+import { useAdminLabels } from "@/admin/hooks/useAdminLabels";
 import PageHeader from "../components/PageHeader";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
@@ -153,6 +154,7 @@ export default function TestimonialsAdminPage() {
       .toUpperCase()
       .slice(0, 2);
 
+  const fl = useAdminLabels();
   const t = (en: string, ar: string) => (isAr ? ar : en);
 
   return (
@@ -346,7 +348,7 @@ export default function TestimonialsAdminPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
-                      {t("Client Name (EN)", "اسم العميل (EN)")}
+                      {fl("clientName")} (EN)
                     </label>
                     <input
                       value={form.client_name}
@@ -357,7 +359,7 @@ export default function TestimonialsAdminPage() {
                   </div>
                   <div>
                     <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
-                      {t("Client Name (AR)", "اسم العميل (AR)")}
+                      {fl("clientName")} (AR)
                     </label>
                     <input
                       dir="rtl"
@@ -373,7 +375,7 @@ export default function TestimonialsAdminPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
-                      {t("Role (EN)", "المسمى (EN)")}
+                      {fl("role")} (EN)
                     </label>
                     <input
                       value={form.role_en ?? ""}
@@ -384,7 +386,7 @@ export default function TestimonialsAdminPage() {
                   </div>
                   <div>
                     <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
-                      {t("Role (AR)", "المسمى (AR)")}
+                      {fl("role")} (AR)
                     </label>
                     <input
                       dir="rtl"
@@ -400,7 +402,7 @@ export default function TestimonialsAdminPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
-                      {t("Review Text (EN)", "نص الرأي (EN)")}
+                      {fl("reviewText")} (EN)
                     </label>
                     <textarea
                       rows={4}
@@ -412,7 +414,7 @@ export default function TestimonialsAdminPage() {
                   </div>
                   <div>
                     <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
-                      {t("Review Text (AR)", "نص الرأي (AR)")}
+                      {fl("reviewText")} (AR)
                     </label>
                     <textarea
                       dir="rtl"
@@ -433,7 +435,7 @@ export default function TestimonialsAdminPage() {
                     {/* Rating */}
                     <div>
                       <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
-                        {t("Rating", "التقييم")}
+                        {fl("rating")}
                       </label>
                       <StarSelector
                         value={form.rating ?? 5}
@@ -444,7 +446,7 @@ export default function TestimonialsAdminPage() {
                     {/* Client Photo */}
                     <div>
                       <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
-                        {t("Client Photo", "صورة العميل")}
+                        {fl("clientPhoto")}
                       </label>
                       <FileUploadField
                         value={form.avatar_url ?? ""}

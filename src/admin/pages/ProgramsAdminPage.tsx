@@ -1,4 +1,5 @@
 import { useLanguage } from "@/context/LanguageContext";
+import { useAdminLabels } from "@/admin/hooks/useAdminLabels";
 import PageHeader from "../components/PageHeader";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
@@ -169,6 +170,7 @@ export default function ProgramsAdminPage() {
 
   /* ─── helpers for labels ─────────────────────────────────────────────────── */
   const L = (en: string, arStr: string) => ar ? arStr : en;
+  const fl = useAdminLabels();
 
   return (
     <div>
@@ -297,11 +299,11 @@ export default function ProgramsAdminPage() {
                 {/* Names */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={lbl}>{L("Name (English)","الاسم (بالإنجليزية)")}</label>
+                    <label className={lbl}>{fl("name")} (EN)</label>
                     <input value={form.name_en} onChange={(e) => set("name_en", e.target.value)} className={inp} placeholder={L("Program name in English","اسم البرنامج بالإنجليزية")} />
                   </div>
                   <div>
-                    <label className={lbl}>{L("Name (Arabic)","الاسم (بالعربية)")}</label>
+                    <label className={lbl}>{fl("name")} (AR)</label>
                     <input dir="rtl" value={form.name_ar ?? ""} onChange={(e) => set("name_ar", e.target.value)} className={inp} placeholder={L("Program name in Arabic","اسم البرنامج بالعربية")} />
                   </div>
                 </div>
@@ -309,11 +311,11 @@ export default function ProgramsAdminPage() {
                 {/* Subtitles */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={lbl}>{L("Subtitle (English)","العنوان الفرعي (بالإنجليزية)")} <span className="font-normal normal-case opacity-60">— {L("optional","اختياري")}</span></label>
+                    <label className={lbl}>{fl("subtitle")} (EN) <span className="font-normal normal-case opacity-60">— {L("optional","اختياري")}</span></label>
                     <input value={form.subtitle_en ?? ""} onChange={(e) => set("subtitle_en", e.target.value)} className={inp} placeholder={L("Short tagline","شعار قصير")} />
                   </div>
                   <div>
-                    <label className={lbl}>{L("Subtitle (Arabic)","العنوان الفرعي (بالعربية)")}</label>
+                    <label className={lbl}>{fl("subtitle")} (AR)</label>
                     <input dir="rtl" value={form.subtitle_ar ?? ""} onChange={(e) => set("subtitle_ar", e.target.value)} className={inp} placeholder={L("Short tagline in Arabic","شعار قصير بالعربية")} />
                   </div>
                 </div>
@@ -321,11 +323,11 @@ export default function ProgramsAdminPage() {
                 {/* Badge */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={lbl}>{L("Badge (English)","الشارة (بالإنجليزية)")} <span className="font-normal normal-case opacity-60">— {L('e.g. "Most Popular"','مثال: الأكثر شعبية')}</span></label>
+                    <label className={lbl}>{fl("badge")} (EN) <span className="font-normal normal-case opacity-60">— {L('e.g. "Most Popular"','مثال: الأكثر شعبية')}</span></label>
                     <input value={form.badge_en ?? ""} onChange={(e) => set("badge_en", e.target.value)} className={inp} placeholder='Most Popular' />
                   </div>
                   <div>
-                    <label className={lbl}>{L("Badge (Arabic)","الشارة (بالعربية)")}</label>
+                    <label className={lbl}>{fl("badge")} (AR)</label>
                     <input dir="rtl" value={form.badge_ar ?? ""} onChange={(e) => set("badge_ar", e.target.value)} className={inp} placeholder='الأكثر شعبية' />
                   </div>
                 </div>
@@ -333,11 +335,11 @@ export default function ProgramsAdminPage() {
                 {/* Short description */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={lbl}>{L("Short Description (English)","الوصف المختصر (بالإنجليزية)")}</label>
+                    <label className={lbl}>{fl("shortDescription")} (EN)</label>
                     <textarea rows={2} value={form.short_description_en ?? ""} onChange={(e) => set("short_description_en", e.target.value)} className={`${inp} resize-y`} />
                   </div>
                   <div>
-                    <label className={lbl}>{L("Short Description (Arabic)","الوصف المختصر (بالعربية)")}</label>
+                    <label className={lbl}>{fl("shortDescription")} (AR)</label>
                     <textarea dir="rtl" rows={2} value={form.short_description_ar ?? ""} onChange={(e) => set("short_description_ar", e.target.value)} className={`${inp} resize-y`} />
                   </div>
                 </div>
@@ -345,11 +347,11 @@ export default function ProgramsAdminPage() {
                 {/* Full description */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={lbl}>{L("Full Description (English)","الوصف الكامل (بالإنجليزية)")}</label>
+                    <label className={lbl}>{fl("fullDescription")} (EN)</label>
                     <textarea rows={4} value={form.full_description_en ?? ""} onChange={(e) => set("full_description_en", e.target.value)} className={`${inp} resize-y`} />
                   </div>
                   <div>
-                    <label className={lbl}>{L("Full Description (Arabic)","الوصف الكامل (بالعربية)")}</label>
+                    <label className={lbl}>{fl("fullDescription")} (AR)</label>
                     <textarea dir="rtl" rows={4} value={form.full_description_ar ?? ""} onChange={(e) => set("full_description_ar", e.target.value)} className={`${inp} resize-y`} />
                   </div>
                 </div>
@@ -357,12 +359,12 @@ export default function ProgramsAdminPage() {
                 {/* Features */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={lbl}>{L("Features (English)","المميزات (بالإنجليزية)")}</label>
+                    <label className={lbl}>{fl("features")} (EN)</label>
                     <p className="text-[11px] text-[var(--admin-text-faint)] mb-1.5">{L("One feature per line","ميزة واحدة في كل سطر")}</p>
                     <textarea rows={5} value={featEnText} onChange={(e) => setFeatEnText(e.target.value)} className={`${inp} resize-y`} placeholder={"Personalized meal plan\nWeekly check-ins"} />
                   </div>
                   <div>
-                    <label className={lbl}>{L("Features (Arabic)","المميزات (بالعربية)")}</label>
+                    <label className={lbl}>{fl("features")} (AR)</label>
                     <p className="text-[11px] text-[var(--admin-text-faint)] mb-1.5">{L("One feature per line","ميزة واحدة في كل سطر")}</p>
                     <textarea dir="rtl" rows={5} value={featArText} onChange={(e) => setFeatArText(e.target.value)} className={`${inp} resize-y`} placeholder={"خطة وجبات مخصصة\nمتابعة أسبوعية"} />
                   </div>
@@ -371,11 +373,11 @@ export default function ProgramsAdminPage() {
                 {/* CTA */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={lbl}>{L("CTA Button (English)","زر الدعوة للعمل (بالإنجليزية)")} <span className="font-normal normal-case opacity-60">— {L("optional","اختياري")}</span></label>
+                    <label className={lbl}>{fl("ctaButton")} (EN) <span className="font-normal normal-case opacity-60">— {L("optional","اختياري")}</span></label>
                     <input value={form.cta_text_en ?? ""} onChange={(e) => set("cta_text_en", e.target.value)} className={inp} placeholder={L("e.g. Get Started","مثال: ابدئي الآن")} />
                   </div>
                   <div>
-                    <label className={lbl}>{L("CTA Button (Arabic)","زر الدعوة للعمل (بالعربية)")}</label>
+                    <label className={lbl}>{fl("ctaButton")} (AR)</label>
                     <input dir="rtl" value={form.cta_text_ar ?? ""} onChange={(e) => set("cta_text_ar", e.target.value)} className={inp} placeholder='ابدئي الآن' />
                   </div>
                 </div>
@@ -387,7 +389,7 @@ export default function ProgramsAdminPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     {/* Icon */}
                     <div>
-                      <label className={lbl}>{L("Icon","الأيقونة")}</label>
+                      <label className={lbl}>{fl("icon")}</label>
                       <select value={form.icon ?? "Leaf"} onChange={(e) => set("icon", e.target.value)} className={inp + " cursor-pointer"}>
                         {ICON_OPTIONS.map((ic) => <option key={ic} value={ic}>{ic}</option>)}
                       </select>
@@ -395,7 +397,7 @@ export default function ProgramsAdminPage() {
 
                     {/* Gradient */}
                     <div>
-                      <label className={lbl}>{L("Icon Gradient","تدرج الأيقونة")}</label>
+                      <label className={lbl}>{fl("iconGradient")}</label>
                       <select value={form.gradient ?? ""} onChange={(e) => set("gradient", e.target.value)} className={inp + " cursor-pointer"}>
                         {GRADIENT_OPTIONS.map((g) => <option key={g.value} value={g.value}>{ar ? g.label_ar : g.label_en}</option>)}
                       </select>
@@ -403,19 +405,19 @@ export default function ProgramsAdminPage() {
 
                     {/* Currency */}
                     <div>
-                      <label className={lbl}>{L("Currency","العملة")}</label>
+                      <label className={lbl}>{fl("currency")}</label>
                       <CurrencySelect value={form.currency ?? "$"} onChange={(s) => set("currency", s)} lang={lang} />
                     </div>
 
                     {/* Price */}
                     <div>
-                      <label className={lbl}>{L("Price","السعر")}</label>
+                      <label className={lbl}>{fl("price")}</label>
                       <input type="number" min={0} value={form.price ?? 0} onChange={(e) => set("price", Number(e.target.value))} className={inp} />
                     </div>
 
                     {/* Duration — number + unit */}
                     <div className="sm:col-span-1">
-                      <label className={lbl}>{L("Duration","المدة")}</label>
+                      <label className={lbl}>{fl("duration")}</label>
                       <div className="flex gap-2">
                         <input
                           type="number" min={1}
@@ -435,14 +437,14 @@ export default function ProgramsAdminPage() {
 
                     {/* Sort Order */}
                     <div>
-                      <label className={lbl}>{L("Sort Order","الترتيب")}</label>
+                      <label className={lbl}>{fl("sortOrder")}</label>
                       <input type="number" min={0} value={form.sort_order ?? 0} onChange={(e) => set("sort_order", Number(e.target.value))} className={inp} />
                     </div>
                   </div>
 
                   {/* Image — full-width row below the grid to avoid column-span whitespace */}
                   <div className="mt-4">
-                    <label className={lbl}>{L("Image","الصورة")}</label>
+                    <label className={lbl}>{fl("image")}</label>
                     <FileUploadField value={form.image_url ?? ""} onChange={(url) => set("image_url", url)} folder="programs" />
                   </div>
 
@@ -469,7 +471,7 @@ export default function ProgramsAdminPage() {
                     {form.discount_enabled && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                         <div>
-                          <label className={lbl}>{L("Discount %","نسبة الخصم %")} <span className="font-normal normal-case opacity-60">(0 – 100)</span></label>
+                          <label className={lbl}>{fl("discountPercent")} <span className="font-normal normal-case opacity-60">(0 – 100)</span></label>
                           <input type="number" min={0} max={100} value={form.discount_percent ?? ""} onChange={(e) => {
                             const raw = e.target.value;
                             if (raw === "") { set("discount_percent", null); return; }
@@ -478,7 +480,7 @@ export default function ProgramsAdminPage() {
                           }} className={inp} placeholder="10" />
                         </div>
                         <div>
-                          <label className={lbl}>{L("Final Price Preview","معاينة السعر النهائي")}</label>
+                          <label className={lbl}>{fl("finalPrice")}</label>
                           <div className={`${inp} flex items-center gap-2 bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold`}>
                             {finalPrice != null ? (
                               <><span className="line-through opacity-50 font-normal text-[12px]">{form.currency ?? "$"}{form.price}</span><span>{form.currency ?? "$"}{finalPrice}</span></>

@@ -16,6 +16,7 @@ import {
   Filter, Check, MoveRight,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAdminLabels } from "@/admin/hooks/useAdminLabels";
 import PageHeader from "../components/PageHeader";
 import {
   getSystemLibraryQuestions,
@@ -1097,6 +1098,7 @@ function QuestionFormFields({
   onRemoveOption: (i: number) => void;
   onUpdateOption: (i: number, field: "label_en" | "label_ar" | "value", val: string) => void;
 }) {
+  const fl = useAdminLabels();
   const showOptions = NEEDS_OPTIONS.includes(form.type);
 
   return (
@@ -1138,12 +1140,12 @@ function QuestionFormFields({
 
       {/* Labels */}
       <div>
-        <label className={LABEL}>Label (EN) *</label>
+        <label className={LABEL}>{fl("label")} (EN) *</label>
         <input value={form.label_en} onChange={(e) => onChange("label_en", e.target.value)}
           placeholder="Question label in English" className={INPUT} />
       </div>
       <div>
-        <label className={LABEL}>Label (AR)</label>
+        <label className={LABEL}>{fl("label")} (AR)</label>
         <input dir="rtl" value={form.label_ar} onChange={(e) => onChange("label_ar", e.target.value)}
           placeholder="نص السؤال بالعربية" className={INPUT} />
       </div>
@@ -1151,12 +1153,12 @@ function QuestionFormFields({
       {/* Placeholders */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={LABEL}>Placeholder (EN)</label>
+          <label className={LABEL}>{fl("placeholder")} (EN)</label>
           <input value={form.placeholder_en} onChange={(e) => onChange("placeholder_en", e.target.value)}
             placeholder="Hint text…" className={INPUT} />
         </div>
         <div>
-          <label className={LABEL}>Placeholder (AR)</label>
+          <label className={LABEL}>{fl("placeholder")} (AR)</label>
           <input dir="rtl" value={form.placeholder_ar} onChange={(e) => onChange("placeholder_ar", e.target.value)}
             placeholder="نص تلميحي…" className={INPUT} />
         </div>
@@ -1165,12 +1167,12 @@ function QuestionFormFields({
       {/* Help text */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={LABEL}>Help Text (EN)</label>
+          <label className={LABEL}>{fl("helpText")} (EN)</label>
           <textarea rows={2} value={form.help_en} onChange={(e) => onChange("help_en", e.target.value)}
             placeholder="Additional guidance…" className={`${INPUT} resize-none`} />
         </div>
         <div>
-          <label className={LABEL}>Help Text (AR)</label>
+          <label className={LABEL}>{fl("helpText")} (AR)</label>
           <textarea dir="rtl" rows={2} value={form.help_ar} onChange={(e) => onChange("help_ar", e.target.value)}
             placeholder="إرشادات إضافية…" className={`${INPUT} resize-none`} />
         </div>
@@ -1178,7 +1180,7 @@ function QuestionFormFields({
 
       {/* Validation note */}
       <div>
-        <label className={LABEL}>{isAr ? "ملاحظة التحقق" : "Validation Note"}</label>
+        <label className={LABEL}>{fl("validationNote")}</label>
         <input value={form.validation_note} onChange={(e) => onChange("validation_note", e.target.value)}
           placeholder="e.g. 0–10, min 2 characters" className={INPUT} />
       </div>

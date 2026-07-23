@@ -1,4 +1,5 @@
 import { useLanguage } from "@/context/LanguageContext";
+import { useAdminLabels } from "@/admin/hooks/useAdminLabels";
 import PageHeader from "../components/PageHeader";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
@@ -108,6 +109,7 @@ export default function ConsultationsAdminPage() {
   const { lang } = useLanguage();
   const ar = lang === "ar";
   const L = (en: string, arStr: string) => ar ? arStr : en;
+  const fl = useAdminLabels();
 
   const [rows,         setRows]         = useState<Row[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -341,11 +343,11 @@ export default function ConsultationsAdminPage() {
                 {/* Titles */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={lbl}>{L("Title (English)","العنوان (بالإنجليزية)")}</label>
+                    <label className={lbl}>{fl("title")} (EN)</label>
                     <input value={form.title_en} onChange={(e) => set("title_en", e.target.value)} className={inp} placeholder={L("Package name in English","اسم الباقة بالإنجليزية")} />
                   </div>
                   <div>
-                    <label className={lbl}>{L("Title (Arabic)","العنوان (بالعربية)")}</label>
+                    <label className={lbl}>{fl("title")} (AR)</label>
                     <input dir="rtl" value={form.title_ar ?? ""} onChange={(e) => set("title_ar", e.target.value)} className={inp} placeholder={L("Package name in Arabic","اسم الباقة بالعربية")} />
                   </div>
                 </div>
@@ -353,11 +355,11 @@ export default function ConsultationsAdminPage() {
                 {/* Subtitles */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={lbl}>{L("Subtitle (English)","العنوان الفرعي (بالإنجليزية)")} <span className="font-normal normal-case opacity-60">— {L("optional","اختياري")}</span></label>
+                    <label className={lbl}>{fl("subtitle")} (EN) <span className="font-normal normal-case opacity-60">— {L("optional","اختياري")}</span></label>
                     <input value={form.subtitle_en ?? ""} onChange={(e) => set("subtitle_en", e.target.value)} className={inp} />
                   </div>
                   <div>
-                    <label className={lbl}>{L("Subtitle (Arabic)","العنوان الفرعي (بالعربية)")}</label>
+                    <label className={lbl}>{fl("subtitle")} (AR)</label>
                     <input dir="rtl" value={form.subtitle_ar ?? ""} onChange={(e) => set("subtitle_ar", e.target.value)} className={inp} />
                   </div>
                 </div>
@@ -365,11 +367,11 @@ export default function ConsultationsAdminPage() {
                 {/* Badge */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={lbl}>{L("Badge (English)","الشارة (بالإنجليزية)")} <span className="font-normal normal-case opacity-60">— {L("marks this as featured","يُعلّمها كباقة مميزة")}</span></label>
+                    <label className={lbl}>{fl("badge")} (EN) <span className="font-normal normal-case opacity-60">— {L("marks this as featured","يُعلّمها كباقة مميزة")}</span></label>
                     <input value={form.badge_en ?? ""} onChange={(e) => set("badge_en", e.target.value)} className={inp} placeholder="Most Popular" />
                   </div>
                   <div>
-                    <label className={lbl}>{L("Badge (Arabic)","الشارة (بالعربية)")}</label>
+                    <label className={lbl}>{fl("badge")} (AR)</label>
                     <input dir="rtl" value={form.badge_ar ?? ""} onChange={(e) => set("badge_ar", e.target.value)} className={inp} placeholder="الأكثر طلبًا" />
                   </div>
                 </div>
@@ -377,11 +379,11 @@ export default function ConsultationsAdminPage() {
                 {/* Description */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={lbl}>{L("Description (English)","الوصف (بالإنجليزية)")} <span className="font-normal normal-case opacity-60">— {L("optional","اختياري")}</span></label>
+                    <label className={lbl}>{fl("description")} (EN) <span className="font-normal normal-case opacity-60">— {L("optional","اختياري")}</span></label>
                     <textarea rows={3} value={form.description_en ?? ""} onChange={(e) => set("description_en", e.target.value)} className={`${inp} resize-y`} />
                   </div>
                   <div>
-                    <label className={lbl}>{L("Description (Arabic)","الوصف (بالعربية)")}</label>
+                    <label className={lbl}>{fl("description")} (AR)</label>
                     <textarea dir="rtl" rows={3} value={form.description_ar ?? ""} onChange={(e) => set("description_ar", e.target.value)} className={`${inp} resize-y`} />
                   </div>
                 </div>
@@ -389,12 +391,12 @@ export default function ConsultationsAdminPage() {
                 {/* Features */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={lbl}>{L("Features (English)","المميزات (بالإنجليزية)")}</label>
+                    <label className={lbl}>{fl("features")} (EN)</label>
                     <p className="text-[11px] text-[var(--admin-text-faint)] mb-1.5">{L("One feature per line","ميزة واحدة في كل سطر")}</p>
                     <textarea rows={5} value={featEnText} onChange={(e) => setFeatEnText(e.target.value)} className={`${inp} resize-y`} placeholder={"Personalized plan\nWeekly check-ins"} />
                   </div>
                   <div>
-                    <label className={lbl}>{L("Features (Arabic)","المميزات (بالعربية)")}</label>
+                    <label className={lbl}>{fl("features")} (AR)</label>
                     <p className="text-[11px] text-[var(--admin-text-faint)] mb-1.5">{L("One feature per line","ميزة واحدة في كل سطر")}</p>
                     <textarea dir="rtl" rows={5} value={featArText} onChange={(e) => setFeatArText(e.target.value)} className={`${inp} resize-y`} placeholder={"خطة مخصصة\nمتابعة أسبوعية"} />
                   </div>
@@ -403,11 +405,11 @@ export default function ConsultationsAdminPage() {
                 {/* CTA */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className={lbl}>{L("CTA Button (English)","زر الدعوة للعمل (بالإنجليزية)")}</label>
+                    <label className={lbl}>{fl("ctaButton")} (EN)</label>
                     <input value={form.cta_text_en ?? ""} onChange={(e) => set("cta_text_en", e.target.value)} className={inp} placeholder="Book Now" />
                   </div>
                   <div>
-                    <label className={lbl}>{L("CTA Button (Arabic)","زر الدعوة للعمل (بالعربية)")}</label>
+                    <label className={lbl}>{fl("ctaButton")} (AR)</label>
                     <input dir="rtl" value={form.cta_text_ar ?? ""} onChange={(e) => set("cta_text_ar", e.target.value)} className={inp} placeholder="احجزي الآن" />
                   </div>
                 </div>
@@ -419,19 +421,19 @@ export default function ConsultationsAdminPage() {
 
                     {/* Price */}
                     <div>
-                      <label className={lbl}>{L("Price","السعر")}</label>
+                      <label className={lbl}>{fl("price")}</label>
                       <input type="number" min={0} value={form.price ?? ""} onChange={(e) => set("price", e.target.value === "" ? null : Number(e.target.value))} className={inp} placeholder="120" />
                     </div>
 
                     {/* Currency */}
                     <div>
-                      <label className={lbl}>{L("Currency","العملة")}</label>
+                      <label className={lbl}>{fl("currency")}</label>
                       <CurrencySelect value={form.currency ?? "$"} onChange={(s) => set("currency", s)} lang={lang} />
                     </div>
 
                     {/* Billing Period */}
                     <div>
-                      <label className={lbl}>{L("Billing Period","دورة الدفع")}</label>
+                      <label className={lbl}>{fl("billingPeriod")}</label>
                       <select
                         value={periodKey}
                         onChange={(e) => setPeriodKey(e.target.value)}
@@ -445,7 +447,7 @@ export default function ConsultationsAdminPage() {
 
                     {/* Duration */}
                     <div className="sm:col-span-2">
-                      <label className={lbl}>{L("Duration","المدة")}</label>
+                      <label className={lbl}>{fl("duration")}</label>
                       <div className="flex gap-2">
                         <input
                           type="number" min={1}
@@ -472,7 +474,7 @@ export default function ConsultationsAdminPage() {
 
                     {/* Sort Order */}
                     <div>
-                      <label className={lbl}>{L("Sort Order","الترتيب")}</label>
+                      <label className={lbl}>{fl("sortOrder")}</label>
                       <input type="number" min={0} value={form.sort_order ?? 0} onChange={(e) => set("sort_order", Number(e.target.value))} className={inp} />
                     </div>
                   </div>
@@ -483,14 +485,14 @@ export default function ConsultationsAdminPage() {
                   <p className="text-[13px] font-bold text-[var(--admin-text)] mb-4">{L("Appearance","المظهر")}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className={lbl}>{L("Icon","الأيقونة")}</label>
+                      <label className={lbl}>{fl("icon")}</label>
                       <select value={form.icon ?? ""} onChange={(e) => set("icon", e.target.value)} className={inp + " cursor-pointer"}>
                         <option value="">{L("None","بدون أيقونة")}</option>
                         {ICON_OPTIONS.map((ic) => <option key={ic} value={ic}>{ic}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className={lbl}>{L("Gradient","التدرج اللوني")}</label>
+                      <label className={lbl}>{fl("gradient")}</label>
                       <select value={form.gradient ?? ""} onChange={(e) => set("gradient", e.target.value)} className={inp + " cursor-pointer"}>
                         {GRADIENT_OPTIONS.map((g) => <option key={g.value} value={g.value}>{ar ? g.label_ar : g.label_en}</option>)}
                       </select>
@@ -519,7 +521,7 @@ export default function ConsultationsAdminPage() {
                     {form.discount_enabled && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                         <div>
-                          <label className={lbl}>{L("Discount %","نسبة الخصم %")} <span className="font-normal normal-case opacity-60">(0 – 100)</span></label>
+                          <label className={lbl}>{fl("discountPercent")} <span className="font-normal normal-case opacity-60">(0 – 100)</span></label>
                           <input type="number" min={0} max={100} value={form.discount_percent ?? ""} onChange={(e) => {
                             const raw = e.target.value;
                             if (raw === "") { set("discount_percent", null); return; }
@@ -528,7 +530,7 @@ export default function ConsultationsAdminPage() {
                           }} className={inp} placeholder="10" />
                         </div>
                         <div>
-                          <label className={lbl}>{L("Final Price Preview","معاينة السعر النهائي")}</label>
+                          <label className={lbl}>{fl("finalPrice")}</label>
                           <div className={`${inp} flex items-center gap-2 bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold`}>
                             {finalPrice != null ? (
                               <><span className="line-through opacity-50 font-normal text-[12px]">{form.currency ?? "$"}{form.price}</span><span>{form.currency ?? "$"}{finalPrice}</span></>

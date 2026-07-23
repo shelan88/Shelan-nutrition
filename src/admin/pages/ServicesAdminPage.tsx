@@ -1,4 +1,5 @@
 import { useLanguage } from "@/context/LanguageContext";
+import { useAdminLabels } from "@/admin/hooks/useAdminLabels";
 import PageHeader from "../components/PageHeader";
 import { motion } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
@@ -150,6 +151,7 @@ function formFromRow(row: ServiceRow): FormState {
 
 export default function ServicesAdminPage() {
   const { lang } = useLanguage();
+  const fl = useAdminLabels();
   const [view, setView] = useState<"list" | "edit">("list");
   const [editing, setEditing] = useState<ServiceRow | null>(null);
   const [services, setServices] = useState<ServiceRow[]>([]);
@@ -315,7 +317,7 @@ export default function ServicesAdminPage() {
                   <p className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider mb-2">English</p>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Name EN</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("name")} (EN)</label>
                     <input
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                       value={form.name_en}
@@ -325,7 +327,7 @@ export default function ServicesAdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Slug</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("slug")}</label>
                     <input
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                       value={form.slug}
@@ -335,7 +337,7 @@ export default function ServicesAdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Short Description EN</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("shortDescription")} (EN)</label>
                     <textarea
                       rows={2}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
@@ -346,7 +348,7 @@ export default function ServicesAdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Full Description EN</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("fullDescription")} (EN)</label>
                     <textarea
                       rows={5}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
@@ -362,7 +364,7 @@ export default function ServicesAdminPage() {
                   <p className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider mb-2">العربية</p>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Name AR</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("name")} (AR)</label>
                     <input
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                       value={form.name_ar}
@@ -372,7 +374,7 @@ export default function ServicesAdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Icon</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("icon")}</label>
                     <select
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors cursor-pointer"
                       value={form.icon}
@@ -386,7 +388,7 @@ export default function ServicesAdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Short Description AR</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("shortDescription")} (AR)</label>
                     <textarea
                       rows={2}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
@@ -397,7 +399,7 @@ export default function ServicesAdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Full Description AR</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("fullDescription")} (AR)</label>
                     <textarea
                       rows={5}
                       className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
@@ -419,7 +421,7 @@ export default function ServicesAdminPage() {
             <div className="p-5 space-y-5">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Price</label>
+                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("price")}</label>
                   <input
                     type="number"
                     min={0}
@@ -429,7 +431,7 @@ export default function ServicesAdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Duration (min)</label>
+                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("duration")} (min)</label>
                   <input
                     type="number"
                     min={0}
@@ -439,7 +441,7 @@ export default function ServicesAdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Sort Order</label>
+                  <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("sortOrder")}</label>
                   <input
                     type="number"
                     min={0}
@@ -463,7 +465,7 @@ export default function ServicesAdminPage() {
 
               {/* Accent selector */}
               <div>
-                <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Accent Gradient</label>
+                <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("accentGradient")}</label>
                 <div className="flex flex-wrap gap-2">
                   {ACCENTS.map((a) => {
                     const selected = form.accentFrom === a.from && form.accentTo === a.to;
@@ -487,7 +489,7 @@ export default function ServicesAdminPage() {
 
               {/* Image URL */}
               <div>
-                <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Image URL</label>
+                <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("imageUrl")}</label>
                 <FileUploadField
                   value={form.image_url}
                   onChange={(url) => setForm((f) => ({ ...f, image_url: url }))}
@@ -510,7 +512,7 @@ export default function ServicesAdminPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Headline EN</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("headline")} (EN)</label>
                       <input
                         className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                         value={form.who_headline_en}
@@ -518,7 +520,7 @@ export default function ServicesAdminPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Description EN</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("description")} (EN)</label>
                       <textarea
                         rows={3}
                         className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
@@ -528,7 +530,7 @@ export default function ServicesAdminPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Points EN (one per line)</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("points")} (EN) (one per line)</label>
                       <textarea
                         rows={4}
                         className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
@@ -540,7 +542,7 @@ export default function ServicesAdminPage() {
                   </div>
                   <div className="space-y-4" dir="rtl">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Headline AR</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("headline")} (AR)</label>
                       <input
                         className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                         value={form.who_headline_ar}
@@ -548,7 +550,7 @@ export default function ServicesAdminPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Description AR</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("description")} (AR)</label>
                       <textarea
                         rows={3}
                         className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
@@ -558,7 +560,7 @@ export default function ServicesAdminPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Points AR (one per line)</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("points")} (AR) (one per line)</label>
                       <textarea
                         rows={4}
                         className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
@@ -577,7 +579,7 @@ export default function ServicesAdminPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Headline EN</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("headline")} (EN)</label>
                       <input
                         className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                         value={form.ben_headline_en}
@@ -585,7 +587,7 @@ export default function ServicesAdminPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Items EN (one per line)</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("items")} (EN) (one per line)</label>
                       <textarea
                         rows={5}
                         className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
@@ -597,7 +599,7 @@ export default function ServicesAdminPage() {
                   </div>
                   <div className="space-y-4" dir="rtl">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Headline AR</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("headline")} (AR)</label>
                       <input
                         className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                         value={form.ben_headline_ar}
@@ -605,7 +607,7 @@ export default function ServicesAdminPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Items AR (one per line)</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("items")} (AR) (one per line)</label>
                       <textarea
                         rows={5}
                         className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
@@ -624,7 +626,7 @@ export default function ServicesAdminPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Headline EN</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("headline")} (EN)</label>
                       <input
                         className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                         value={form.cta_headline_en}
@@ -632,7 +634,7 @@ export default function ServicesAdminPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Description EN</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("description")} (EN)</label>
                       <textarea
                         rows={3}
                         className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
@@ -642,7 +644,7 @@ export default function ServicesAdminPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Button Label EN</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("buttonLabel")} (EN)</label>
                       <input
                         className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                         value={form.cta_button_en}
@@ -652,7 +654,7 @@ export default function ServicesAdminPage() {
                   </div>
                   <div className="space-y-4" dir="rtl">
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Headline AR</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("headline")} (AR)</label>
                       <input
                         className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                         value={form.cta_headline_ar}
@@ -660,7 +662,7 @@ export default function ServicesAdminPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Description AR</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("description")} (AR)</label>
                       <textarea
                         rows={3}
                         className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
@@ -670,7 +672,7 @@ export default function ServicesAdminPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Button Label AR</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("buttonLabel")} (AR)</label>
                       <input
                         className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
                         value={form.cta_button_ar}

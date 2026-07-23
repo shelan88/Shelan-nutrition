@@ -31,6 +31,7 @@ import {
 } from "@/admin/repositories/question-library.repository";
 import type { LibraryCategory, MyLibraryFolder } from "@/admin/repositories/question-library.repository";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAdminLabels } from "@/admin/hooks/useAdminLabels";
 import PageHeader from "../components/PageHeader";
 import { supabase } from "@/lib/supabase";
 import {
@@ -595,6 +596,8 @@ function TemplateEditor({
   onReloadTemplate: () => Promise<void>;
   onPreview?: () => void;
 }) {
+  const fl = useAdminLabels();
+
   function setField<K extends keyof TemplateForm>(k: K, v: TemplateForm[K]) {
     setTemplateForm({ ...templateForm, [k]: v });
   }
@@ -663,7 +666,7 @@ function TemplateEditor({
             <div className="p-5 space-y-4">
               {/* Names */}
               <div>
-                <label className={LABEL}>Name (EN) *</label>
+                <label className={LABEL}>{fl("name")} (EN) *</label>
                 <input
                   value={templateForm.name_en}
                   onChange={(e) => setField("name_en", e.target.value)}
@@ -672,7 +675,7 @@ function TemplateEditor({
                 />
               </div>
               <div>
-                <label className={LABEL}>Name (AR)</label>
+                <label className={LABEL}>{fl("name")} (AR)</label>
                 <input
                   dir="rtl"
                   value={templateForm.name_ar}
@@ -684,7 +687,7 @@ function TemplateEditor({
 
               {/* Descriptions */}
               <div>
-                <label className={LABEL}>Description (EN)</label>
+                <label className={LABEL}>{fl("description")} (EN)</label>
                 <textarea
                   rows={2}
                   value={templateForm.description_en}
@@ -694,7 +697,7 @@ function TemplateEditor({
                 />
               </div>
               <div>
-                <label className={LABEL}>Description (AR)</label>
+                <label className={LABEL}>{fl("description")} (AR)</label>
                 <textarea
                   dir="rtl"
                   rows={2}
@@ -1277,6 +1280,7 @@ function QuestionForm({
   onSave: (form: QuestionForm & { template_id: string }) => void;
   onCancel: () => void;
 }) {
+  const fl = useAdminLabels();
   const [form, setForm] = useState<QuestionForm & { template_id: string }>(initial);
 
   function set<K extends keyof QuestionForm>(k: K, v: QuestionForm[K]) {
@@ -1339,11 +1343,11 @@ function QuestionForm({
       {/* Labels */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className={LABEL}>Label (EN) *</label>
+          <label className={LABEL}>{fl("label")} (EN) *</label>
           <input value={form.label_en} onChange={(e) => set("label_en", e.target.value)} placeholder="Question label in English" className={INPUT} />
         </div>
         <div>
-          <label className={LABEL}>Label (AR)</label>
+          <label className={LABEL}>{fl("label")} (AR)</label>
           <input dir="rtl" value={form.label_ar} onChange={(e) => set("label_ar", e.target.value)} placeholder="نص السؤال بالعربية" className={INPUT} />
         </div>
       </div>
@@ -1351,11 +1355,11 @@ function QuestionForm({
       {/* Placeholders */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className={LABEL}>Placeholder (EN)</label>
+          <label className={LABEL}>{fl("placeholder")} (EN)</label>
           <input value={form.placeholder_en} onChange={(e) => set("placeholder_en", e.target.value)} placeholder="Hint text in English…" className={INPUT} />
         </div>
         <div>
-          <label className={LABEL}>Placeholder (AR)</label>
+          <label className={LABEL}>{fl("placeholder")} (AR)</label>
           <input dir="rtl" value={form.placeholder_ar} onChange={(e) => set("placeholder_ar", e.target.value)} placeholder="نص تلميحي بالعربية…" className={INPUT} />
         </div>
       </div>
@@ -1363,11 +1367,11 @@ function QuestionForm({
       {/* Help text */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className={LABEL}>Help Text (EN)</label>
+          <label className={LABEL}>{fl("helpText")} (EN)</label>
           <input value={form.help_en} onChange={(e) => set("help_en", e.target.value)} placeholder="Additional guidance in English…" className={INPUT} />
         </div>
         <div>
-          <label className={LABEL}>Help Text (AR)</label>
+          <label className={LABEL}>{fl("helpText")} (AR)</label>
           <input dir="rtl" value={form.help_ar} onChange={(e) => set("help_ar", e.target.value)} placeholder="إرشادات إضافية بالعربية…" className={INPUT} />
         </div>
       </div>

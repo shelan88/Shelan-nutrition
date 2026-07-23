@@ -1,4 +1,5 @@
 import { useLanguage } from "@/context/LanguageContext";
+import { useAdminLabels } from "@/admin/hooks/useAdminLabels";
 import PageHeader from "../components/PageHeader";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
@@ -36,6 +37,7 @@ function initForm(): Omit<Row, "id" | "created_at"> {
 
 export default function FAQAdminPage() {
   const { lang } = useLanguage();
+  const fl = useAdminLabels();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"list" | "edit">("list");
@@ -240,7 +242,7 @@ export default function FAQAdminPage() {
                 {/* Question bilingual */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Question (EN)</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("question")} (EN)</label>
                     <textarea
                       rows={2}
                       value={form.question_en}
@@ -250,7 +252,7 @@ export default function FAQAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Question (AR)</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("question")} (AR)</label>
                     <textarea
                       dir="rtl"
                       rows={2}
@@ -265,7 +267,7 @@ export default function FAQAdminPage() {
                 {/* Answer bilingual */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Answer (EN)</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("answer")} (EN)</label>
                     <textarea
                       rows={4}
                       value={form.answer_en}
@@ -275,7 +277,7 @@ export default function FAQAdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Answer (AR)</label>
+                    <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("answer")} (AR)</label>
                     <textarea
                       dir="rtl"
                       rows={4}
@@ -292,7 +294,7 @@ export default function FAQAdminPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Category */}
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Category</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("category")}</label>
                       <select
                         value={form.category ?? "general"}
                         onChange={(e) => set("category", e.target.value as Category)}
@@ -306,7 +308,7 @@ export default function FAQAdminPage() {
 
                     {/* Sort Order */}
                     <div>
-                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">Sort Order</label>
+                      <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">{fl("sortOrder")}</label>
                       <input
                         type="number"
                         value={form.sort_order ?? 0}
