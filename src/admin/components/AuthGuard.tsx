@@ -57,7 +57,17 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (cancelled) return;
-      setState("loading");
+      // DO NOT call setState("loading") here.
+      //
+      // Supabase fires TOKEN_REFRESHED through onAuthStateChange whenever the
+      // Android browser returns from a background activity — including the native
+      // file picker. Calling setState("loading") tears down the entire admin layout
+      // (replacing it with a spinner) which unmounts any open FileDropZone before
+      // its onChange can fire. The file selection is silently lost.
+      //
+      // The loading state is only needed for the *initial* session check above.
+      // For subsequent auth events (TOKEN_REFRESHED, SIGNED_OUT, etc.) we resolve
+      // the new guard state and apply it directly with no visible flash.
       const result = await resolveGuardState(session);
       if (!cancelled) setState(result);
     });
