@@ -23,6 +23,7 @@ interface ContactFormStrings {
   submittingLabel: string;
   successTitle: string;
   successText: string;
+  sendAnotherLabel?: string;
 }
 
 interface Props {
@@ -109,7 +110,7 @@ export default function ContactForm({ strings }: Props) {
               onClick={() => { setSuccess(false); setForm(INITIAL); }}
               className="mt-2 text-sm font-semibold text-primary-pink hover:text-deep-purple transition-colors"
             >
-              Send another message
+              {strings.sendAnotherLabel ?? "Send another message"}
             </button>
           </motion.div>
         ) : (

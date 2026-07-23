@@ -216,7 +216,7 @@ export default function ProgramDetailPage() {
               to="/#programs"
               className="w-full sm:w-auto px-8 py-4 rounded-full border border-gray-200 text-body font-medium text-base hover:bg-gray-50 transition-colors text-center"
             >
-              {lang === "ar" ? "← عرض البرامج" : "← Back to Programs"}
+              {lang === "ar" ? "عرض البرامج ←" : "← Back to Programs"}
             </Link>
           </motion.div>
         </div>

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronDown, Salad, HeartPulse, Sparkles, Users, Star, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useLanguage } from "@/context/LanguageContext";
 import SectionHeader from "@/components/ui/SectionHeader";
 import type { CMSService } from "@/types/cms.types";
 
@@ -23,8 +24,8 @@ function WhoIsItFor({ data }: { data: CMSService["whoIsItFor"] }) {
           {data.points.map((point, i) => (
             <motion.li
               key={i}
-              initial={{ opacity: 0, x: -16 }}
-              whileInView={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
               transition={{ duration: 0.4, delay: i * 0.07 }}
               className="flex items-start gap-3"
@@ -198,6 +199,7 @@ interface Props {
 }
 
 export default function ServiceDetailContent({ service }: Props) {
+  const { lang } = useLanguage();
   const Icon = ICONS[service.iconName] ?? Sparkles;
   const bookingHref = `/booking?service=${service.id}`;
 
@@ -225,7 +227,7 @@ export default function ServiceDetailContent({ service }: Props) {
                   className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full border border-soft-purple/25 text-deep-purple font-semibold hover:bg-light-pink/30 transition-colors text-sm"
                 >
                   <Users size={14} />
-                  All Services
+                  {lang === "ar" ? "كل الخدمات" : "All Services"}
                 </Link>
               </div>
             </div>

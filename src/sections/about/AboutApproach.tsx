@@ -28,8 +28,8 @@ export default function AboutApproach({ approach }: Props) {
             {approach.steps.map((step, i) => (
               <motion.div
                 key={step.number}
-                initial={{ opacity: 0, x: -24 }}
-                whileInView={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.35 }}
                 transition={{ duration: 0.55, delay: i * 0.1 }}
                 className="flex gap-6 sm:gap-8 items-start"

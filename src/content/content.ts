@@ -747,6 +747,7 @@ export const contactFormStrings = {
     successTitle: "Message Received!",
     successText:
       "Thank you for reaching out. I'll respond within 24 business hours.",
+    sendAnotherLabel: "Send another message",
     emailLabel2: "Email",
     locationLabel: "Location",
     hoursLabel: "Business Hours",
@@ -774,6 +775,7 @@ export const contactFormStrings = {
     submittingLabel: "جاري الإرسال…",
     successTitle: "تم استلام الرسالة!",
     successText: "شكراً على تواصلكِ. سأرد خلال 24 ساعة عمل.",
+    sendAnotherLabel: "إرسال رسالة أخرى",
     emailLabel2: "البريد الإلكتروني",
     locationLabel: "الموقع",
     hoursLabel: "ساعات العمل",

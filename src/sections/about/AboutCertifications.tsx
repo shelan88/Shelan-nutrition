@@ -34,7 +34,7 @@ function CertCard({ cert, index }: { cert: CMSCertification; index: number }) {
         <Icon className="text-primary-pink" size={20} />
       </div>
 
-      <h3 className="font-heading text-sm font-bold text-heading mb-1 leading-snug pr-8">
+      <h3 className="font-heading text-sm font-bold text-heading mb-1 leading-snug pe-8">
         {cert.title}
       </h3>
       <p className="text-xs text-deep-purple/50 font-medium">{cert.issuer}</p>
