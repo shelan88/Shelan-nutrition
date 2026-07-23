@@ -66,18 +66,6 @@ export default function TrustStrip() {
           ))}
         </div>
 
-        {/* Subtle note */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-center text-[11px] text-gray-400 mt-8"
-        >
-          {isAr
-            ? "* شعارات المؤسسات للعرض التوضيحي — سيتم استبدالها بالشعارات الرسمية"
-            : "* Institution logos are placeholder — to be replaced with official assets"}
-        </motion.p>
       </div>
     </section>
   );

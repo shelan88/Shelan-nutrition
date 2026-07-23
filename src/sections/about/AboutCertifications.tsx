@@ -113,8 +113,12 @@ export default function AboutCertifications({ certifications: legacyData }: Lega
       .finally(() => setLoading(false));
   }, []);
 
-  // Section hidden by admin setting
-  if (!loading && settings && !settings.visible) return null;
+  // While loading we don't yet know visibility — render nothing to avoid a
+  // flash-then-disappear if the section turns out to be hidden.
+  if (loading) return null;
+
+  // Section hidden by admin setting (null settings = no row = show by default).
+  if (settings !== null && !settings.visible) return null;
 
   // Heading / description: prefer DB settings, fall back to legacy prop, then hardcoded
   const heading = isAr
