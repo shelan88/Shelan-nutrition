@@ -20,7 +20,6 @@ import {
 } from "@/admin/repositories/aboutCms.repository";
 import type {
   QualificationRow, ExpertiseRow, CertificationRow, CertSettingsRow,
-  SectionSettingsRow,
 } from "@/admin/repositories/aboutCms.repository";
 
 // ── Style constants ──────────────────────────────────────────────────────────
