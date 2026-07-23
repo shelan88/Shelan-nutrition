@@ -23,6 +23,7 @@ export default function BookingPage() {
   const { lang }                    = useLanguage();
   const [searchParams]              = useSearchParams();
   const preselectedServiceId        = searchParams.get("service") ?? undefined;
+  const preselectedProgramId        = searchParams.get("program") ?? undefined;
   const { user, loading }           = useAuth();
   const navigate                    = useNavigate();
 
@@ -88,6 +89,7 @@ export default function BookingPage() {
               data={data}
               strings={str as unknown as Record<string, string | string[]>}
               preselectedServiceId={preselectedServiceId}
+              preselectedProgramId={preselectedProgramId}
             />
           )}
         </div>

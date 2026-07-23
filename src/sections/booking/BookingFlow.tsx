@@ -11,10 +11,13 @@ import { useNavigate } from "react-router-dom";
 import { createAppointment } from "@/admin/repositories/appointments.repository";
 import { getTemplateForService } from "@/admin/repositories/assessment-templates.repository";
 import { createResponse } from "@/admin/repositories/assessment-responses.repository";
+import { getProgramById } from "@/admin/repositories/programs.repository";
+import type { ProgramRow } from "@/types/database.types";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/context/LanguageContext";
 import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Calendar, Star, RefreshCw, ChevronLeft, ChevronRight, CheckCircle2, Lock } from "lucide-react";
+import { Check, Calendar, Star, RefreshCw, ChevronLeft, ChevronRight, CheckCircle2, Lock, Tag, Clock } from "lucide-react";
 import type { CMSBookingData, CMSBookingService } from "@/types/cms.types";
 
 // ─── Icon resolver ────────────────────────────────────────────────────────────
@@ -404,16 +407,76 @@ function BookingSummary({
   );
 }
 
+// ─── Program banner (shown when a program is pre-selected) ────────────────────
+function ProgramBanner({ program, lang }: { program: ProgramRow; lang?: string }) {
+  const name  = (lang === "ar" ? program.name_ar      : program.name_en)      ?? program.name_en;
+  const currency = program.currency ?? "$";
+  const hasDiscount =
+    !!(program.discount_enabled &&
+      program.discount_percent != null &&
+      program.discount_percent > 0 &&
+      program.price != null);
+  const discountedPrice = hasDiscount
+    ? Math.round(program.price! * (1 - program.discount_percent! / 100) * 100) / 100
+    : null;
+
+  return (
+    <div className="mb-8 p-4 rounded-2xl bg-gradient-to-r from-primary-pink/10 to-lavender-purple/10 border border-primary-pink/20 flex flex-wrap items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold text-primary-pink uppercase tracking-wide mb-0.5">
+          {lang === "ar" ? "البرنامج المختار" : "Selected Program"}
+        </p>
+        <p className="font-heading font-bold text-heading truncate">{name}</p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {program.duration_weeks != null && (
+          <span className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-white border border-soft-purple/20 text-deep-purple/60" dir="ltr">
+            <Clock size={11} strokeWidth={2} />
+            {program.duration_weeks}{lang === "ar" ? " أسابيع" : "w"}
+          </span>
+        )}
+        {program.price != null && (
+          <span className="flex items-center gap-1 text-sm font-bold px-3 py-1 rounded-full bg-primary-pink text-white" dir="ltr">
+            <Tag size={12} strokeWidth={2} />
+            {hasDiscount ? (
+              <>{currency}{discountedPrice}</>
+            ) : (
+              <>{currency}{program.price}</>
+            )}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 interface Props {
   data: CMSBookingData;
   strings: Record<string, string | string[]>;
   preselectedServiceId?: string;
+  preselectedProgramId?: string;
 }
 
-export default function BookingFlow({ data, strings, preselectedServiceId }: Props) {
+export default function BookingFlow({ data, strings, preselectedServiceId, preselectedProgramId }: Props) {
   const steps = (strings.steps as string[]) ?? [];
-  const [step, setStep] = useState(0);
+
+  // When a program is pre-selected we skip service-selection (step 0).
+  const programMode = !!preselectedProgramId;
+  const [program, setProgram] = useState<ProgramRow | null>(null);
+  const [programLoading, setProgramLoading] = useState(programMode);
+
+  useEffect(() => {
+    if (!preselectedProgramId) return;
+    setProgramLoading(true);
+    getProgramById(preselectedProgramId).then((row) => {
+      setProgram(row);
+      setProgramLoading(false);
+    });
+  }, [preselectedProgramId]);
+
+  // Start at step 1 (date/time) when a program is pre-selected.
+  const [step, setStep] = useState(programMode ? 1 : 0);
   const [serviceId, setServiceId] = useState(preselectedServiceId ?? "");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -424,15 +487,46 @@ export default function BookingFlow({ data, strings, preselectedServiceId }: Pro
   const [confirming, setConfirming] = useState(false);
 
   const { user } = useAuth();
+  const { lang } = useLanguage();
   const navigate = useNavigate();
 
-  const selectedService = useMemo(
-    () => data.services.find((s) => s.id === serviceId),
-    [data.services, serviceId]
-  );
+  // Build a service-compatible object from the Supabase program so the
+  // BookingSummary can render the name and price without a separate component.
+  const programAsService: CMSBookingService | undefined = useMemo(() => {
+    if (!program) return undefined;
+    const currency = program.currency ?? "$";
+    const hasDiscount =
+      !!(program.discount_enabled &&
+        program.discount_percent != null &&
+        program.discount_percent > 0 &&
+        program.price != null);
+    const price = hasDiscount
+      ? Math.round(program.price! * (1 - program.discount_percent! / 100) * 100) / 100
+      : program.price;
+    const name = (lang === "ar" ? program.name_ar : program.name_en) ?? program.name_en ?? "";
+    return {
+      id: program.id,
+      name,
+      duration: program.duration_weeks != null
+        ? `${program.duration_weeks}${lang === "ar" ? " أسابيع" : " weeks"}`
+        : "",
+      price: price != null ? `${currency}${price}` : "—",
+      priceNote: "",
+      description:
+        (lang === "ar" ? program.short_description_ar : program.short_description_en) ??
+        program.short_description_en ??
+        "",
+      iconName: "Calendar",
+    };
+  }, [program, lang]);
+
+  const selectedService = useMemo(() => {
+    if (programMode) return programAsService;
+    return data.services.find((s) => s.id === serviceId);
+  }, [programMode, programAsService, data.services, serviceId]);
 
   const canNext = [
-    !!serviceId,
+    programMode ? true : !!serviceId,  // step 0: skipped in program mode
     !!date && !!time,
     !!(personalInfo.firstName && personalInfo.email),
     true,
@@ -442,13 +536,16 @@ export default function BookingFlow({ data, strings, preselectedServiceId }: Pro
     if (step < steps.length - 1 && canNext[step]) setStep((s) => s + 1);
   };
 
-  const handleBack = () => setStep((s) => Math.max(0, s - 1));
+  // In program mode never go back to step 0 (service selection is bypassed).
+  const handleBack = () => setStep((s) => Math.max(programMode ? 1 : 0, s - 1));
 
   const handleConfirm = async () => {
     setConfirming(true);
     try {
+      // Use the program id (if in program mode) or the selected service id.
+      const lookupId = programMode ? (program?.id ?? "") : serviceId;
       // Check if this service has an assessment template assigned
-      const template = serviceId ? await getTemplateForService(serviceId) : null;
+      const template = lookupId ? await getTemplateForService(lookupId) : null;
       const hasTemplate = !!(template?.active);
 
       const appt = await createAppointment({
@@ -481,8 +578,22 @@ export default function BookingFlow({ data, strings, preselectedServiceId }: Pro
 
   const str = strings as Record<string, string>;
 
+  // While fetching the pre-selected program, show a spinner.
+  if (programMode && programLoading) {
+    return (
+      <div className="max-w-3xl mx-auto flex items-center justify-center min-h-64">
+        <div className="w-10 h-10 border-2 border-primary-pink/20 border-t-primary-pink rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto">
+      {/* Program banner — shown for every step when coming from a program detail page */}
+      {programMode && program && (
+        <ProgramBanner program={program} lang={lang} />
+      )}
+
       <StepIndicator steps={steps} current={step} />
 
       <div className="bg-white rounded-3xl border border-soft-purple/12 shadow-xl shadow-deep-purple/10 p-8 lg:p-10 min-h-96">
@@ -536,7 +647,7 @@ export default function BookingFlow({ data, strings, preselectedServiceId }: Pro
         <div className="flex items-center justify-between mt-6">
           <button
             onClick={handleBack}
-            disabled={step === 0}
+            disabled={step === (programMode ? 1 : 0)}
             className="flex items-center gap-2 px-6 py-3 rounded-full border border-soft-purple/20 text-deep-purple text-sm font-semibold hover:bg-light-pink/30 disabled:opacity-0 disabled:pointer-events-none transition-all"
           >
             <ChevronLeft size={16} className="rtl:rotate-180" />

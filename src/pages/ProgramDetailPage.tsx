@@ -207,7 +207,7 @@ export default function ProgramDetailPage() {
             className="flex flex-col sm:flex-row items-center gap-4 pt-6 border-t border-gray-100"
           >
             <Link
-              to="/booking"
+              to={`/booking?program=${program.id}`}
               className="w-full sm:w-auto px-10 py-4 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple text-white font-semibold text-base shadow-lg hover:shadow-xl hover:opacity-95 transition-all text-center"
             >
               {ctaText}
