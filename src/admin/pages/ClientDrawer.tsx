@@ -22,10 +22,11 @@ import {
   Flame, Wheat, Droplets, Paperclip,
   Image as ImageIcon, FlaskConical, Film as FilmIcon, File as FileIcon,
   ShieldCheck, Stethoscope, Lock, Printer, Download,
-  Edit2, Archive, Trash2, ArrowLeftRight, Save, X as XIcon, Loader2,
+  Edit2, Archive, Trash2, ArrowLeftRight, Save, X as XIcon, Loader2, Upload,
 } from "lucide-react";
 import type { Client, TimelineType, FileType, RiskIndicatorLevel, Gender, ClientStatus } from "../data/clients";
 import { deleteClient, archiveClient, updateClient } from "@/admin/repositories/clients.repository";
+import { uploadClientFile } from "@/admin/repositories/client-files.repository";
 import NutritionPlansTab from "./NutritionPlansTab";
 import FullAssessmentModal from "@/admin/components/FullAssessmentModal";
 import PdfDebugModal from "@/admin/components/PdfDebugModal";
@@ -578,9 +579,30 @@ interface EditForm {
 }
 
 export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefresh }: ClientDrawerProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [actioning, setActioning] = useState<string | null>(null);
-  const [tab, setTab] = useState<"profile" | "assessments" | "nutrition">("profile");
+  const scrollRef    = useRef<HTMLDivElement>(null);
+  const uploadRef    = useRef<HTMLInputElement>(null);
+  const [actioning,    setActioning]    = useState<string | null>(null);
+  const [tab,          setTab]          = useState<"profile" | "assessments" | "nutrition">("profile");
+  const [uploading,    setUploading]    = useState(false);
+  const [uploadMsg,    setUploadMsg]    = useState<string | null>(null);
+
+  async function handleUploadFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !client) return;
+    e.target.value = "";
+    setUploading(true);
+    setUploadMsg(null);
+    const row = await uploadClientFile(client.id, file);
+    setUploading(false);
+    if (row) {
+      setUploadMsg(isAr ? "تم رفع الملف ✓" : "File uploaded ✓");
+      setTimeout(() => setUploadMsg(null), 3000);
+      onRefresh?.();
+    } else {
+      setUploadMsg(isAr ? "فشل الرفع" : "Upload failed");
+      setTimeout(() => setUploadMsg(null), 3000);
+    }
+  }
 
   // ── Full assessment modal ───────────────────────────────────────────────────
   interface ViewingAssessment { responseId: string; templateNameEn: string; templateNameAr: string | null; }
@@ -724,6 +746,14 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
             </div>
 
             {/* ── Action bar ────────────────────────────────────────────── */}
+            {/* Hidden file input for Upload Files */}
+            <input
+              ref={uploadRef}
+              type="file"
+              className="hidden"
+              onChange={handleUploadFile}
+            />
+
             <div className="shrink-0 flex items-center gap-2 px-6 py-3 border-b border-[var(--admin-border)] bg-[var(--admin-hover-bg)] overflow-x-auto no-scrollbar">
               {/* Edit */}
               <button
@@ -766,6 +796,18 @@ export default function ClientDrawer({ client, isAr, onClose, onDelete, onRefres
                   ? <Loader2 size={12} strokeWidth={2} className="animate-spin" />
                   : <Download size={12} strokeWidth={2} />}
                 {isAr ? "تصدير" : "Export"}
+              </button>
+
+              {/* Upload Files */}
+              <button
+                disabled={uploading}
+                onClick={() => uploadRef.current?.click()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--admin-border)] text-[12px] font-semibold text-[var(--admin-text-muted)] hover:border-[var(--admin-border-strong)] hover:bg-[var(--admin-surface)] transition-all whitespace-nowrap shrink-0 disabled:opacity-60"
+              >
+                {uploading
+                  ? <Loader2 size={12} strokeWidth={2} className="animate-spin" />
+                  : <Upload size={12} strokeWidth={2} />}
+                {uploadMsg ?? (isAr ? "رفع ملف" : "Upload Files")}
               </button>
 
               {/* Delete */}
