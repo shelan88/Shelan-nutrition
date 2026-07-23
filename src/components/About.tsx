@@ -6,8 +6,10 @@ import { getSetting } from "@/admin/repositories/settings.repository";
 import {
   getActiveQualifications,
   getActiveExpertise,
+  getSectionSettings,
   type QualificationRow,
   type ExpertiseRow,
+  type SectionSettingsRow,
 } from "@/admin/repositories/aboutCms.repository";
 
 interface AboutSetting {
@@ -28,19 +30,25 @@ export default function About() {
   const [dbAbout,         setDbAbout]         = useState<AboutSetting | null>(null);
   const [qualifications,  setQualifications]  = useState<QualificationRow[] | null>(null);
   const [expertise,       setExpertise]       = useState<ExpertiseRow[] | null>(null);
+  const [qualSettings,    setQualSettings]    = useState<SectionSettingsRow | null | undefined>(undefined);
+  const [expSettings,     setExpSettings]     = useState<SectionSettingsRow | null | undefined>(undefined);
 
   useEffect(() => {
-    // Load all three sources in parallel
+    // Load all sources in parallel
     Promise.all([
       getSetting("site.about"),
       getActiveQualifications(),
       getActiveExpertise(),
-    ]).then(([aboutVal, quals, exp]) => {
+      getSectionSettings("qualifications"),
+      getSectionSettings("expertise"),
+    ]).then(([aboutVal, quals, exp, qualCfg, expCfg]) => {
       if (aboutVal && typeof aboutVal === "object" && !Array.isArray(aboutVal)) {
         setDbAbout(aboutVal as AboutSetting);
       }
       setQualifications(quals.length > 0 ? quals : null);
       setExpertise(exp.length > 0 ? exp : null);
+      setQualSettings(qualCfg);   // null = row missing (treat as visible)
+      setExpSettings(expCfg);
     }).catch(() => {/* silent fallback to content.ts */});
   }, []);
 
@@ -51,6 +59,10 @@ export default function About() {
     ? bioRaw.split(/\n\n+/).filter(Boolean)
     : t.bio;
   const portraitSrc = dbAbout?.portrait_url || "/portrait.jpg";
+
+  // Section visibility: undefined = still loading (optimistic show), null = DB row missing (show by default)
+  const qualVisible = qualSettings === undefined ? true : (qualSettings === null ? true : qualSettings.visible);
+  const expVisible  = expSettings  === undefined ? true : (expSettings  === null ? true : expSettings.visible);
 
   // Qualifications: DB rows → or fall back to content.ts credentials
   const qualItems: string[] = qualifications
@@ -105,8 +117,8 @@ export default function About() {
             ))}
           </div>
 
-          {/* Qualifications */}
-          {qualItems.length > 0 && (
+          {/* Qualifications — hidden when admin disables the section */}
+          {qualVisible && qualItems.length > 0 && (
             <div className="mb-6">
               <p className="text-sm font-semibold text-light-pink mb-3">
                 {isAr ? "المؤهلات" : t.credentialsLabel}
@@ -122,8 +134,8 @@ export default function About() {
             </div>
           )}
 
-          {/* Areas of Expertise (only shown when DB has items) */}
-          {expItems.length > 0 && (
+          {/* Areas of Expertise — hidden when admin disables the section */}
+          {expVisible && expItems.length > 0 && (
             <div>
               <p className="text-sm font-semibold text-light-pink mb-3">
                 {isAr ? "مجالات التخصص" : "Areas of Expertise"}

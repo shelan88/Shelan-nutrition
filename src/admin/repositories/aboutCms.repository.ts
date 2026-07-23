@@ -258,6 +258,40 @@ export async function updateCertSettings(
   return true;
 }
 
+// ── Section settings (qualifications / expertise visibility) ──────────────────
+
+export interface SectionSettingsRow {
+  id:          string;
+  section_key: "qualifications" | "expertise";
+  visible:     boolean;
+  created_at:  string;
+  updated_at:  string;
+}
+
+export async function getSectionSettings(
+  key: "qualifications" | "expertise"
+): Promise<SectionSettingsRow | null> {
+  const { data, error } = await supabase
+    .from("about_section_settings")
+    .select("*")
+    .eq("section_key", key)
+    .maybeSingle();
+  if (error) { console.error("[aboutCms] getSectionSettings:", error.message); return null; }
+  return data as SectionSettingsRow | null;
+}
+
+export async function updateSectionVisible(
+  key: "qualifications" | "expertise",
+  visible: boolean
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("about_section_settings")
+    .update({ visible })
+    .eq("section_key", key);
+  if (error) { console.error("[aboutCms] updateSectionVisible:", error.message); return false; }
+  return true;
+}
+
 // ── Logo upload ───────────────────────────────────────────────────────────────
 
 export async function uploadCertLogo(certId: string, file: File): Promise<string | null> {

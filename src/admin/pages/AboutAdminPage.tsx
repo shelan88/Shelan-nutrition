@@ -15,10 +15,12 @@ import {
   getCertifications, createCertification, updateCertification,
   deleteCertification, reorderCertifications,
   getCertSettings, updateCertSettings,
+  getSectionSettings, updateSectionVisible,
   uploadCertLogo, deleteCertLogo,
 } from "@/admin/repositories/aboutCms.repository";
 import type {
   QualificationRow, ExpertiseRow, CertificationRow, CertSettingsRow,
+  SectionSettingsRow,
 } from "@/admin/repositories/aboutCms.repository";
 
 // ── Style constants ──────────────────────────────────────────────────────────
@@ -848,6 +850,8 @@ function CertSection({ items, setItems, loading, onReload, L, fl }: CertSectionP
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SECTION SETTINGS TAB
+// Manages visibility for all three About page sections plus certifications
+// detailed settings (heading, description, bg, note).
 // ─────────────────────────────────────────────────────────────────────────────
 interface SettingsSectionProps {
   L: (en: string, ar: string) => string;
@@ -855,12 +859,20 @@ interface SettingsSectionProps {
 }
 
 function SettingsSection({ L, fl }: SettingsSectionProps) {
-  const [settingsRow, setSettingsRow] = useState<CertSettingsRow | null>(null);
-  const [form, setFormState] = useState<SettingsForm>(initSettingsForm());
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  // ── Certifications detailed settings ─────────────────────────────────────
+  const [certRow, setCertRow] = useState<CertSettingsRow | null>(null);
+  const [form, setFormState]  = useState<SettingsForm>(initSettingsForm());
+
+  // ── Section-level visibility (qualifications / expertise) ─────────────────
+  const [qualRow,     setQualRow]     = useState<SectionSettingsRow | null>(null);
+  const [expRow,      setExpRow]      = useState<SectionSettingsRow | null>(null);
+  const [qualVisible, setQualVisible] = useState(true);
+  const [expVisible,  setExpVisible]  = useState(true);
+
+  const [loading,   setLoading]   = useState(true);
+  const [saving,    setSaving]    = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [saved,     setSaved]     = useState(false);
 
   function set<K extends keyof SettingsForm>(k: K, v: SettingsForm[K]) {
     setFormState((p) => ({ ...p, [k]: v }));
@@ -868,20 +880,31 @@ function SettingsSection({ L, fl }: SettingsSectionProps) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const row = await getCertSettings();
-    setSettingsRow(row);
-    if (row) {
+    const [certSettings, qualSettings, expSettings] = await Promise.all([
+      getCertSettings(),
+      getSectionSettings("qualifications"),
+      getSectionSettings("expertise"),
+    ]);
+
+    setCertRow(certSettings);
+    if (certSettings) {
       setFormState({
-        visible: row.visible,
-        heading_en: row.heading_en,
-        heading_ar: row.heading_ar,
-        description_en: row.description_en ?? "",
-        description_ar: row.description_ar ?? "",
-        bg_color: row.bg_color,
-        note_en: row.note_en ?? "",
-        note_ar: row.note_ar ?? "",
+        visible:        certSettings.visible,
+        heading_en:     certSettings.heading_en,
+        heading_ar:     certSettings.heading_ar,
+        description_en: certSettings.description_en ?? "",
+        description_ar: certSettings.description_ar ?? "",
+        bg_color:       certSettings.bg_color,
+        note_en:        certSettings.note_en ?? "",
+        note_ar:        certSettings.note_ar ?? "",
       });
     }
+
+    setQualRow(qualSettings);
+    setQualVisible(qualSettings?.visible ?? true);
+    setExpRow(expSettings);
+    setExpVisible(expSettings?.visible ?? true);
+
     setLoading(false);
   }, []);
 
@@ -889,75 +912,166 @@ function SettingsSection({ L, fl }: SettingsSectionProps) {
 
   async function handleSave() {
     setSaving(true); setSaveError(null); setSaved(false);
-    const patch = {
-      visible: form.visible,
-      heading_en: form.heading_en,
-      heading_ar: form.heading_ar,
-      description_en: form.description_en || null,
-      description_ar: form.description_ar || null,
-      bg_color: form.bg_color,
-      note_en: form.note_en || null,
-      note_ar: form.note_ar || null,
-    };
-    let ok: boolean;
-    if (settingsRow) {
-      ok = await updateCertSettings(settingsRow.id, patch);
-    } else {
-      ok = false;
-      setSaveError(L("No settings row found. Please contact support.", "لم يُعثر على سجل الإعدادات. يرجى التواصل مع الدعم."));
-    }
+
+    const results = await Promise.all([
+      // Section visibility flags
+      updateSectionVisible("qualifications", qualVisible),
+      updateSectionVisible("expertise",      expVisible),
+      // Certifications detailed settings
+      certRow
+        ? updateCertSettings(certRow.id, {
+            visible:        form.visible,
+            heading_en:     form.heading_en,
+            heading_ar:     form.heading_ar,
+            description_en: form.description_en || null,
+            description_ar: form.description_ar || null,
+            bg_color:       form.bg_color,
+            note_en:        form.note_en || null,
+            note_ar:        form.note_ar || null,
+          })
+        : Promise.resolve(false),
+    ]);
+
     setSaving(false);
-    if (!ok && !saveError) { setSaveError(L("Save failed. Please try again.", "فشل الحفظ. يرجى المحاولة مرة أخرى.")); return; }
-    if (ok) { setSaved(true); await load(); setTimeout(() => setSaved(false), 3000); }
+    const allOk = results.every(Boolean);
+    if (!allOk) {
+      setSaveError(L("Save failed. Please try again.", "فشل الحفظ. يرجى المحاولة مرة أخرى."));
+      return;
+    }
+    setSaved(true);
+    await load();
+    setTimeout(() => setSaved(false), 3000);
   }
 
   if (loading) {
-    return <div className="py-12 text-center text-[13px] text-[var(--admin-text-muted)]">{L("Loading…", "جارٍ التحميل…")}</div>;
+    return (
+      <div className="py-12 text-center text-[13px] text-[var(--admin-text-muted)]">
+        {L("Loading…", "جارٍ التحميل…")}
+      </div>
+    );
+  }
+
+  // ── Shared toggle button renderer ─────────────────────────────────────────
+  function VisibilityToggle({
+    visible,
+    onToggle,
+  }: {
+    visible: boolean;
+    onToggle: () => void;
+  }) {
+    return (
+      <button
+        onClick={onToggle}
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${
+          visible
+            ? "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200 hover:bg-emerald-100"
+            : "bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)] ring-1 ring-[var(--admin-border)] hover:bg-[var(--admin-border)]"
+        }`}
+      >
+        {visible ? <Eye size={13} /> : <EyeOff size={13} />}
+        {visible ? L("Visible", "مرئي") : L("Hidden", "مخفي")}
+      </button>
+    );
   }
 
   return (
-    <motion.div {...fadeUp()}>
+    <motion.div {...fadeUp()} className="space-y-6">
       {saveError && (
-        <div className="mb-4 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-[13px]">
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-[13px]">
           <span className="font-semibold">⚠</span> {saveError}
         </div>
       )}
       {saved && (
-        <div className="mb-4 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-[13px]">
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-[13px]">
           <span className="font-semibold">✓</span> {L("Settings saved successfully.", "تم حفظ الإعدادات بنجاح.")}
         </div>
       )}
 
+      {/* ── Section Visibility Card ─────────────────────────────────────── */}
+      <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--admin-border)]">
+          <h2 className="text-[13px] font-bold text-[var(--admin-text)]">
+            {L("Section Visibility", "ظهور الأقسام")}
+          </h2>
+          <p className="text-[11px] text-[var(--admin-text-muted)] mt-0.5">
+            {L(
+              "Show or hide each section on the public About page. Hidden sections leave no empty space.",
+              "تحكم في ظهور كل قسم على صفحة من نحن. الأقسام المخفية لا تترك فراغاً."
+            )}
+          </p>
+        </div>
+        <div className="divide-y divide-[var(--admin-border)]">
+
+          {/* Qualifications row */}
+          <div className="flex items-center justify-between px-5 py-4">
+            <div>
+              <p className="text-[13px] font-semibold text-[var(--admin-text)]">
+                {L("Qualifications", "المؤهلات والخبرات")}
+              </p>
+              <p className="text-[11px] text-[var(--admin-text-muted)] mt-0.5">
+                {L(
+                  "Credential bullet list shown in the About section",
+                  "قائمة المؤهلات المعروضة في قسم من نحن"
+                )}
+              </p>
+            </div>
+            <VisibilityToggle
+              visible={qualVisible}
+              onToggle={() => setQualVisible((v) => !v)}
+            />
+          </div>
+
+          {/* Expertise row */}
+          <div className="flex items-center justify-between px-5 py-4">
+            <div>
+              <p className="text-[13px] font-semibold text-[var(--admin-text)]">
+                {L("Areas of Expertise", "مجالات التخصص")}
+              </p>
+              <p className="text-[11px] text-[var(--admin-text-muted)] mt-0.5">
+                {L(
+                  "Specialisation bullet list shown below qualifications",
+                  "قائمة التخصصات المعروضة أسفل المؤهلات"
+                )}
+              </p>
+            </div>
+            <VisibilityToggle
+              visible={expVisible}
+              onToggle={() => setExpVisible((v) => !v)}
+            />
+          </div>
+
+          {/* Certifications row */}
+          <div className="flex items-center justify-between px-5 py-4">
+            <div>
+              <p className="text-[13px] font-semibold text-[var(--admin-text)]">
+                {L("Certifications & Associations", "الشهادات والاعتمادات")}
+              </p>
+              <p className="text-[11px] text-[var(--admin-text-muted)] mt-0.5">
+                {L(
+                  "Full credential cards grid at the bottom of the About page",
+                  "شبكة بطاقات الاعتمادات في أسفل صفحة من نحن"
+                )}
+              </p>
+            </div>
+            <VisibilityToggle
+              visible={form.visible}
+              onToggle={() => set("visible", !form.visible)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Certifications Detailed Settings ───────────────────────────── */}
       <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
         <div className="px-5 py-4 border-b border-[var(--admin-border)]">
           <h2 className="text-[13px] font-bold text-[var(--admin-text)]">
             {L("Certifications Section Settings", "إعدادات قسم الشهادات والاعتمادات")}
           </h2>
+          <p className="text-[11px] text-[var(--admin-text-muted)] mt-0.5">
+            {L("Heading, description, background colour, and optional note for the cards grid.", "عنوان القسم والوصف ولون الخلفية والملاحظة الاختيارية لشبكة البطاقات.")}
+          </p>
         </div>
         <div className="p-6 space-y-6">
-
-          {/* Visibility toggle */}
-          <div className="flex items-center justify-between p-4 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-hover-bg)]">
-            <div>
-              <p className="text-[13px] font-semibold text-[var(--admin-text)]">
-                {L("Show Certifications Section", "إظهار قسم الشهادات والاعتمادات")}
-              </p>
-              <p className="text-[11px] text-[var(--admin-text-muted)] mt-0.5">
-                {L("Toggle visibility of the entire section on the About page", "تحكم في ظهور القسم كاملاً على صفحة من نحن")}
-              </p>
-            </div>
-            <button
-              onClick={() => set("visible", !form.visible)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${
-                form.visible
-                  ? "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200 hover:bg-emerald-100"
-                  : "bg-[var(--admin-border)] text-[var(--admin-text-faint)] ring-1 ring-[var(--admin-border)] hover:opacity-80"
-              }`}
-            >
-              {form.visible ? <Eye size={13} /> : <EyeOff size={13} />}
-              {form.visible ? L("Visible", "مرئي") : L("Hidden", "مخفي")}
-            </button>
-          </div>
 
           {/* Headings */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1016,7 +1130,7 @@ function SettingsSection({ L, fl }: SettingsSectionProps) {
           {/* Background color */}
           <div>
             <label className={lbl}>{L("Background Color", "لون الخلفية")}</label>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <input
                 type="color"
                 value={form.bg_color}
@@ -1034,7 +1148,7 @@ function SettingsSection({ L, fl }: SettingsSectionProps) {
                 style={{ backgroundColor: form.bg_color }}
               />
               <p className="text-[11px] text-[var(--admin-text-faint)]">
-                {L("Background color behind the certification cards", "لون الخلفية خلف بطاقات الاعتمادات")}
+                {L("Background colour behind the certification cards", "لون الخلفية خلف بطاقات الاعتمادات")}
               </p>
             </div>
           </div>
@@ -1078,7 +1192,7 @@ function SettingsSection({ L, fl }: SettingsSectionProps) {
               className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all disabled:opacity-60"
             >
               <Save size={15} />
-              {saving ? L("Saving…", "جارٍ الحفظ…") : L("Save Settings", "حفظ الإعدادات")}
+              {saving ? L("Saving…", "جارٍ الحفظ…") : L("Save All Settings", "حفظ جميع الإعدادات")}
             </button>
           </div>
         </div>
