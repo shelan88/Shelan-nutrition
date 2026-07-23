@@ -262,7 +262,7 @@ export async function updateCertSettings(
 
 export interface SectionSettingsRow {
   id:          string;
-  section_key: "qualifications" | "expertise";
+  section_key: "qualifications" | "expertise" | "certifications";
   visible:     boolean;
   created_at:  string;
   updated_at:  string;
