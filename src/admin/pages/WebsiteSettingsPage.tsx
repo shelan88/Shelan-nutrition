@@ -9,6 +9,7 @@ import PageHeader from "../components/PageHeader";
 import { motion, AnimatePresence } from "framer-motion";
 import { Save, ChevronUp, ChevronDown, Eye, EyeOff } from "lucide-react";
 import { getSetting, setSetting } from "@/admin/repositories/settings.repository";
+import { getSectionHref } from "@/lib/sectionAnchors";
 import FileUploadField from "../components/FileUploadField";
 
 const fadeUp = (delay = 0) => ({
@@ -76,26 +77,28 @@ const defaultContact = {
 
 type NavItem = {
   id: string;
+  sectionId?: string;   // permanent anchor key — drives href derivation
   label_en: string;
   label_ar: string;
-  href: string;
+  href: string;         // kept for display/fallback; NOT editable by admin
   visible: boolean;
   order: number;
   cta?: boolean;
 };
 
 const DEFAULT_NAV_ITEMS: NavItem[] = [
-  { id: "home",            label_en: "Home",            label_ar: "الرئيسية",        href: "/",                visible: true,  order: 0 },
-  { id: "about",           label_en: "About",           label_ar: "من أنا",          href: "/about",           visible: true,  order: 1 },
-  { id: "services",        label_en: "Services",        label_ar: "الخدمات",         href: "/services",        visible: true,  order: 2 },
-  { id: "programs",        label_en: "Programs",        label_ar: "البرامج",         href: "/#programs",       visible: true,  order: 3 },
-  { id: "consultations",   label_en: "Consultations",   label_ar: "الاستشارات",      href: "/#booking",        visible: true,  order: 3.5 },
-  { id: "success-stories", label_en: "Success Stories", label_ar: "قصص النجاح",     href: "/success-stories", visible: true,  order: 4 },
-  { id: "testimonials",    label_en: "Client Reviews",  label_ar: "آراء العملاء",   href: "/testimonials",    visible: true,  order: 5 },
-  { id: "blog",            label_en: "Blog",            label_ar: "المدونة",         href: "/blog",            visible: true,  order: 6 },
-  { id: "faq",             label_en: "FAQ",             label_ar: "الأسئلة الشائعة", href: "/faq",             visible: true,  order: 7 },
-  { id: "contact",         label_en: "Contact",         label_ar: "تواصلي معي",      href: "/contact",         visible: true,  order: 8 },
-  { id: "booking",         label_en: "Book Now",        label_ar: "احجزي الآن",      href: "/booking",         visible: true,  order: 9, cta: true },
+  { id: "home",            sectionId: "home",            label_en: "Home",            label_ar: "الرئيسية",         href: "/",                visible: true,  order: 0 },
+  { id: "about",           sectionId: "about",           label_en: "About",           label_ar: "من أنا",           href: "/#about",           visible: true,  order: 1 },
+  { id: "services",        sectionId: "services",        label_en: "Services",        label_ar: "الخدمات",          href: "/#services",        visible: true,  order: 2 },
+  { id: "programs",        sectionId: "programs",        label_en: "Programs",        label_ar: "البرامج",          href: "/#programs",        visible: true,  order: 3 },
+  { id: "consultations",   sectionId: "consultations",   label_en: "Consultations",   label_ar: "الاستشارات",       href: "/#consultations",   visible: true,  order: 3.5 },
+  { id: "success-stories", sectionId: "success-stories", label_en: "Success Stories", label_ar: "قصص النجاح",      href: "/#success-stories", visible: true,  order: 4 },
+  { id: "testimonials",    sectionId: "testimonials",    label_en: "Client Reviews",  label_ar: "آراء العملاء",    href: "/#testimonials",    visible: true,  order: 5 },
+  { id: "faq",             sectionId: "faq",             label_en: "FAQ",             label_ar: "الأسئلة الشائعة", href: "/#faq",             visible: true,  order: 6 },
+  { id: "free-guide",      sectionId: "free-guide",      label_en: "Free Guide",      label_ar: "الدليل المجاني",  href: "/#free-guide",      visible: true,  order: 7 },
+  { id: "blog",            sectionId: "blog",            label_en: "Blog",            label_ar: "المدونة",          href: "/blog",             visible: true,  order: 8 },
+  { id: "contact",         sectionId: "contact",         label_en: "Contact",         label_ar: "تواصلي معي",       href: "/contact",          visible: true,  order: 9 },
+  { id: "booking-cta",     sectionId: "booking-cta",     label_en: "Book Now",        label_ar: "احجزي الآن",       href: "/booking",          visible: true,  order: 10, cta: true },
 ];
 
 // ─── SaveBar ──────────────────────────────────────────────────────────────────
@@ -177,7 +180,11 @@ export default function WebsiteSettingsPage() {
   const handleSave = useCallback(async () => {
     setSaving(true);
     const key = keyMap[tab];
-    const value = tab === "nav" ? { items: navItems } : getterMap[tab];
+    const itemsToSave = navItems.map(item => ({
+      ...item,
+      href: item.sectionId ? getSectionHref(item.sectionId) : item.href,
+    }));
+    const value = tab === "nav" ? { items: itemsToSave } : getterMap[tab];
     const ok = await setSetting(key, value as any);
     setSaving(false);
     if (ok) { setSaved(true); setTimeout(() => setSaved(false), 2000); }
@@ -380,9 +387,9 @@ export default function WebsiteSettingsPage() {
                           {item.visible ? <Eye size={12} /> : <EyeOff size={12} />}
                         </button>
 
-                        {/* Route badge */}
-                        <span className="text-[11px] font-mono text-[var(--admin-text-faint)] bg-[var(--admin-hover-bg)] px-2 py-0.5 rounded-md border border-[var(--admin-border)] shrink-0">
-                          {item.href}
+                        {/* Route badge — shows permanent canonical href (read-only) */}
+                        <span className="text-[11px] font-mono text-[var(--admin-text-faint)] bg-[var(--admin-hover-bg)] px-2 py-0.5 rounded-md border border-[var(--admin-border)] shrink-0" title="Permanent Link — not editable">
+                          🔒 {item.sectionId ? getSectionHref(item.sectionId) : item.href}
                         </span>
 
                         {/* CTA badge */}

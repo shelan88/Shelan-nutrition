@@ -45,6 +45,7 @@ import QuestionLibraryPage from "../pages/QuestionLibraryPage";
 import ClientProfilePage from "../pages/ClientProfilePage";
 import AdminProfilePage from "../pages/AdminProfilePage";
 import AdminSettingsPage from "../pages/AdminSettingsPage";
+import FreeGuideAdminPage from "../pages/FreeGuideAdminPage";
 
 /**
  * AdminShellInner — reads `theme` from AdminContext (must sit inside
@@ -88,6 +89,7 @@ export default function AdminLayout() {
               <Route path="faqs"                  element={<FAQAdminPage />} />
               <Route path="programs"              element={<ProgramsAdminPage />} />
               <Route path="consultations"        element={<ConsultationsAdminPage />} />
+              <Route path="free-guide"            element={<FreeGuideAdminPage />} />
               <Route path="success-stories"       element={<SuccessStoriesAdminPage />} />
 
               {/* Assessment Templates — live */}

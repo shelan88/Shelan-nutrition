@@ -22,12 +22,14 @@ import { pagesNav, authModal } from "@/content/content";
 import AuthModal from "@/components/AuthModal";
 import { getSetting } from "@/admin/repositories/settings.repository";
 import { supabase } from "@/lib/supabase";
+import { getSectionHref } from "@/lib/sectionAnchors";
 import type { Session } from "@supabase/supabase-js";
 
 // ── Nav item shape coming from DB (site.nav) ──────────────────────────────────
 
 type DBNavItem = {
   id: string;
+  sectionId?: string;
   label_en: string;
   label_ar: string;
   href: string;
@@ -258,7 +260,7 @@ export default function Navbar() {
         .sort((a, b) => a.order - b.order)
         .map(i => ({
           label: lang === "en" ? i.label_en : i.label_ar,
-          href:  i.href,
+          href:  i.sectionId ? getSectionHref(i.sectionId) : i.href,
           cta:   i.cta ?? false,
         }))
     : pagesNav[lang];

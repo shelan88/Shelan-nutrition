@@ -13,7 +13,7 @@ export default function Hero() {
 
   return (
     <section
-      id="top"
+      id="hero"
       className="section-dark relative pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden bg-gradient-to-b from-soft-purple via-primary-pink to-soft-pink"
     >
       <div className="absolute inset-0 bg-gradient-to-b from-deep-purple/60 via-primary-pink/70 to-soft-pink/80" />

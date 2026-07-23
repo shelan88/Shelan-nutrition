@@ -96,6 +96,14 @@ export const NAV_ITEMS: NavItem[] = [
     group: "content",
   },
   {
+    id: "free-guide",
+    label: "Free Guide",
+    labelAr: "الدليل المجاني",
+    href: "/admin/free-guide",
+    iconName: "Download",
+    group: "content",
+  },
+  {
     id: "faqs",
     label: "FAQs",
     labelAr: "الأسئلة الشائعة",
@@ -276,6 +284,13 @@ export const PAGE_META: Record<string, PageMeta> = {
     description: "Manage the consultation packages shown in the booking section of your website.",
     descriptionAr: "إدارة باقات الاستشارة المعروضة في قسم الحجز بموقعك.",
     illustrationVariant: "calendar",
+  },
+  "free-guide": {
+    title: "Free Guide",
+    titleAr: "الدليل المجاني",
+    description: "Manage the free downloadable guide, email collection, and PDF delivery.",
+    descriptionAr: "إدارة الدليل المجاني القابل للتنزيل وجمع البريد الإلكتروني وتسليم PDF.",
+    illustrationVariant: "media",
   },
   faqs: {
     title: "FAQs",

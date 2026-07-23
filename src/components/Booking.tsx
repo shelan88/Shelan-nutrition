@@ -106,7 +106,7 @@ export default function Booking() {
       : pricingPlans[lang].map((p, i) => ({ ...p, id: String(i) }));
 
   return (
-    <section id="booking" className="section-dark py-24 bg-gradient-to-br from-primary-pink via-soft-pink to-soft-purple">
+    <section id="consultations" className="section-dark py-24 bg-gradient-to-br from-primary-pink via-soft-pink to-soft-purple">
       <div className="max-w-6xl mx-auto px-6 lg:px-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

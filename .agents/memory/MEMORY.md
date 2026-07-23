@@ -13,3 +13,4 @@
 - [Admin dark mode implementation](admin-dark-mode.md) — CSS-variable approach; AdminShellInner applies .dark to .admin-shell; no flash; bg-white NOT overridden (toggle thumbs).
 - [Media Library restructure](media-library-restructure.md) — Media Library is now a read-only client browser; upload removed; client files stay in ClientProfilePage FilesTab; plan files stay in NutritionPlansTab; getClientFiles/getClientPlanFiles added to repositories.
 - [Android file picker unmounts FileDropZone](android-file-picker-unmount.md) — root cause: AuthGuard called setState("loading") inside onAuthStateChange; Supabase fires TOKEN_REFRESHED on visibilitychange, tearing down entire admin layout.
+- [Free Guide system + Nav architecture](free-guide-and-nav-architecture.md) — lead_emails+free_guide_settings tables; SECTION_HREFS canonical map in sectionAnchors.ts; Navbar derives hrefs from sectionId, never stores them.
