@@ -88,6 +88,14 @@ export const NAV_ITEMS: NavItem[] = [
     group: "content",
   },
   {
+    id: "consultations",
+    label: "Consultations",
+    labelAr: "الاستشارات",
+    href: "/admin/consultations",
+    iconName: "CalendarCheck",
+    group: "content",
+  },
+  {
     id: "faqs",
     label: "FAQs",
     labelAr: "الأسئلة الشائعة",
@@ -261,6 +269,13 @@ export const PAGE_META: Record<string, PageMeta> = {
     description: "Create and manage your nutrition programs, packages, and featured offerings.",
     descriptionAr: "إنشاء وإدارة برامجك ووحزمك التغذوية.",
     illustrationVariant: "services",
+  },
+  consultations: {
+    title: "Consultations",
+    titleAr: "الاستشارات",
+    description: "Manage the consultation packages shown in the booking section of your website.",
+    descriptionAr: "إدارة باقات الاستشارة المعروضة في قسم الحجز بموقعك.",
+    illustrationVariant: "calendar",
   },
   faqs: {
     title: "FAQs",

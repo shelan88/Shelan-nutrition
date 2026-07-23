@@ -31,6 +31,7 @@ import ServicesAdminPage from "../pages/ServicesAdminPage";
 import TestimonialsAdminPage from "../pages/TestimonialsAdminPage";
 import FAQAdminPage from "../pages/FAQAdminPage";
 import ProgramsAdminPage from "../pages/ProgramsAdminPage";
+import ConsultationsAdminPage from "../pages/ConsultationsAdminPage";
 import SuccessStoriesAdminPage from "../pages/SuccessStoriesAdminPage";
 import WebsiteSettingsPage from "../pages/WebsiteSettingsPage";
 import SocialMediaAdminPage from "../pages/SocialMediaAdminPage";
@@ -86,6 +87,7 @@ export default function AdminLayout() {
               <Route path="media-library"         element={<MediaLibraryPage />} />
               <Route path="faqs"                  element={<FAQAdminPage />} />
               <Route path="programs"              element={<ProgramsAdminPage />} />
+              <Route path="consultations"        element={<ConsultationsAdminPage />} />
               <Route path="success-stories"       element={<SuccessStoriesAdminPage />} />
 
               {/* Assessment Templates — live */}

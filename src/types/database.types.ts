@@ -323,6 +323,36 @@ export interface ProgramRow {
   updated_at: string;
 }
 
+export interface ConsultationRow {
+  id:               string;
+  title_en:         string;
+  title_ar:         string | null;
+  subtitle_en:      string | null;
+  subtitle_ar:      string | null;
+  description_en:   string | null;
+  description_ar:   string | null;
+  price:            number | null;
+  currency:         string | null;
+  period_en:        string | null;    // e.g. "one-time", "/ month"
+  period_ar:        string | null;
+  duration_en:      string | null;    // e.g. "45 minutes"
+  duration_ar:      string | null;
+  features_en:      string[] | null;
+  features_ar:      string[] | null;
+  cta_text_en:      string | null;
+  cta_text_ar:      string | null;
+  badge_en:         string | null;
+  badge_ar:         string | null;
+  icon:             string | null;
+  gradient:         string | null;
+  discount_enabled: boolean;
+  discount_percent: number | null;
+  active:           boolean;
+  sort_order:       number | null;
+  created_at:       string;
+  updated_at:       string;
+}
+
 export interface FAQRow {
   id: string;
   question_en: string;
@@ -459,6 +489,7 @@ export interface Database {
       website_settings:{ Row: WebsiteSettingRow; Insert: Omit<WebsiteSettingRow, "id"|"updated_at"> & { id?:string; updated_at?:string; }; Update: Partial<WebsiteSettingRow>; };
       admin_profiles:  { Row: AdminProfileRow;   Insert: Omit<AdminProfileRow,   "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<AdminProfileRow>; };
       programs:                    { Row: ProgramRow;                   Insert: Omit<ProgramRow,                   "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<ProgramRow>; };
+      consultations:               { Row: ConsultationRow;              Insert: Omit<ConsultationRow,              "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<ConsultationRow>; };
       success_stories:             { Row: SuccessStoryRow;              Insert: Omit<SuccessStoryRow,              "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<SuccessStoryRow>; };
       faqs:                        { Row: FAQRow;                       Insert: Omit<FAQRow,                       "id"|"created_at"> & { id?:string; created_at?:string; }; Update: Partial<FAQRow>; };
       assessment_templates:        { Row: AssessmentTemplateRow;        Insert: Omit<AssessmentTemplateRow,        "id"|"created_at"|"updated_at"> & { id?:string; created_at?:string; updated_at?:string; }; Update: Partial<AssessmentTemplateRow>; };
