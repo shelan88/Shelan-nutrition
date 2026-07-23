@@ -90,6 +90,7 @@ export default function BookingPage() {
               strings={str as unknown as Record<string, string | string[]>}
               preselectedServiceId={preselectedServiceId}
               preselectedProgramId={preselectedProgramId}
+              canonicalServices={bookingData.en.services}
             />
           )}
         </div>

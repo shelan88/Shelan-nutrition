@@ -459,9 +459,12 @@ interface Props {
   strings: Record<string, string | string[]>;
   preselectedServiceId?: string;
   preselectedProgramId?: string;
+  /** English-locale services used to persist the canonical service name
+   *  regardless of the visitor's display language. */
+  canonicalServices?: CMSBookingService[];
 }
 
-export default function BookingFlow({ data, strings, preselectedServiceId, preselectedProgramId }: Props) {
+export default function BookingFlow({ data, strings, preselectedServiceId, preselectedProgramId, canonicalServices }: Props) {
   const steps = (strings.steps as string[]) ?? [];
 
   // When a program is pre-selected we skip service-selection (step 0).
@@ -557,7 +560,15 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
         user_id:      user?.id ?? null,
         date,
         time,
-        type:      selectedService?.name ?? "Consultation",
+        // Always store the canonical English name regardless of the visitor's UI language.
+        // Program mode: use name_en from the Supabase row.
+        // CMS service mode: look up the matching English service by id; fall back to
+        //   the display name only if canonicalServices was not provided.
+        type: (
+          programMode
+            ? (program?.name_en ?? selectedService?.name)
+            : (canonicalServices?.find((s) => s.id === serviceId)?.name ?? selectedService?.name)
+        ) ?? "Consultation",
         status:    "scheduled",
         notes:     personalInfo.notes || null,
         client_id: null,
