@@ -1,9 +1,16 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, Clock, Tag } from "lucide-react";
+import {
+  CheckCircle2, Clock, Tag,
+  Salad, HeartPulse, Sparkles, Star, Heart, Leaf, Apple, Dumbbell, Brain, Sun,
+} from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { getActivePrograms } from "@/admin/repositories/programs.repository";
 import type { ProgramRow } from "@/types/database.types";
+
+const PROGRAM_ICONS: Record<string, React.ElementType> = {
+  Salad, HeartPulse, Sparkles, Star, Heart, Leaf, Apple, Dumbbell, Brain, Sun,
+};
 
 const cardAccents = [
   { border: "border-primary-pink/20",   badge: "bg-primary-pink/10 text-primary-pink",    dot: "bg-primary-pink" },
@@ -64,11 +71,14 @@ export default function Programs() {
                 className={`group relative bg-white border-2 ${accent.border} rounded-2xl p-6 shadow-sm hover:shadow-lg hover:shadow-deep-purple/10 transition-all duration-300 flex flex-col`}
               >
                 {/* Icon */}
-                {prog.icon && (
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-soft-pink to-soft-purple flex items-center justify-center text-2xl mb-4">
-                    {prog.icon}
-                  </div>
-                )}
+                {prog.icon && PROGRAM_ICONS[prog.icon] && (() => {
+                  const Icon = PROGRAM_ICONS[prog.icon!];
+                  return (
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-soft-pink to-soft-purple flex items-center justify-center mb-4">
+                      <Icon size={22} strokeWidth={1.8} className="text-white" />
+                    </div>
+                  );
+                })()}
 
                 <h3 className="font-heading text-lg font-bold text-heading mb-2 leading-snug">
                   {name}
