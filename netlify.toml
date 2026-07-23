@@ -1,0 +1,10 @@
+[build]
+  # Explicitly pass --registry so the public npm registry is used regardless
+  # of any NPM_CONFIG_REGISTRY environment variable that may have been copied
+  # from the Replit environment into Netlify's dashboard settings.
+  command = "npm install --registry https://registry.npmjs.org/ && npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_CONFIG_REGISTRY = "https://registry.npmjs.org/"
