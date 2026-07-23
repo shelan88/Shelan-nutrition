@@ -19,7 +19,7 @@ const cardAccents = [
 ];
 
 export default function Programs() {
-  const { lang } = useLanguage();
+  const { lang, dir } = useLanguage();
   const [programs, setPrograms] = useState<ProgramRow[] | null>(null); // null = loading
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export default function Programs() {
   if (programs === null || programs.length === 0) return null;
 
   return (
-    <section id="programs" className="py-24 bg-white">
+    <section id="programs" className="py-24 bg-white" dir={dir}>
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -109,28 +109,29 @@ export default function Programs() {
                 })()}
 
                 {/* Title */}
-                <h3 className="font-heading text-lg font-bold text-heading leading-snug" style={{ marginBottom: subtitle ? "4px" : "8px" }}>
+                <h3 className="font-heading text-lg font-bold text-heading leading-snug text-start" style={{ marginBottom: subtitle ? "4px" : "8px" }}>
                   {name}
                 </h3>
 
                 {/* Subtitle */}
                 {subtitle && (
-                  <p className="text-[12px] text-body/70 italic mb-2 leading-snug">
+                  <p className="text-[12px] text-body/70 italic mb-2 leading-snug text-start">
                     {subtitle}
                   </p>
                 )}
 
                 {/* Short description */}
                 {shortDesc && (
-                  <p className="text-body text-sm leading-relaxed mb-4 flex-1">
+                  <p className="text-body text-sm leading-relaxed mb-4 flex-1 text-start">
                     {shortDesc}
                   </p>
                 )}
 
                 {/* Meta: price + duration */}
+                {/* Badges flow from inline-start in RTL; price/duration numbers are kept LTR to prevent bidi reordering */}
                 <div className="flex flex-wrap gap-2 mb-4">
                   {prog.price != null && (
-                    <span className={`flex items-center gap-1 text-[12px] font-semibold px-2.5 py-1 rounded-full ${accent.badge}`}>
+                    <span className={`flex items-center gap-1 text-[12px] font-semibold px-2.5 py-1 rounded-full ${accent.badge}`} dir="ltr">
                       <Tag size={11} strokeWidth={2} />
                       {hasDiscount ? (
                         <>
@@ -147,10 +148,9 @@ export default function Programs() {
                     </span>
                   )}
                   {prog.duration_weeks != null && (
-                    <span className="flex items-center gap-1 text-[12px] font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
+                    <span className="flex items-center gap-1 text-[12px] font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600" dir="ltr">
                       <Clock size={11} strokeWidth={2} />
-                      {prog.duration_weeks}
-                      {lang === "ar" ? " أسابيع" : " weeks"}
+                      <span dir={dir}>{prog.duration_weeks}{lang === "ar" ? " أسابيع" : " weeks"}</span>
                     </span>
                   )}
                 </div>
@@ -159,7 +159,7 @@ export default function Programs() {
                 {features.length > 0 && (
                   <ul className="space-y-1.5 border-t border-gray-100 pt-4">
                     {features.map((f, fi) => (
-                      <li key={fi} className="flex items-start gap-2 text-[13px] text-body">
+                      <li key={fi} className="flex items-start gap-2 text-[13px] text-body text-start">
                         <CheckCircle2 size={14} className={`shrink-0 mt-0.5 ${accent.dot.replace("bg-", "text-")}`} />
                         {f}
                       </li>
