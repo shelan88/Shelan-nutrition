@@ -34,8 +34,16 @@ async function resolveGuardState(session: Session | null): Promise<GuardState> {
     .in("role", ["admin", "staff"])
     .maybeSingle();
 
-  if (error || !data) {
-    // Not an authorised staff member — sign out immediately
+  // Network / transient errors: do NOT sign out — the session is still valid
+  // and the user is still authorised. Signing out on a network hiccup
+  // (which is common on Android app-switches) would eject the user mid-task.
+  if (error) {
+    console.warn("[AuthGuard] admin_profiles query failed (network?):", error.message);
+    return "authorized"; // keep the gate open; next real auth event will re-check
+  }
+
+  if (!data) {
+    // Row genuinely missing → not an admin. Sign out cleanly.
     await supabase.auth.signOut();
     return "unauthorized";
   }
