@@ -241,8 +241,11 @@ function DebugPanelInner() {
   }, [isDragging]);
 
   // ── Derived counters ───────────────────────────────────────────────────────
-  const errorCount = entries.filter((e) => e.level === "error").length;
-  const warnCount  = entries.filter((e) => e.level === "warn").length;
+  const errorCount     = entries.filter((e) => e.level === "error").length;
+  const warnCount      = entries.filter((e) => e.level === "warn").length;
+  const slowQueryCount = entries.filter(
+    (e) => e.level === "warn" && e.category === "performance" && e.module === "Supabase",
+  ).length;
   const filtered   = filter === "all" ? entries : entries.filter((e) => e.category === filter);
 
   // ── Toolbar actions ────────────────────────────────────────────────────────
@@ -280,6 +283,7 @@ function DebugPanelInner() {
       >
         <span className="text-white/50">🐛</span>
         <span className="text-white/70">{entries.length}</span>
+        {slowQueryCount > 0 && <span className="text-amber-300">🐢{slowQueryCount}</span>}
         {warnCount > 0  && <span className="text-yellow-400">⚠{warnCount}</span>}
         {errorCount > 0 && <span className="text-red-400">✕{errorCount}</span>}
         <span className="text-white/30">▲</span>
@@ -333,6 +337,11 @@ function DebugPanelInner() {
 
           {/* Counters */}
           <span className="text-white/30 text-[10px]">{entries.length}</span>
+          {slowQueryCount > 0 && (
+            <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[9px] font-bold uppercase ring-1 ring-amber-500/40" title={`${slowQueryCount} slow query${slowQueryCount > 1 ? "s" : ""} detected (>${800}ms)`}>
+              🐢 {slowQueryCount} slow
+            </span>
+          )}
           {warnCount  > 0 && <span className="text-yellow-400 text-[10px] font-bold">⚠{warnCount}</span>}
           {errorCount > 0 && <span className="text-red-400   text-[10px] font-bold">✕{errorCount}</span>}
 

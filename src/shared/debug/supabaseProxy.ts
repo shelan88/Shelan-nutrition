@@ -14,6 +14,9 @@ import { addTraceStep } from "./traceStore";
 
 type AnyObj = Record<string | symbol, unknown>;
 
+/** Queries exceeding this threshold (ms) are logged as warnings. */
+const SLOW_QUERY_MS = 800;
+
 /**
  * Recursively wraps a Supabase query builder. Every chained method that
  * returns another builder is also wrapped, ensuring .then() is always
@@ -48,13 +51,15 @@ function wrapBuilder(
                 ? (res.data as AnyObj[])[0]
                 : null;
 
+              const isSlow = !hasError && ms > SLOW_QUERY_MS;
+
               debugLog({
-                level:      hasError ? "error" : "log",
+                level:      hasError ? "error" : isSlow ? "warn" : "log",
                 category:   "database",
                 module:     "Supabase",
                 component:  "supabaseProxy",
                 action:     `${op}(${table})`,
-                result:     hasError ? "error" : "success",
+                result:     hasError ? "error" : isSlow ? "warning" : "success",
                 table,
                 recordId:   typeof firstRow?.id === "string" ? firstRow.id : undefined,
                 durationMs: ms,
@@ -65,6 +70,21 @@ function wrapBuilder(
                     : res.data != null ? 1 : 0,
                 },
               });
+
+              // Emit a dedicated performance warning so the PERF filter captures it
+              if (isSlow) {
+                debugLog({
+                  level:      "warn",
+                  category:   "performance",
+                  module:     "Supabase",
+                  component:  "supabaseProxy",
+                  action:     `slow query — ${op}(${table})`,
+                  result:     "warning",
+                  table,
+                  durationMs: ms,
+                  data:       { threshold: SLOW_QUERY_MS, exceeded: ms - SLOW_QUERY_MS },
+                });
+              }
 
               addTraceStep({
                 label:  "Supabase",
