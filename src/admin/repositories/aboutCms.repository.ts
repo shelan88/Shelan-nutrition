@@ -284,10 +284,12 @@ export async function updateSectionVisible(
   key: "qualifications" | "expertise" | "certifications",
   visible: boolean
 ): Promise<boolean> {
+  // Use upsert so this works even when no row exists yet for this section_key.
+  // .update().eq() silently succeeds with 0 affected rows when the row is missing,
+  // causing getSectionSettings() to return null → frontend defaults to visible=true.
   const { error } = await supabase
     .from("about_section_settings")
-    .update({ visible })
-    .eq("section_key", key);
+    .upsert({ section_key: key, visible }, { onConflict: "section_key" });
   if (error) { console.error("[aboutCms] updateSectionVisible:", error.message); return false; }
   return true;
 }
