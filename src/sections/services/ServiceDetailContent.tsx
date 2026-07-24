@@ -238,7 +238,7 @@ export default function ServiceDetailContent({ service }: Props) {
       <WhoIsItFor data={service.whoIsItFor} />
       <Benefits data={service.benefits} />
       <ConsultationSteps data={service.consultation} />
-      <ServiceFAQ faq={service.faq} />
+      {service.faq.length > 0 && <ServiceFAQ faq={service.faq} />}
       <ServiceCTA cta={service.cta} bookingHref={bookingHref} />
     </>
   );
