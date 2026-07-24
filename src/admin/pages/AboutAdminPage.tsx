@@ -20,6 +20,7 @@ import {
 } from "@/admin/repositories/aboutCms.repository";
 import type {
   QualificationRow, ExpertiseRow, CertificationRow, CertSettingsRow,
+  CertUploadLogEntry,
 } from "@/admin/repositories/aboutCms.repository";
 
 // ── Style constants ──────────────────────────────────────────────────────────
@@ -378,6 +379,8 @@ function CertSection({ items, setItems, loading, onReload, L, fl }: CertSectionP
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadLogs, setUploadLogs] = useState<CertUploadLogEntry[]>([]);
+  const [uploadLogsOpen, setUploadLogsOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   function set<K extends keyof CertForm>(k: K, v: CertForm[K]) {
@@ -388,6 +391,8 @@ function CertSection({ items, setItems, loading, onReload, L, fl }: CertSectionP
     setEditing(null);
     setFormState(initCertForm());
     setSaveError(null);
+    setUploadLogs([]);
+    setUploadLogsOpen(false);
     setView("edit");
   }
 
@@ -404,19 +409,23 @@ function CertSection({ items, setItems, loading, onReload, L, fl }: CertSectionP
       active: row.active,
     });
     setSaveError(null);
+    setUploadLogs([]);
+    setUploadLogsOpen(false);
     setView("edit");
   }
 
-  function cancel() { setView("list"); setEditing(null); setSaveError(null); }
+  function cancel() { setView("list"); setEditing(null); setSaveError(null); setUploadLogs([]); setUploadLogsOpen(false); }
 
   async function handleUpload(file: File) {
     setUploading(true);
-    // Use a temp UUID for new items, or editing.id for existing
+    setUploadLogs([]);
+    setUploadLogsOpen(true);
     const certId = editing ? editing.id : crypto.randomUUID();
-    const url = await uploadCertLogo(certId, file);
+    const result = await uploadCertLogo(certId, file);
+    setUploadLogs(result.logs);
     setUploading(false);
-    if (url) {
-      set("logo_url", url);
+    if (result.url) {
+      set("logo_url", result.url);
     }
   }
 
@@ -789,6 +798,48 @@ function CertSection({ items, setItems, loading, onReload, L, fl }: CertSectionP
                         onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); }}
                       />
                     </label>
+                  )}
+                </div>
+              )}
+
+              {/* ── Upload debug log — always visible, works in production ── */}
+              {uploadLogs.length > 0 && (
+                <div className="rounded-xl border border-[var(--admin-border)] overflow-hidden text-[12px]">
+                  <button
+                    type="button"
+                    onClick={() => setUploadLogsOpen((v) => !v)}
+                    className="w-full flex items-center justify-between px-3 py-2 bg-[var(--admin-hover-bg)] text-[var(--admin-text-muted)] font-semibold hover:bg-[var(--admin-border)] transition-colors"
+                  >
+                    <span>
+                      {uploading ? "⏳ جاري الرفع…" : uploadLogs.some(l => l.level === "error") ? "❌ سجل الرفع (فشل)" : "✅ سجل الرفع (نجح)"}
+                    </span>
+                    <span className="text-[10px] opacity-60">{uploadLogsOpen ? "▲ إخفاء" : "▼ إظهار"}</span>
+                  </button>
+                  {uploadLogsOpen && (
+                    <div className="divide-y divide-[var(--admin-border)] bg-[var(--admin-surface)]">
+                      {uploadLogs.map((entry, i) => (
+                        <div
+                          key={i}
+                          className={`flex items-start gap-2 px-3 py-1.5 ${
+                            entry.level === "error" ? "bg-red-50 text-red-700" :
+                            entry.level === "ok"    ? "bg-emerald-50 text-emerald-700" :
+                            entry.level === "warn"  ? "bg-amber-50 text-amber-700" :
+                            "text-[var(--admin-text-muted)]"
+                          }`}
+                        >
+                          <span className="shrink-0 mt-px">
+                            {entry.level === "error" ? "✗" : entry.level === "ok" ? "✓" : entry.level === "warn" ? "⚠" : "·"}
+                          </span>
+                          <span className="font-mono break-all leading-relaxed">{entry.message}</span>
+                        </div>
+                      ))}
+                      {uploading && (
+                        <div className="flex items-center gap-2 px-3 py-2 text-[var(--admin-text-faint)]">
+                          <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin shrink-0" />
+                          <span>جاري الرفع…</span>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               )}

@@ -297,31 +297,62 @@ export async function updateSectionVisible(
 
 // ── Logo upload ───────────────────────────────────────────────────────────────
 
-export async function uploadCertLogo(certId: string, file: File): Promise<string | null> {
-  // Always store as .jpg so HEIC/Samsung-Gallery files are converted to JPEG
-  // by uploadToStorage's compressImage step (which handles HEIC via createImageBitmap).
-  // SVG files skip compression and are also stored at this path — the extension
-  // is cosmetic for public URLs and doesn't affect rendering.
+export type CertUploadLogLevel = "info" | "ok" | "warn" | "error";
+export interface CertUploadLogEntry {
+  level:   CertUploadLogLevel;
+  message: string;
+}
+export interface CertUploadResult {
+  url:  string | null;
+  logs: CertUploadLogEntry[];
+}
+
+export async function uploadCertLogo(
+  certId: string,
+  file: File,
+): Promise<CertUploadResult> {
+  const logs: CertUploadLogEntry[] = [];
+  const L = (level: CertUploadLogLevel, message: string) =>
+    logs.push({ level, message });
+
+  L("info", `الملف: ${file.name}`);
+  L("info", `الحجم: ${(file.size / 1024).toFixed(1)} KB`);
+  L("info", `file.type: "${file.type || "(فارغ — سيتم الكشف تلقائياً)"}"`);
+
+  if (file.size === 0) {
+    L("error", "الملف فارغ (0 bytes) — أعد المحاولة أو اختر ملفاً آخر");
+    return { url: null, logs };
+  }
+
   const isSvg = file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg");
   const ext   = isSvg ? "svg" : "jpg";
   const path  = `${certId}.${ext}`;
+
+  L("info", `Storage path: cert-logos/${path}`);
+  L("info", isSvg ? "SVG → بدون ضغط" : "سيتم تحويله لـ JPEG (يدعم HEIC تلقائياً)");
 
   const { url, error } = await uploadToStorage(file, {
     bucket:       "cert-logos",
     path,
     upsert:       true,
     allowedTypes: ["image/*"],
-    compress:     !isSvg,      // convert HEIC → JPEG; skip for SVG (canvas can't encode SVG)
-    maxWidthPx:   800,         // logos don't need to be wider than 800 px
+    compress:     !isSvg,
+    maxWidthPx:   800,
     quality:      0.9,
   });
 
-  if (error || !url) {
-    console.error("[aboutCms] uploadCertLogo:", error);
-    return null;
+  if (error) {
+    L("error", `فشل الرفع: ${error}`);
+    return { url: null, logs };
   }
-  // Bust CDN cache so the new logo appears immediately
-  return url + `?t=${Date.now()}`;
+  if (!url) {
+    L("error", "الرفع فشل بدون رسالة خطأ");
+    return { url: null, logs };
+  }
+
+  L("ok", "تم الرفع بنجاح ✓");
+  L("info", url);
+  return { url: url + `?t=${Date.now()}`, logs };
 }
 
 export async function deleteCertLogo(certId: string): Promise<void> {
