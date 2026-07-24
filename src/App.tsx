@@ -23,7 +23,9 @@
  * The public and admin worlds are completely separated at the routing level.
  * Admin pages never see the public Navbar/Footer, and vice-versa.
  */
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { debugLog } from "@/shared/debug/logger";
 import { LanguageProvider } from "@/context/LanguageContext";
 import ScrollToTop from "@/components/ui/ScrollToTop";
 
@@ -127,11 +129,26 @@ function PublicLayout() {
   );
 }
 
+/** Logs every client-side route change into the debug panel (DEV only). */
+function RouteLogger() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    debugLog({
+      level: "log", category: "navigation",
+      module: "Router", component: "RouteLogger",
+      action: `route → ${pathname}`,
+      result: "info",
+    });
+  }, [pathname]);
+  return null;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <LanguageProvider>
         <ScrollToTop />
+        <RouteLogger />
         <Routes>
           {/* Admin — completely isolated, no public chrome */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
@@ -140,8 +157,8 @@ export default function App() {
           {/* Public — wrapped in Navbar + Footer + chrome */}
           <Route path="/*" element={<PublicLayout />} />
         </Routes>
-        {/* ── TEMPORARY: upload debug panel ── remove when investigation done */}
-        <DebugPanel />
+        {/* ── DEV ONLY: global debug panel — remove before production ship */}
+        {import.meta.env.DEV && <DebugPanel />}
       </LanguageProvider>
     </BrowserRouter>
   );

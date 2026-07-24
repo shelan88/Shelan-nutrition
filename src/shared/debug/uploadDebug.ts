@@ -1,101 +1,80 @@
 /**
- * uploadDebug.ts — lightweight on-screen debug event bus
+ * uploadDebug.ts — Upload-specific debug helpers.
  *
- * Temporary diagnostics only. Import dbg() / dbgOk() / dbgWarn() / dbgError()
- * anywhere in the upload flow to emit an entry that appears in DebugPanel.
- *
- * All entries are also forwarded to the browser console.
- * Remove this file (and DebugPanel) when the investigation is done.
+ * Thin bridge over the unified logger in logger.ts.
+ * Existing callers (upload.service.ts, FileDropZone.tsx, useUpload.ts)
+ * continue working unchanged; all entries now appear in the main debug panel.
  */
+
+import { debugLog, getLogs as _getLogs, subscribe as _subscribe, clearLogs as _clearLogs } from "./logger";
+import type { DebugEntry } from "./logger";
+
+// ── Legacy types (kept for call-site compatibility) ────────────────────────────
 
 export type LogLevel = "info" | "ok" | "warn" | "error";
 
+/** Subset of DebugEntry exposed via the old API. */
 export interface LogEntry {
-  id: number;
-  ts: string;       // HH:MM:SS.mmm
-  level: LogLevel;
-  label: string;
+  id:      number;
+  ts:      string;
+  level:   LogLevel;
+  label:   string;
   detail?: string;
 }
 
-type Listener = (entry: LogEntry | "__clear__") => void;
+// ── Internal mapping ──────────────────────────────────────────────────────────
 
-let _seq = 0;
-const _logs: LogEntry[] = [];
-const _listeners = new Set<Listener>();
+function _levelToNew(level: LogLevel): "log" | "warn" | "error" {
+  if (level === "error") return "error";
+  if (level === "warn")  return "warn";
+  return "log";
+}
+
+function _levelToResult(level: LogLevel): "success" | "warning" | "error" | "info" {
+  if (level === "ok")    return "success";
+  if (level === "warn")  return "warning";
+  if (level === "error") return "error";
+  return "info";
+}
 
 function _emit(label: string, rawDetail: unknown, level: LogLevel): void {
-  const now = new Date();
-  const ts =
-    String(now.getHours()).padStart(2, "0") + ":" +
-    String(now.getMinutes()).padStart(2, "0") + ":" +
-    String(now.getSeconds()).padStart(2, "0") + "." +
-    String(now.getMilliseconds()).padStart(3, "0");
-
   let detail: string | undefined;
   if (rawDetail !== undefined && rawDetail !== null && rawDetail !== "") {
-    if (typeof rawDetail === "string") {
-      detail = rawDetail;
-    } else {
-      try {
-        detail = JSON.stringify(rawDetail);
-      } catch {
-        detail = String(rawDetail);
-      }
-    }
+    detail = typeof rawDetail === "string" ? rawDetail : (() => {
+      try { return JSON.stringify(rawDetail); } catch { return String(rawDetail); }
+    })();
   }
 
-  const entry: LogEntry = { id: ++_seq, ts, level, label, detail };
-  _logs.push(entry);
-  if (_logs.length > 300) _logs.splice(0, _logs.length - 300);
-  _listeners.forEach((fn) => fn(entry));
-
-  // Mirror to browser console
-  const args: unknown[] = [`[DBG/${level.toUpperCase()}] ${label}`, ...(rawDetail !== undefined ? [rawDetail] : [])];
-  if      (level === "error") console.error(...args);
-  else if (level === "warn")  console.warn(...args);
-  else if (level === "ok")    console.info(...args);
-  else                        console.log(...args);
+  debugLog({
+    level:     _levelToNew(level),
+    category:  "media",
+    module:    "Upload",
+    component: "uploadDebug",
+    action:    label,
+    result:    _levelToResult(level),
+    error:     level === "error" ? (detail ?? label) : undefined,
+    data:      level !== "error" ? detail : undefined,
+  });
 }
 
-/** Log an informational step. */
-export function dbg(label: string, detail?: unknown): void {
-  _emit(label, detail, "info");
-}
+// ── Public API (identical to old uploadDebug.ts) ──────────────────────────────
 
-/** Log a successful outcome (green). */
-export function dbgOk(label: string, detail?: unknown): void {
-  _emit(label, detail, "ok");
-}
+export function dbg(label: string,      detail?: unknown): void { _emit(label, detail, "info");  }
+export function dbgOk(label: string,    detail?: unknown): void { _emit(label, detail, "ok");    }
+export function dbgWarn(label: string,  detail?: unknown): void { _emit(label, detail, "warn");  }
+export function dbgError(label: string, detail?: unknown): void { _emit(label, detail, "error"); }
 
-/** Log a warning (yellow). */
-export function dbgWarn(label: string, detail?: unknown): void {
-  _emit(label, detail, "warn");
-}
-
-/** Log an error (red). */
-export function dbgError(label: string, detail?: unknown): void {
-  _emit(label, detail, "error");
-}
-
-/** Returns a read-only snapshot of all buffered entries. */
+/** Returns buffered log entries in the old LogEntry shape (for any remaining consumers). */
 export function getLogs(): readonly LogEntry[] {
-  return _logs;
+  return _getLogs().map((e: DebugEntry): LogEntry => ({
+    id:     e.id,
+    ts:     e.timestamp,
+    level:  e.level === "error" ? "error" : e.level === "warn" ? "warn"
+            : e.result === "success" ? "ok" : "info",
+    label:  `${e.module}›${e.action}`,
+    detail: e.error ?? (typeof e.data === "string" ? e.data : undefined),
+  }));
 }
 
-/** Clears all buffered entries and notifies subscribers. */
-export function clearLogs(): void {
-  _logs.splice(0, _logs.length);
-  _listeners.forEach((fn) => fn("__clear__"));
-}
-
-/**
- * Subscribe to new log entries.
- * The callback receives each LogEntry as it arrives, or the string "__clear__"
- * when clearLogs() is called.
- * Returns an unsubscribe function.
- */
-export function subscribe(fn: Listener): () => void {
-  _listeners.add(fn);
-  return () => _listeners.delete(fn);
-}
+/** Subscribe to log events (delegates to the unified logger). */
+export { _subscribe as subscribe, _clearLogs as clearLogs };

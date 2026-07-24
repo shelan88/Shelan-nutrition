@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Lang } from "@/content/content";
+import { debugLog } from "@/shared/debug/logger";
 
 interface LanguageContextValue {
   lang: Lang;
@@ -29,8 +30,27 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem(STORAGE_KEY, lang);
   }, [lang, dir]);
 
-  const setLang = (next: Lang) => setLangState(next);
-  const toggleLang = () => setLangState((prev: Lang) => (prev === "en" ? "ar" : "en"));
+  const setLang = (next: Lang) => {
+    debugLog({
+      level: "log", category: "language",
+      module: "Language", component: "LanguageProvider",
+      action: `switch → ${next}`,
+      result: "info",
+    });
+    setLangState(next);
+  };
+
+  const toggleLang = () =>
+    setLangState((prev: Lang) => {
+      const next: Lang = prev === "en" ? "ar" : "en";
+      debugLog({
+        level: "log", category: "language",
+        module: "Language", component: "LanguageProvider",
+        action: `toggle ${prev} → ${next}`,
+        result: "info",
+      });
+      return next;
+    });
 
   return (
     <LanguageContext.Provider value={{ lang, dir, toggleLang, setLang }}>

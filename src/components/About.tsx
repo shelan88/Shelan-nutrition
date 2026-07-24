@@ -75,7 +75,12 @@ export default function About() {
     : [];
 
   return (
-    <section id="about" className="section-dark py-24 bg-gradient-to-b from-soft-pink via-primary-pink to-soft-purple">
+    <section
+      id="about"
+      data-section-id="about"
+      data-db-table="about_qualifications,about_expertise"
+      className="section-dark py-24 bg-gradient-to-b from-soft-pink via-primary-pink to-soft-purple"
+    >
       <div className="max-w-7xl mx-auto px-6 lg:px-10 grid lg:grid-cols-2 gap-16 items-center">
         {/* Portrait */}
         <motion.div

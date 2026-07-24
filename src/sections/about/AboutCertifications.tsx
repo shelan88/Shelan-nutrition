@@ -164,6 +164,9 @@ export default function AboutCertifications({ certifications: legacyData }: Lega
 
   return (
     <section
+      data-section-id="certifications"
+      data-db-table="about_certifications"
+      data-visible="true"
       className={`py-24 ${bgClass}`}
       style={bgStyle}
     >
