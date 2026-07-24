@@ -35,7 +35,7 @@ const fadeUp = (delay = 0) => ({
 });
 
 // ── Tab config ───────────────────────────────────────────────────────────────
-type TabId = "qualifications" | "expertise" | "certifications" | "settings";
+type TabId = "qualifications" | "expertise" | "certifications";
 
 // ── Text-item form (shared by Qualifications and Expertise) ──────────────────
 interface TextItemForm {
@@ -109,12 +109,15 @@ interface TextItemSectionProps {
   singularAR: string;
   L: (en: string, ar: string) => string;
   fl: (key: string) => string;
+  visible: boolean;
+  onToggleVisible: () => void;
 }
 
 function TextItemSection({
   items, setItems, loading, onReload,
   onCreate, onUpdate, onDelete, onReorder,
   singularEN, singularAR, L, fl,
+  visible, onToggleVisible,
 }: TextItemSectionProps) {
   const [view, setView] = useState<"list" | "edit">("list");
   const [editing, setEditing] = useState<TextRow | null>(null);
@@ -187,17 +190,32 @@ function TextItemSection({
         <motion.div key="list" {...fadeUp()}>
           <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-border)]">
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[var(--admin-border)]">
               <p className="text-[13px] text-[var(--admin-text-muted)]">
                 {items.length} {L("items", "عناصر")}
               </p>
-              <button
-                onClick={openNew}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all"
-              >
-                <Plus size={15} />
-                {L(`Add ${singularEN}`, `إضافة ${singularAR}`)}
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Visibility toggle */}
+                <button
+                  onClick={onToggleVisible}
+                  title={visible ? L("Hide section on homepage", "إخفاء القسم من الصفحة الرئيسية") : L("Show section on homepage", "إظهار القسم في الصفحة الرئيسية")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${
+                    visible
+                      ? "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200 hover:bg-emerald-100"
+                      : "bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)] ring-1 ring-[var(--admin-border)] hover:bg-[var(--admin-border)]"
+                  }`}
+                >
+                  {visible ? <Eye size={13} /> : <EyeOff size={13} />}
+                  {visible ? L("Visible", "مرئي") : L("Hidden", "مخفي")}
+                </button>
+                <button
+                  onClick={openNew}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all"
+                >
+                  <Plus size={15} />
+                  {L(`Add ${singularEN}`, `إضافة ${singularAR}`)}
+                </button>
+              </div>
             </div>
 
             {loading ? (
@@ -367,9 +385,11 @@ interface CertSectionProps {
   onReload: () => Promise<void>;
   L: (en: string, ar: string) => string;
   fl: (key: string) => string;
+  visible: boolean;
+  onToggleVisible: () => void;
 }
 
-function CertSection({ items, setItems, loading, onReload, L, fl }: CertSectionProps) {
+function CertSection({ items, setItems, loading, onReload, L, fl, visible, onToggleVisible }: CertSectionProps) {
   const [view, setView] = useState<"list" | "edit">("list");
   const [editing, setEditing] = useState<CertificationRow | null>(null);
   const [form, setFormState] = useState<CertForm>(initCertForm());
@@ -520,17 +540,32 @@ function CertSection({ items, setItems, loading, onReload, L, fl }: CertSectionP
       {view === "list" ? (
         <motion.div key="list" {...fadeUp()}>
           <div className="bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--admin-border)]">
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[var(--admin-border)]">
               <p className="text-[13px] text-[var(--admin-text-muted)]">
                 {items.length} {L("certifications", "اعتمادات")}
               </p>
-              <button
-                onClick={openNew}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all"
-              >
-                <Plus size={15} />
-                {L("Add Card", "إضافة بطاقة")}
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Visibility toggle */}
+                <button
+                  onClick={onToggleVisible}
+                  title={visible ? L("Hide section on homepage", "إخفاء القسم من الصفحة الرئيسية") : L("Show section on homepage", "إظهار القسم في الصفحة الرئيسية")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${
+                    visible
+                      ? "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200 hover:bg-emerald-100"
+                      : "bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)] ring-1 ring-[var(--admin-border)] hover:bg-[var(--admin-border)]"
+                  }`}
+                >
+                  {visible ? <Eye size={13} /> : <EyeOff size={13} />}
+                  {visible ? L("Visible", "مرئي") : L("Hidden", "مخفي")}
+                </button>
+                <button
+                  onClick={openNew}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-all"
+                >
+                  <Plus size={15} />
+                  {L("Add Card", "إضافة بطاقة")}
+                </button>
+              </div>
             </div>
 
             {loading ? (
@@ -1266,6 +1301,11 @@ export default function AboutAdminPage() {
   const [expLoading, setExpLoading] = useState(true);
   const [certLoading, setCertLoading] = useState(true);
 
+  // Section visibility (mirrors about_section_settings table)
+  const [qualVisible, setQualVisible] = useState(true);
+  const [expVisible,  setExpVisible]  = useState(true);
+  const [certVisible, setCertVisible] = useState(true);
+
   const loadQualifications = useCallback(async () => {
     setQualLoading(true);
     setQualifications(await getQualifications());
@@ -1288,11 +1328,33 @@ export default function AboutAdminPage() {
   useEffect(() => { loadExpertise(); }, [loadExpertise]);
   useEffect(() => { loadCertifications(); }, [loadCertifications]);
 
+  // Load section visibility on mount
+  useEffect(() => {
+    Promise.all([
+      getSectionSettings("qualifications"),
+      getSectionSettings("expertise"),
+      getSectionSettings("certifications"),
+    ]).then(([q, e, c]) => {
+      setQualVisible(q?.visible ?? true);
+      setExpVisible(e?.visible  ?? true);
+      setCertVisible(c?.visible ?? true);
+    });
+  }, []);
+
+  async function handleToggleVisible(
+    key: "qualifications" | "expertise" | "certifications",
+    current: boolean,
+    setter: (v: boolean) => void,
+  ) {
+    const next = !current;
+    setter(next);
+    await updateSectionVisible(key, next);
+  }
+
   const TABS: { id: TabId; labelEN: string; labelAR: string }[] = [
-    { id: "qualifications",  labelEN: "Qualifications",       labelAR: "أهلية ومؤهلات" },
-    { id: "expertise",       labelEN: "Areas of Expertise",   labelAR: "مجالات التخصص" },
-    { id: "certifications",  labelEN: "Certifications",       labelAR: "الشهادات والاعتمادات" },
-    { id: "settings",        labelEN: "Section Settings",     labelAR: "إعدادات القسم" },
+    { id: "qualifications",  labelEN: "Qualifications",     labelAR: "أهلية ومؤهلات" },
+    { id: "expertise",       labelEN: "Areas of Expertise", labelAR: "مجالات التخصص" },
+    { id: "certifications",  labelEN: "Certifications",     labelAR: "الشهادات والاعتمادات" },
   ];
 
   return (
@@ -1343,6 +1405,8 @@ export default function AboutAdminPage() {
               singularAR="مؤهل"
               L={L}
               fl={fl}
+              visible={qualVisible}
+              onToggleVisible={() => handleToggleVisible("qualifications", qualVisible, setQualVisible)}
             />
           </motion.div>
         )}
@@ -1362,6 +1426,8 @@ export default function AboutAdminPage() {
               singularAR="تخصص"
               L={L}
               fl={fl}
+              visible={expVisible}
+              onToggleVisible={() => handleToggleVisible("expertise", expVisible, setExpVisible)}
             />
           </motion.div>
         )}
@@ -1375,13 +1441,9 @@ export default function AboutAdminPage() {
               onReload={loadCertifications}
               L={L}
               fl={fl}
+              visible={certVisible}
+              onToggleVisible={() => handleToggleVisible("certifications", certVisible, setCertVisible)}
             />
-          </motion.div>
-        )}
-
-        {activeTab === "settings" && (
-          <motion.div key="settings" {...fadeUp()}>
-            <SettingsSection L={L} fl={fl} />
           </motion.div>
         )}
       </AnimatePresence>
