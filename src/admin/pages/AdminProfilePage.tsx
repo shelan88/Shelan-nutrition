@@ -2,32 +2,42 @@
  * AdminProfilePage — administrator's own account settings.
  *
  * Sections:
- *   1. Identity   — initials avatar, display name (editable), email (read-only), role badge
+ *   1. Identity   — clickable avatar uploader, display name, email, role badge
  *   2. Security   — change password
  *   3. Preferences — language, theme
  *
  * Data sources:
- *   • supabase.auth.getUser()  → email, user_metadata.full_name
+ *   • supabase.auth.getUser()  → email, user_metadata.full_name, user.id
  *   • admin_profiles table     → role, created_at
+ *   • AdminContext             → avatarUrl / setAvatarUrl (shared across topbar)
+ *
+ * Avatar upload pipeline (fully logged):
+ *   file selected → validation → upload started → upload complete
+ *   → DB updated → UI refreshed / any failure reason
  *
  * Never loads any client medical data.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   User, Mail, Shield, Key, Globe, Sun, Moon,
-  Save, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff,
+  Save, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff, Camera,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAdmin } from "../context/AdminContext";
+import { uploadAdminAvatar } from "../repositories/profile.repository";
+import { useUpload } from "@/lib/upload";
+import { dbg, dbgOk, dbgError } from "@/shared/debug/uploadDebug";
+import UploadProgressBar from "@/shared/components/upload/UploadProgressBar";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AdminInfo {
-  email:     string;
-  fullName:  string;
-  role:      "admin" | "staff";
-  joinedAt:  string;
+  userId:   string;
+  email:    string;
+  fullName: string;
+  role:     "admin" | "staff";
+  joinedAt: string;
 }
 
 type StatusMsg = { type: "success" | "error"; text: string };
@@ -47,9 +57,7 @@ function RoleBadge({ role }: { role: "admin" | "staff" }) {
       ? "bg-violet-100 text-violet-700 border-violet-200"
       : "bg-blue-100 text-blue-700 border-blue-200";
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${cls}`}
-    >
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${cls}`}>
       <Shield size={11} />
       {role === "admin" ? "Administrator" : "Staff"}
     </span>
@@ -59,11 +67,7 @@ function RoleBadge({ role }: { role: "admin" | "staff" }) {
 function Feedback({ msg }: { msg: StatusMsg }) {
   const ok = msg.type === "success";
   return (
-    <div
-      className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg ${
-        ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
-      }`}
-    >
+    <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg ${ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
       {ok ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
       {msg.text}
     </div>
@@ -72,15 +76,7 @@ function Feedback({ msg }: { msg: StatusMsg }) {
 
 // ─── Card wrapper ─────────────────────────────────────────────────────────────
 
-function Card({
-  title,
-  icon: Icon,
-  children,
-}: {
-  title:    string;
-  icon:     React.ElementType;
-  children: React.ReactNode;
-}) {
+function Card({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
   return (
     <div className="bg-[var(--admin-surface)] border border-[var(--admin-border)] rounded-xl overflow-hidden">
       <div className="flex items-center gap-2.5 px-6 py-4 border-b border-[var(--admin-border)]">
@@ -94,7 +90,7 @@ function Card({
   );
 }
 
-// ─── Field components ─────────────────────────────────────────────────────────
+// ─── Field styles ─────────────────────────────────────────────────────────────
 
 const inputCls = `
   w-full h-10 px-3 rounded-lg text-sm
@@ -116,11 +112,18 @@ const btnSecondCls = `
   transition-colors border border-[var(--admin-border)]
 `;
 
+// ─── Avatar display URL helper ────────────────────────────────────────────────
+
+function avatarSrc(url: string, nonce: number): string {
+  // Strip any previous cache-buster, then append a fresh one.
+  return url.split("?av=")[0] + `?av=${nonce}`;
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminProfilePage() {
   const { lang, toggleLang } = useLanguage();
-  const { theme, toggleTheme } = useAdmin();
+  const { theme, toggleTheme, avatarUrl, avatarNonce, setAvatarUrl } = useAdmin();
 
   const [info,       setInfo]       = useState<AdminInfo | null>(null);
   const [loading,    setLoading]    = useState(true);
@@ -131,12 +134,18 @@ export default function AdminProfilePage() {
   const [nameStatus, setNameStatus] = useState<StatusMsg | null>(null);
 
   // Password
-  const [pwNew,        setPwNew]        = useState("");
-  const [pwConfirm,    setPwConfirm]    = useState("");
-  const [pwShowNew,    setPwShowNew]    = useState(false);
-  const [pwShowConf,   setPwShowConf]   = useState(false);
-  const [pwSaving,     setPwSaving]     = useState(false);
-  const [pwStatus,     setPwStatus]     = useState<StatusMsg | null>(null);
+  const [pwNew,      setPwNew]      = useState("");
+  const [pwConfirm,  setPwConfirm]  = useState("");
+  const [pwShowNew,  setPwShowNew]  = useState(false);
+  const [pwShowConf, setPwShowConf] = useState(false);
+  const [pwSaving,   setPwSaving]   = useState(false);
+  const [pwStatus,   setPwStatus]   = useState<StatusMsg | null>(null);
+
+  // Avatar
+  const avatarRef              = useRef<HTMLInputElement>(null);
+  const [avatarImgFailed, setAvatarImgFailed] = useState(false);
+  const [avatarStatus,    setAvatarStatus]    = useState<StatusMsg | null>(null);
+  const { run: runUpload, uploading: avatarUploading, progress: avatarProgress, error: uploadError } = useUpload();
 
   const isAr = lang === "ar";
 
@@ -155,6 +164,7 @@ export default function AdminProfilePage() {
 
       const name = (user.user_metadata?.full_name as string | undefined) ?? "";
       const loaded: AdminInfo = {
+        userId:   user.id,
         email:    user.email ?? "",
         fullName: name,
         role:     (ap?.role as "admin" | "staff") ?? "staff",
@@ -167,6 +177,77 @@ export default function AdminProfilePage() {
     load();
   }, []);
 
+  // Reset img-failed flag when avatarUrl changes (new photo uploaded)
+  useEffect(() => { setAvatarImgFailed(false); }, [avatarUrl]);
+
+  // ── Avatar upload ────────────────────────────────────────────────────────────
+  const handleAvatarFile = async (file: File) => {
+    if (!info?.userId) return;
+
+    dbg("adminAvatar:fileSelected", `name="${file.name}" size=${file.size}B type="${file.type || "(empty)"}"`);
+    setAvatarStatus(null);
+    setAvatarImgFailed(false);
+
+    // ── Client-side validation ──────────────────────────────────────────────
+    const normalised = file.type === "image/jpg" ? "image/jpeg" : file.type;
+    const allowed    = ["image/jpeg", "image/png", "image/webp"];
+
+    if (normalised && !normalised.startsWith("image/")) {
+      const msg = isAr ? "يُسمح فقط بصور JPG وPNG وWebP" : "Only JPG, PNG, and WebP images are allowed.";
+      dbgError("adminAvatar:validation FAILED", `type="${file.type}" — not an image MIME`);
+      setAvatarStatus({ type: "error", text: msg });
+      return;
+    }
+
+    // If MIME is set and not in allowed list, reject (but allow empty MIME — sniffed by upload service)
+    if (normalised && !normalised.startsWith("image/")) {
+      const msg = isAr ? "يُسمح فقط بصور JPG وPNG وWebP" : "Only JPG, PNG, and WebP images are allowed.";
+      dbgError("adminAvatar:validation FAILED", `type="${normalised}"`);
+      setAvatarStatus({ type: "error", text: msg });
+      return;
+    }
+    if (normalised && !allowed.includes(normalised) && normalised !== "image/jpg") {
+      const ext = file.name.split(".").pop()?.toLowerCase();
+      if (!["jpg","jpeg","png","webp","heic","heif"].includes(ext ?? "")) {
+        const msg = isAr ? "يُسمح فقط بصور JPG وPNG وWebP" : "Only JPG, PNG, and WebP images are allowed.";
+        dbgError("adminAvatar:validation FAILED", `type="${normalised}" ext="${ext}"`);
+        setAvatarStatus({ type: "error", text: msg });
+        return;
+      }
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      const msg = isAr ? "يجب أن تكون الصورة أصغر من 5 ميغابايت" : "Image must be smaller than 5 MB.";
+      dbgError("adminAvatar:validation FAILED", `size=${(file.size / 1024 / 1024).toFixed(1)} MB`);
+      setAvatarStatus({ type: "error", text: msg });
+      return;
+    }
+
+    dbgOk("adminAvatar:validation passed", `size=${(file.size / 1024).toFixed(0)} KB`);
+
+    // ── Upload ─────────────────────────────────────────────────────────────
+    const url = await runUpload(file, (f) => uploadAdminAvatar(info.userId, f));
+
+    if (url) {
+      dbgOk("adminAvatar:uiRefreshed", "context updated — topbar and all avatar consumers reflect new photo");
+      setAvatarUrl(url);   // ← propagates instantly to Topbar + everywhere else
+      setAvatarStatus({
+        type: "success",
+        text: isAr ? "تم تحديث الصورة الشخصية بنجاح" : "Profile photo updated successfully.",
+      });
+    } else {
+      // uploadError from useUpload gives the reason; also already logged inside uploadAdminAvatar
+      const reason = uploadError ?? "Upload failed.";
+      dbgError("adminAvatar:upload returned null", reason);
+      if (!avatarStatus) {
+        setAvatarStatus({
+          type: "error",
+          text: isAr ? "فشل رفع الصورة، يرجى المحاولة مرة أخرى" : reason,
+        });
+      }
+    }
+  };
+
   // ── Save name ───────────────────────────────────────────────────────────────
   const handleSaveName = async () => {
     const trimmed = nameValue.trim();
@@ -178,10 +259,7 @@ export default function AdminProfilePage() {
       setNameStatus({ type: "error", text: error.message });
     } else {
       setInfo((p) => (p ? { ...p, fullName: trimmed } : p));
-      setNameStatus({
-        type: "success",
-        text: isAr ? "تم حفظ الاسم بنجاح" : "Name updated successfully",
-      });
+      setNameStatus({ type: "success", text: isAr ? "تم حفظ الاسم بنجاح" : "Name updated successfully" });
     }
     setNameSaving(false);
   };
@@ -190,19 +268,11 @@ export default function AdminProfilePage() {
   const handleChangePassword = async () => {
     if (!pwNew) return;
     if (pwNew !== pwConfirm) {
-      setPwStatus({
-        type: "error",
-        text: isAr ? "كلمتا المرور غير متطابقتين" : "Passwords do not match",
-      });
+      setPwStatus({ type: "error", text: isAr ? "كلمتا المرور غير متطابقتين" : "Passwords do not match" });
       return;
     }
     if (pwNew.length < 8) {
-      setPwStatus({
-        type: "error",
-        text: isAr
-          ? "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل"
-          : "Password must be at least 8 characters",
-      });
+      setPwStatus({ type: "error", text: isAr ? "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل" : "Password must be at least 8 characters" });
       return;
     }
     setPwSaving(true);
@@ -211,12 +281,8 @@ export default function AdminProfilePage() {
     if (error) {
       setPwStatus({ type: "error", text: error.message });
     } else {
-      setPwStatus({
-        type: "success",
-        text: isAr ? "تم تغيير كلمة المرور بنجاح" : "Password changed successfully",
-      });
-      setPwNew("");
-      setPwConfirm("");
+      setPwStatus({ type: "success", text: isAr ? "تم تغيير كلمة المرور بنجاح" : "Password changed successfully" });
+      setPwNew(""); setPwConfirm("");
     }
     setPwSaving(false);
   };
@@ -226,16 +292,14 @@ export default function AdminProfilePage() {
     return (
       <div className="max-w-2xl mx-auto py-8 space-y-4">
         {[1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="bg-[var(--admin-surface)] border border-[var(--admin-border)] rounded-xl h-48 animate-pulse"
-          />
+          <div key={i} className="bg-[var(--admin-surface)] border border-[var(--admin-border)] rounded-xl h-48 animate-pulse" />
         ))}
       </div>
     );
   }
 
-  const inits = info ? getInitials(info.fullName, info.email) : "A";
+  const inits       = info ? getInitials(info.fullName, info.email) : "A";
+  const displaySrc  = avatarUrl && !avatarImgFailed ? avatarSrc(avatarUrl, avatarNonce) : null;
 
   return (
     <div className="max-w-2xl mx-auto py-8 space-y-6" dir={isAr ? "rtl" : "ltr"}>
@@ -254,19 +318,112 @@ export default function AdminProfilePage() {
 
       {/* ── 1. Identity ─────────────────────────────────────────────────────── */}
       <Card title={isAr ? "الهوية" : "Identity"} icon={User}>
-        {/* Avatar + role summary */}
+
+        {/* Avatar + summary row */}
         <div className="flex items-center gap-5 mb-6">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary-pink to-lavender-purple flex items-center justify-center text-white text-xl font-bold shadow-md select-none shrink-0">
-            {inits}
+
+          {/* ── Clickable avatar ── */}
+          <div className="relative shrink-0 group">
+            {/* Circle */}
+            <div className="w-16 h-16 rounded-full overflow-hidden shadow-md ring-2 ring-[var(--admin-border)]">
+              {displaySrc ? (
+                <img
+                  key={displaySrc}
+                  src={displaySrc}
+                  alt="Profile avatar"
+                  className="w-full h-full object-cover"
+                  onError={() => setAvatarImgFailed(true)}
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-primary-pink to-lavender-purple flex items-center justify-center text-white text-xl font-bold select-none">
+                  {inits}
+                </div>
+              )}
+            </div>
+
+            {/* Hover overlay — show only when not uploading */}
+            {!avatarUploading && (
+              <button
+                type="button"
+                onClick={() => avatarRef.current?.click()}
+                className="absolute inset-0 rounded-full bg-black/45 flex flex-col items-center justify-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                aria-label={isAr ? "تغيير الصورة الشخصية" : "Change profile photo"}
+              >
+                <Camera size={14} className="text-white" />
+                <span className="text-white text-[9px] font-semibold leading-none">
+                  {isAr ? "تغيير" : "Change"}
+                </span>
+              </button>
+            )}
+
+            {/* Uploading spinner overlay */}
+            {avatarUploading && (
+              <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center pointer-events-none">
+                <Loader2 size={20} className="text-white animate-spin" />
+              </div>
+            )}
+
+            {/* Hidden file input */}
+            <input
+              ref={avatarRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              className="sr-only"
+              tabIndex={-1}
+              disabled={avatarUploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleAvatarFile(file);
+                e.target.value = "";
+              }}
+            />
           </div>
-          <div>
-            <p className="font-semibold text-[var(--admin-text)] text-base leading-snug">
+
+          {/* Name / email / role */}
+          <div className="min-w-0">
+            <p className="font-semibold text-[var(--admin-text)] text-base leading-snug truncate">
               {info?.fullName || info?.email}
             </p>
-            <p className="text-xs text-[var(--admin-text-faint)] mb-2">{info?.email}</p>
+            <p className="text-xs text-[var(--admin-text-faint)] mb-2 truncate">{info?.email}</p>
             {info && <RoleBadge role={info.role} />}
           </div>
         </div>
+
+        {/* Upload progress bar */}
+        {avatarUploading && (
+          <div className="mb-4">
+            <UploadProgressBar
+              progress={avatarProgress > 0 ? avatarProgress : null}
+              className="h-1 rounded-full bg-[var(--admin-border)]"
+            />
+            <p className="text-[11px] text-[var(--admin-text-faint)] mt-1">
+              {isAr ? "جارٍ رفع الصورة…" : "Uploading photo…"} {avatarProgress > 0 ? `${avatarProgress}%` : ""}
+            </p>
+          </div>
+        )}
+
+        {/* Avatar status message */}
+        {avatarStatus && !avatarUploading && (
+          <div className="mb-4">
+            <Feedback msg={avatarStatus} />
+          </div>
+        )}
+
+        {/* Upload error from useUpload hook (e.g. network error) */}
+        {uploadError && !avatarUploading && !avatarStatus && (
+          <div className="mb-4">
+            <Feedback msg={{ type: "error", text: uploadError }} />
+          </div>
+        )}
+
+        {/* Photo hint */}
+        {!avatarUploading && !avatarStatus && !uploadError && (
+          <p className="text-[11px] text-[var(--admin-text-faint)] mb-5 -mt-2">
+            {isAr
+              ? "انقر على الصورة لتغييرها · JPG أو PNG أو WebP · حجم أقصى 5 ميغابايت"
+              : "Click the photo to change it · JPG, PNG, or WebP · Max 5 MB"}
+          </p>
+        )}
 
         {/* Display name */}
         <div className="space-y-1.5">
@@ -297,11 +454,7 @@ export default function AdminProfilePage() {
           </div>
         </div>
 
-        {nameStatus && (
-          <div className="mt-3">
-            <Feedback msg={nameStatus} />
-          </div>
-        )}
+        {nameStatus && <div className="mt-3"><Feedback msg={nameStatus} /></div>}
 
         <div className="mt-4 flex justify-end">
           <button
@@ -318,7 +471,6 @@ export default function AdminProfilePage() {
       {/* ── 2. Security ─────────────────────────────────────────────────────── */}
       <Card title={isAr ? "الأمان" : "Security"} icon={Key}>
         <div className="space-y-4">
-          {/* New password */}
           <div className="space-y-1.5">
             <label className="block text-xs font-medium text-[var(--admin-text-muted)]">
               {isAr ? "كلمة المرور الجديدة" : "New Password"}
@@ -331,17 +483,13 @@ export default function AdminProfilePage() {
                 className={`${inputCls} pe-10`}
                 placeholder={isAr ? "8 أحرف على الأقل" : "At least 8 characters"}
               />
-              <button
-                type="button"
-                onClick={() => setPwShowNew((v) => !v)}
-                className="absolute inset-y-0 end-0 px-3 flex items-center text-[var(--admin-text-faint)] hover:text-[var(--admin-text-muted)]"
-              >
+              <button type="button" onClick={() => setPwShowNew((v) => !v)}
+                className="absolute inset-y-0 end-0 px-3 flex items-center text-[var(--admin-text-faint)] hover:text-[var(--admin-text-muted)]">
                 {pwShowNew ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
             </div>
           </div>
 
-          {/* Confirm password */}
           <div className="space-y-1.5">
             <label className="block text-xs font-medium text-[var(--admin-text-muted)]">
               {isAr ? "تأكيد كلمة المرور الجديدة" : "Confirm New Password"}
@@ -354,11 +502,8 @@ export default function AdminProfilePage() {
                 className={`${inputCls} pe-10`}
                 placeholder={isAr ? "أعد إدخال كلمة المرور الجديدة" : "Re-enter new password"}
               />
-              <button
-                type="button"
-                onClick={() => setPwShowConf((v) => !v)}
-                className="absolute inset-y-0 end-0 px-3 flex items-center text-[var(--admin-text-faint)] hover:text-[var(--admin-text-muted)]"
-              >
+              <button type="button" onClick={() => setPwShowConf((v) => !v)}
+                className="absolute inset-y-0 end-0 px-3 flex items-center text-[var(--admin-text-faint)] hover:text-[var(--admin-text-muted)]">
                 {pwShowConf ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
             </div>
@@ -367,11 +512,7 @@ export default function AdminProfilePage() {
           {pwStatus && <Feedback msg={pwStatus} />}
 
           <div className="flex justify-end">
-            <button
-              onClick={handleChangePassword}
-              disabled={pwSaving || !pwNew || !pwConfirm}
-              className={btnPrimaryCls}
-            >
+            <button onClick={handleChangePassword} disabled={pwSaving || !pwNew || !pwConfirm} className={btnPrimaryCls}>
               {pwSaving ? <Loader2 size={14} className="animate-spin" /> : <Key size={14} />}
               {isAr ? "تغيير كلمة المرور" : "Change Password"}
             </button>
@@ -382,12 +523,9 @@ export default function AdminProfilePage() {
       {/* ── 3. Preferences ──────────────────────────────────────────────────── */}
       <Card title={isAr ? "التفضيلات" : "Preferences"} icon={Globe}>
         <div className="space-y-1">
-          {/* Language */}
           <div className="flex items-center justify-between py-3">
             <div>
-              <p className="text-sm font-medium text-[var(--admin-text)]">
-                {isAr ? "اللغة" : "Language"}
-              </p>
+              <p className="text-sm font-medium text-[var(--admin-text)]">{isAr ? "اللغة" : "Language"}</p>
               <p className="text-xs text-[var(--admin-text-faint)] mt-0.5">
                 {isAr ? "اللغة الحالية: العربية" : "Current: English"}
               </p>
@@ -400,12 +538,9 @@ export default function AdminProfilePage() {
 
           <div className="h-px bg-[var(--admin-border)]" />
 
-          {/* Theme */}
           <div className="flex items-center justify-between py-3">
             <div>
-              <p className="text-sm font-medium text-[var(--admin-text)]">
-                {isAr ? "المظهر" : "Theme"}
-              </p>
+              <p className="text-sm font-medium text-[var(--admin-text)]">{isAr ? "المظهر" : "Theme"}</p>
               <p className="text-xs text-[var(--admin-text-faint)] mt-0.5">
                 {theme === "light"
                   ? (isAr ? "الوضع الفاتح مفعّل" : "Light mode active")

@@ -53,8 +53,13 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
   const [open,       setOpen]       = useState(false);
   const [adminName,  setAdminName]  = useState("");
   const [adminEmail, setAdminEmail] = useState("");
+  const [imgFailed,  setImgFailed]  = useState(false);
   const ref      = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  // avatarUrl / avatarNonce come from AdminContext so they update instantly
+  // when the admin uploads a new photo on the Profile page.
+  const { avatarUrl, avatarNonce } = useAdmin();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -64,6 +69,9 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
       setAdminEmail(user.email ?? "");
     });
   }, []);
+
+  // Reset img-failed flag whenever a new avatar URL arrives
+  useEffect(() => { setImgFailed(false); }, [avatarUrl]);
 
   const handleSignOut = async () => {
     setOpen(false);
@@ -87,6 +95,11 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
       ? adminName.trim()[0].toUpperCase()
       : adminEmail[0]?.toUpperCase() ?? "A";
 
+  // Build cache-busted display URL
+  const avatarDisplaySrc = avatarUrl && !imgFailed
+    ? `${avatarUrl.split("?av=")[0]}?av=${avatarNonce}`
+    : null;
+
   const items = lang === "ar"
     ? [
         { icon: User,         label: "الملف الشخصي", href: "/admin/profile",  external: false },
@@ -105,9 +118,20 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
         aria-expanded={open}
         aria-label="User menu"
       >
-        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-pink to-lavender-purple flex items-center justify-center text-white text-[11px] font-bold shadow-sm">
-          {inits}
-        </div>
+        {/* Avatar: photo when set, initials gradient otherwise */}
+        {avatarDisplaySrc ? (
+          <img
+            key={avatarDisplaySrc}
+            src={avatarDisplaySrc}
+            alt=""
+            className="w-7 h-7 rounded-full object-cover shadow-sm ring-1 ring-[var(--admin-border)]"
+            onError={() => setImgFailed(true)}
+          />
+        ) : (
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-pink to-lavender-purple flex items-center justify-center text-white text-[11px] font-bold shadow-sm">
+            {inits}
+          </div>
+        )}
         <span className="hidden sm:block text-[13px] font-medium text-[var(--admin-text)]">
           {adminName || "Admin"}
         </span>
@@ -129,11 +153,26 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
               py-1.5 overflow-hidden
             "
           >
-            <div className="px-4 py-3 border-b border-[var(--admin-border)]">
-              <p className="text-[13px] font-semibold text-[var(--admin-text)]">
-                {adminName || "Admin"}
-              </p>
-              <p className="text-[11px] text-[var(--admin-text-faint)]">{adminEmail}</p>
+            {/* Dropdown header — mini avatar + name + email */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--admin-border)]">
+              {avatarDisplaySrc ? (
+                <img
+                  src={avatarDisplaySrc}
+                  alt=""
+                  className="w-8 h-8 rounded-full object-cover shrink-0 ring-1 ring-[var(--admin-border)]"
+                  onError={() => setImgFailed(true)}
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-pink to-lavender-purple flex items-center justify-center text-white text-[11px] font-bold shrink-0">
+                  {inits}
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-[var(--admin-text)] truncate">
+                  {adminName || "Admin"}
+                </p>
+                <p className="text-[11px] text-[var(--admin-text-faint)] truncate">{adminEmail}</p>
+              </div>
             </div>
 
             <div className="py-1">
