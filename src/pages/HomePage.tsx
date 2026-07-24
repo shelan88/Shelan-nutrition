@@ -23,9 +23,29 @@ import LeadMagnet from "@/components/LeadMagnet";
 import Booking from "@/components/Booking";
 import CTA from "@/components/CTA";
 import { supabase } from "@/lib/supabase";
+import {
+  getSectionSettings,
+  type SectionSettingsRow,
+} from "@/admin/repositories/aboutCms.repository";
 
 export default function HomePage() {
   const [isAdmin, setIsAdmin] = useState(false);
+
+  // undefined = loading (show optimistically), null = no DB row (show by default), row = use row.visible
+  const [certSectionRow, setCertSectionRow] = useState<
+    SectionSettingsRow | null | undefined
+  >(undefined);
+
+  useEffect(() => {
+    getSectionSettings("certifications")
+      .then((row) => setCertSectionRow(row))
+      .catch(() => setCertSectionRow(null));
+  }, []);
+
+  const trustStripVisible =
+    certSectionRow === undefined ? true
+    : certSectionRow === null    ? true
+    : certSectionRow.visible;
 
   useEffect(() => {
     if (!import.meta.env.DEV) return;
@@ -59,8 +79,8 @@ export default function HomePage() {
       {/* 2. About — dark brand gradient */}
       <About />
 
-      {/* 3. TrustStrip — white, authority builder */}
-      <TrustStrip />
+      {/* 3. TrustStrip — white, authority builder; hidden when admin disables certifications section */}
+      {trustStripVisible && <TrustStrip />}
 
       {/* 4. Services — off-white #F9FAFB */}
       <Services />
