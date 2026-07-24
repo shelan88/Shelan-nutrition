@@ -3,7 +3,7 @@ import { useAdminLabels } from "@/admin/hooks/useAdminLabels";
 import PageHeader from "../components/PageHeader";
 import { motion } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Pencil, Trash2, Eye, EyeOff, ArrowLeft, Save, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, EyeOff, ArrowLeft, Save, Search, ArrowUp, ArrowDown, ChevronUp, ChevronDown } from "lucide-react";
 import { getAllServices, createService, updateService, deleteService } from "@/admin/repositories/services.repository";
 import type { ServiceRow } from "@/types/database.types";
 import FileUploadField from "../components/FileUploadField";
@@ -40,6 +40,14 @@ const ACCENT_PREVIEW: Record<string, string> = {
 
 const ICON_OPTIONS = ["Salad", "HeartPulse", "Sparkles", "Star", "Heart", "Leaf", "Apple", "Dumbbell", "Brain", "Sun"];
 
+type FaqDraftItem = {
+  question_en: string;
+  question_ar: string;
+  answer_en: string;
+  answer_ar: string;
+  _open: boolean; // UI-only, not persisted
+};
+
 type FormState = {
   name_en: string;
   name_ar: string;
@@ -72,6 +80,7 @@ type FormState = {
   cta_desc_ar: string;
   cta_button_en: string;
   cta_button_ar: string;
+  faq: FaqDraftItem[];
 };
 
 const EMPTY_FORM: FormState = {
@@ -106,6 +115,7 @@ const EMPTY_FORM: FormState = {
   cta_desc_ar: "",
   cta_button_en: "Book Your Consultation",
   cta_button_ar: "احجزي استشارة",
+  faq: [],
 };
 
 function formFromRow(row: ServiceRow): FormState {
@@ -146,6 +156,13 @@ function formFromRow(row: ServiceRow): FormState {
     cta_desc_ar: cta.descriptionAr ?? "",
     cta_button_en: cta.buttonLabel ?? "Book Your Consultation",
     cta_button_ar: cta.buttonLabelAr ?? "احجزي استشارة",
+    faq: (d.faq ?? []).map((item: any) => ({
+      question_en: item.question   ?? "",
+      question_ar: item.questionAr ?? "",
+      answer_en:   item.answer     ?? "",
+      answer_ar:   item.answerAr   ?? "",
+      _open: false,
+    })),
   };
 }
 
@@ -232,6 +249,12 @@ export default function ServicesAdminPage() {
         buttonLabel: form.cta_button_en,
         buttonLabelAr: form.cta_button_ar,
       },
+      faq: form.faq.map(({ question_en, question_ar, answer_en, answer_ar }) => ({
+        question:   question_en,
+        questionAr: question_ar,
+        answer:     answer_en,
+        answerAr:   answer_ar,
+      })),
     };
 
     const payload = {
@@ -259,6 +282,42 @@ export default function ServicesAdminPage() {
     setSaving(false);
     setView("list");
     await loadServices();
+  };
+
+  // ── FAQ helpers ─────────────────────────────────────────────────────────────
+  const addFaqItem = () => {
+    setForm((f) => ({
+      ...f,
+      faq: [...f.faq, { question_en: "", question_ar: "", answer_en: "", answer_ar: "", _open: true }],
+    }));
+  };
+
+  const removeFaqItem = (i: number) => {
+    setForm((f) => ({ ...f, faq: f.faq.filter((_, idx) => idx !== i) }));
+  };
+
+  const moveFaqItem = (i: number, dir: -1 | 1) => {
+    setForm((f) => {
+      const arr = [...f.faq];
+      const target = i + dir;
+      if (target < 0 || target >= arr.length) return f;
+      [arr[i], arr[target]] = [arr[target], arr[i]];
+      return { ...f, faq: arr };
+    });
+  };
+
+  const updateFaqItem = (i: number, patch: Partial<FaqDraftItem>) => {
+    setForm((f) => ({
+      ...f,
+      faq: f.faq.map((item, idx) => (idx === i ? { ...item, ...patch } : item)),
+    }));
+  };
+
+  const toggleFaqItem = (i: number) => {
+    setForm((f) => ({
+      ...f,
+      faq: f.faq.map((item, idx) => (idx === i ? { ...item, _open: !item._open } : item)),
+    }));
   };
 
   const filtered = services.filter((s) => {
@@ -680,6 +739,146 @@ export default function ServicesAdminPage() {
                       />
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* ── FAQ ─────────────────────────────────────────────────── */}
+              <div className="border-t border-[var(--admin-border)] pt-6 mt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-[13px] font-bold text-[var(--admin-text)]">
+                    {lang === "ar" ? "الأسئلة الشائعة (FAQ)" : "FAQ"}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={addFaqItem}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-primary-pink/50 text-[12px] font-medium text-primary-pink hover:bg-primary-pink/5 transition-colors"
+                  >
+                    <Plus size={13} />
+                    {lang === "ar" ? "إضافة سؤال" : "Add Question"}
+                  </button>
+                </div>
+
+                {form.faq.length === 0 && (
+                  <p className="text-[12px] text-[var(--admin-text-faint)] italic py-6 text-center border border-dashed border-[var(--admin-border)] rounded-xl">
+                    {lang === "ar"
+                      ? "لا توجد أسئلة بعد. اضغط «إضافة سؤال» للبدء."
+                      : "No FAQ items yet — click \"Add Question\" to start."}
+                  </p>
+                )}
+
+                <div className="space-y-3">
+                  {form.faq.map((item, i) => (
+                    <div key={i} className="rounded-xl border border-[var(--admin-border)] overflow-hidden">
+                      {/* Item header row */}
+                      <div className="flex items-center gap-2 px-4 py-3 bg-[var(--admin-hover-bg)]">
+                        <span className="text-[11px] font-bold text-[var(--admin-text-faint)] w-5 text-center shrink-0">
+                          {i + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => toggleFaqItem(i)}
+                          className="flex-1 text-start text-[13px] font-medium text-[var(--admin-text)] truncate min-w-0"
+                        >
+                          {item.question_en || (lang === "ar" ? "سؤال جديد…" : "New question…")}
+                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            disabled={i === 0}
+                            onClick={() => moveFaqItem(i, -1)}
+                            title="Move up"
+                            className="p-1 rounded text-[var(--admin-text-faint)] hover:text-[var(--admin-text)] hover:bg-[var(--admin-surface)] disabled:opacity-30 transition-colors"
+                          >
+                            <ArrowUp size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={i === form.faq.length - 1}
+                            onClick={() => moveFaqItem(i, 1)}
+                            title="Move down"
+                            className="p-1 rounded text-[var(--admin-text-faint)] hover:text-[var(--admin-text)] hover:bg-[var(--admin-surface)] disabled:opacity-30 transition-colors"
+                          >
+                            <ArrowDown size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeFaqItem(i)}
+                            title="Delete"
+                            className="p-1 rounded text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleFaqItem(i)}
+                            className="p-1 rounded text-[var(--admin-text-faint)] hover:text-[var(--admin-text)] hover:bg-[var(--admin-surface)] transition-colors"
+                          >
+                            {item._open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Item body (expanded) */}
+                      {item._open && (
+                        <div className="p-5 border-t border-[var(--admin-border)] grid grid-cols-1 md:grid-cols-2 gap-5">
+                          {/* English */}
+                          <div className="space-y-3">
+                            <p className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider">English</p>
+                            <div>
+                              <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
+                                Question (EN)
+                              </label>
+                              <input
+                                className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
+                                value={item.question_en}
+                                onChange={(e) => updateFaqItem(i, { question_en: e.target.value })}
+                                placeholder="What is…?"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
+                                Answer (EN)
+                              </label>
+                              <textarea
+                                rows={3}
+                                className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
+                                value={item.answer_en}
+                                onChange={(e) => updateFaqItem(i, { answer_en: e.target.value })}
+                                placeholder="The answer is…"
+                              />
+                            </div>
+                          </div>
+                          {/* Arabic */}
+                          <div className="space-y-3" dir="rtl">
+                            <p className="text-[11px] font-bold text-[var(--admin-text-faint)] uppercase tracking-wider">العربية</p>
+                            <div>
+                              <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
+                                السؤال (AR)
+                              </label>
+                              <input
+                                className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors"
+                                value={item.question_ar}
+                                onChange={(e) => updateFaqItem(i, { question_ar: e.target.value })}
+                                placeholder="ما هو…؟"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-1.5">
+                                الجواب (AR)
+                              </label>
+                              <textarea
+                                rows={3}
+                                className="w-full px-3 py-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)] text-[13px] placeholder:text-[var(--admin-text-faint)] focus:outline-none focus:ring-2 focus:ring-primary-pink/20 focus:border-primary-pink/40 transition-colors resize-y"
+                                value={item.answer_ar}
+                                onChange={(e) => updateFaqItem(i, { answer_ar: e.target.value })}
+                                placeholder="الجواب هو…"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
 

@@ -44,7 +44,10 @@ function mapService(row: ServiceRow, lang: string): CMSService {
         lang === "ar" ? (be.itemsAr ?? be.items ?? []) : (be.items ?? []),
     },
     consultation: d.consultation ?? { headline: "", steps: [] },
-    faq: d.faq ?? [],
+    faq: (d.faq ?? []).map((item: any) => ({
+      question: lang === "ar" ? (item.questionAr ?? item.question ?? "") : (item.question ?? ""),
+      answer:   lang === "ar" ? (item.answerAr  ?? item.answer  ?? "") : (item.answer  ?? ""),
+    })),
     cta: {
       headline:
         lang === "ar"
