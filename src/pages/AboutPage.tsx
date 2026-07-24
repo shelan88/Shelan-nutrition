@@ -6,7 +6,7 @@
  *   Replace `aboutData[lang]` with an async fetch from `supabase.from('about_page')...`
  *   Nothing else in this file changes.
  */
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { aboutData } from "@/data/about.data";
 import PageHero from "@/components/ui/PageHero";
@@ -17,11 +17,35 @@ import AboutPhilosophy from "@/sections/about/AboutPhilosophy";
 import AboutApproach from "@/sections/about/AboutApproach";
 import AboutCertifications from "@/sections/about/AboutCertifications";
 import AboutWhyTrust from "@/sections/about/AboutWhyTrust";
+import {
+  getSectionSettings,
+  type SectionSettingsRow,
+} from "@/admin/repositories/aboutCms.repository";
 
 export default function AboutPage() {
   const { lang } = useLanguage();
   // ↓ Only this line changes when Supabase is connected
   const data = aboutData[lang];
+
+  // Certifications section visibility — same three-state pattern as
+  // Qualifications / Expertise in About.tsx:
+  //   undefined  = still loading   → show optimistically
+  //   null       = no DB row found → show by default
+  //   row object = use row.visible
+  const [certSectionRow, setCertSectionRow] = useState<
+    SectionSettingsRow | null | undefined
+  >(undefined);
+
+  useEffect(() => {
+    getSectionSettings("certifications")
+      .then((row) => setCertSectionRow(row))
+      .catch(() => setCertSectionRow(null)); // network error → treat as visible
+  }, []);
+
+  const certVisible =
+    certSectionRow === undefined ? true  // loading
+    : certSectionRow === null    ? true  // no row → default visible
+    : certSectionRow.visible;           // use the admin's setting
 
   useEffect(() => {
     document.title = lang === "ar" ? "من أنا | SHELAN" : "About Shelan | SHELAN Nutrition";
@@ -49,7 +73,7 @@ export default function AboutPage() {
       <AboutMissionVision missionVision={data.missionVision} />
       <AboutPhilosophy philosophy={data.philosophy} />
       <AboutApproach approach={data.approach} />
-      <AboutCertifications certifications={data.certifications} />
+      {certVisible && <AboutCertifications certifications={data.certifications} />}
       <AboutWhyTrust whyTrust={data.whyTrust} />
       <CTABanner
         kicker={data.cta.kicker}
