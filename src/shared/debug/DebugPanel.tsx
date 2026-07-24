@@ -158,16 +158,25 @@ function TraceStepList({ trace }: { trace: Trace }) {
 
 type TabId = "logs" | "inspector" | "trace";
 
-const PANEL_W = 560;
+const MAX_PANEL_W = 560;
+/** Actual panel width — never wider than the viewport minus a small margin. */
+function getPanelW() {
+  return typeof window !== "undefined"
+    ? Math.min(MAX_PANEL_W, window.innerWidth - 8)
+    : MAX_PANEL_W;
+}
 
 function DebugPanelInner() {
   // Panel state
   const [open,      setOpen]      = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>("logs");
-  const [pos,       setPos]       = useState(() => ({
-    x: typeof window !== "undefined" ? Math.max(0, window.innerWidth  - PANEL_W - 16) : 20,
-    y: typeof window !== "undefined" ? Math.max(0, window.innerHeight - 540)          : 20,
-  }));
+  const [pos,       setPos]       = useState(() => {
+    const w = getPanelW();
+    return {
+      x: typeof window !== "undefined" ? Math.max(0, window.innerWidth  - w - 4) : 4,
+      y: typeof window !== "undefined" ? Math.max(0, window.innerHeight - 540)   : 20,
+    };
+  });
 
   // Drag
   const [isDragging, setIsDragging] = useState(false);
@@ -227,8 +236,8 @@ function DebugPanelInner() {
       if (!dragStart.current) return;
       const { mx, my, px, py } = dragStart.current;
       setPos({
-        x: Math.max(0, Math.min(window.innerWidth  - PANEL_W, px + e.clientX - mx)),
-        y: Math.max(0, Math.min(window.innerHeight - 40,      py + e.clientY - my)),
+        x: Math.max(0, Math.min(window.innerWidth  - getPanelW(), px + e.clientX - mx)),
+        y: Math.max(0, Math.min(window.innerHeight - 40,           py + e.clientY - my)),
       });
     }
     function onUp() { setIsDragging(false); dragStart.current = null; }
@@ -302,7 +311,8 @@ function DebugPanelInner() {
           position:    "fixed",
           left:        pos.x,
           top:         pos.y,
-          width:       PANEL_W,
+          width:       getPanelW(),
+          maxWidth:    "calc(100vw - 8px)",
           maxHeight:   "72vh",
           zIndex:      999999,
           display:     "flex",
@@ -380,7 +390,7 @@ function DebugPanelInner() {
           {activeTab === "logs" && (
             <>
               {/* Filter chips */}
-              <div className="flex flex-wrap gap-1 px-2 pt-2 pb-1 border-b border-white/5 shrink-0">
+              <div className="flex gap-1 px-2 pt-2 pb-1 border-b border-white/5 shrink-0 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
                 {FILTERS.map((f) => (
                   <button
                     key={f.id}
