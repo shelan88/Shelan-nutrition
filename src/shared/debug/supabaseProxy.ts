@@ -47,9 +47,9 @@ function wrapBuilder(
             (res: { data?: unknown; error?: { message: string } | null }) => {
               const ms       = Date.now() - start;
               const hasError = !!res?.error;
-              const firstRow = Array.isArray(res?.data)
-                ? (res.data as AnyObj[])[0]
-                : null;
+              const isList   = Array.isArray(res?.data);
+              const firstRow = isList ? (res.data as AnyObj[])[0] : null;
+              const shape    = isList ? "list" : "single";
 
               const isSlow = !hasError && ms > SLOW_QUERY_MS;
 
@@ -58,15 +58,15 @@ function wrapBuilder(
                 category:   "database",
                 module:     "Supabase",
                 component:  "supabaseProxy",
-                action:     `${op}(${table})`,
+                action:     `${op}(${table}) (${shape})`,
                 result:     hasError ? "error" : isSlow ? "warning" : "success",
                 table,
                 recordId:   typeof firstRow?.id === "string" ? firstRow.id : undefined,
                 durationMs: ms,
                 error:      hasError ? res.error!.message : undefined,
                 data:       hasError ? undefined : {
-                  rows: Array.isArray(res.data)
-                    ? res.data.length
+                  rows: isList
+                    ? (res.data as unknown[]).length
                     : res.data != null ? 1 : 0,
                 },
               });
