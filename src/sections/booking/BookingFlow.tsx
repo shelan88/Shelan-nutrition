@@ -8,6 +8,7 @@
  */
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { debugLog } from "@/shared/debug/logger";
 import { createAppointment } from "@/admin/repositories/appointments.repository";
 import { getTemplateForService } from "@/admin/repositories/assessment-templates.repository";
 import { createResponse } from "@/admin/repositories/assessment-responses.repository";
@@ -547,6 +548,14 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
 
   const handleConfirm = async () => {
     setConfirming(true);
+    const fieldCount = Object.values(personalInfo).filter((v) => String(v).trim()).length + (date ? 1 : 0) + (time ? 1 : 0);
+    debugLog({
+      level: "log", category: "forms",
+      module: "Booking", component: "BookingFlow", action: "confirm",
+      result: "info",
+      data: { fieldCount, programMode, hasDate: !!date, hasTime: !!time },
+    });
+    const t0 = performance.now();
     try {
       // Use the program id (if in program mode) or the selected service id.
       const lookupId = programMode ? (program?.id ?? "") : serviceId;
@@ -581,10 +590,32 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
       if (appt && hasTemplate) {
         // Pre-create the blank response row so the questionnaire page can find it
         await createResponse(template!.id, appt.id, user?.id ?? null, null);
+        debugLog({
+          level: "log", category: "forms",
+          module: "Booking", component: "BookingFlow", action: "confirm",
+          result: "success", durationMs: Math.round(performance.now() - t0),
+          recordId: appt.id,
+          data: { fieldCount, hasTemplate: true },
+        });
         navigate(`/assessment/respond/${appt.id}`);
       } else {
+        debugLog({
+          level: "log", category: "forms",
+          module: "Booking", component: "BookingFlow", action: "confirm",
+          result: "success", durationMs: Math.round(performance.now() - t0),
+          recordId: appt?.id,
+          data: { fieldCount, hasTemplate: false },
+        });
         setConfirmed(true);
       }
+    } catch (err) {
+      debugLog({
+        level: "error", category: "forms",
+        module: "Booking", component: "BookingFlow", action: "confirm",
+        result: "error", durationMs: Math.round(performance.now() - t0),
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
     } finally {
       setConfirming(false);
     }

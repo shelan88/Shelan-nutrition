@@ -20,6 +20,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, CheckCircle2, Loader2 } from "lucide-react";
+import { debugLog } from "@/shared/debug/logger";
 
 import ProgressStepper from "@/components/assessment/ProgressStepper";
 import QuestionCard from "@/components/assessment/QuestionCard";
@@ -372,6 +373,15 @@ export default function AssessmentWizard({ data, strings }: AssessmentWizardProp
       // Yield to React so the loading indicator renders before sync work begins
       await Promise.resolve();
 
+      const fieldCount = Object.keys(answers).length;
+      debugLog({
+        level: "log", category: "forms",
+        module: "Assessment", component: "AssessmentWizard", action: "submit",
+        result: "info",
+        data: { fieldCount },
+      });
+      const t0 = performance.now();
+
       try {
         // 1. Calculate score, risk level, plan, and diagnosis
         const result = calculateAssessment(answers);
@@ -416,10 +426,24 @@ export default function AssessmentWizard({ data, strings }: AssessmentWizardProp
         // 5. Clear draft
         // TODO Supabase: supabase.from('assessments').insert({ answers, submittedAt: new Date() })
         localStorage.removeItem(LS_KEY);
+
+        debugLog({
+          level: "log", category: "forms",
+          module: "Assessment", component: "AssessmentWizard", action: "submit",
+          result: "success", durationMs: Math.round(performance.now() - t0),
+          data: { fieldCount, isExistingClient: !!existingClient, riskLevel: result.riskLevel },
+        });
+
         setDirection(1);
         setView("success");
         window.scrollTo({ top: 0, behavior: "smooth" });
       } catch (err) {
+        debugLog({
+          level: "error", category: "forms",
+          module: "Assessment", component: "AssessmentWizard", action: "submit",
+          result: "error", durationMs: Math.round(performance.now() - t0),
+          error: err instanceof Error ? err.message : String(err),
+        });
         console.error("[SHELAN] Assessment submission failed:", err);
       } finally {
         setIsSubmitting(false);

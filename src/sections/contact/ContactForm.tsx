@@ -7,6 +7,7 @@ import { useState } from "react";
 import { sendMessage } from "@/admin/repositories/messages.repository";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
+import { debugLog } from "@/shared/debug/logger";
 
 interface ContactFormStrings {
   nameLabel: string;
@@ -73,9 +74,25 @@ export default function ContactForm({ strings }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs = validate();
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      debugLog({
+        level: "warn", category: "forms",
+        module: "Contact", component: "ContactForm", action: "submit",
+        result: "warning",
+        data: { fieldCount: Object.keys(INITIAL).length, validationErrors: Object.keys(errs).length },
+      });
+      return;
+    }
     setSubmitting(true);
     setSubmitError("");
+    debugLog({
+      level: "log", category: "forms",
+      module: "Contact", component: "ContactForm", action: "submit",
+      result: "info",
+      data: { fieldCount: Object.keys(INITIAL).length, hasEmail: !!form.email.trim(), hasPhone: !!form.phone.trim() },
+    });
+    const t0 = performance.now();
     const ok = await sendMessage({
       sender_name:  form.name.trim(),
       sender_email: form.email.trim() || undefined,
@@ -83,10 +100,23 @@ export default function ContactForm({ strings }: Props) {
       content:      `[${form.subject}] ${form.message.trim()}`,
       source:       "website",
     });
+    const durationMs = Math.round(performance.now() - t0);
     setSubmitting(false);
     if (ok) {
+      debugLog({
+        level: "log", category: "forms",
+        module: "Contact", component: "ContactForm", action: "submit",
+        result: "success", durationMs,
+        data: { fieldCount: Object.keys(INITIAL).length },
+      });
       setSuccess(true);
     } else {
+      debugLog({
+        level: "error", category: "forms",
+        module: "Contact", component: "ContactForm", action: "submit",
+        result: "error", durationMs,
+        error: "sendMessage returned false",
+      });
       setSubmitError("Something went wrong — please try again or reach out directly by phone.");
     }
   };
