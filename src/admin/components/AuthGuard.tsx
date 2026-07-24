@@ -55,19 +55,23 @@ export default function AuthGuard({ children }: AuthGuardProps) {
       if (!cancelled) setState(result);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (cancelled) return;
-      // DO NOT call setState("loading") here.
+      // DO NOT call setState("loading") here — it tears down the entire admin
+      // layout (including open file inputs) before onChange can fire on Android.
       //
-      // Supabase fires TOKEN_REFRESHED through onAuthStateChange whenever the
-      // Android browser returns from a background activity — including the native
-      // file picker. Calling setState("loading") tears down the entire admin layout
-      // (replacing it with a spinner) which unmounts any open FileDropZone before
-      // its onChange can fire. The file selection is silently lost.
+      // TOKEN_REFRESHED fires whenever the Android browser returns from a
+      // background activity (e.g. the native file picker). We must NOT re-query
+      // admin_profiles for this event: the network may be momentarily unavailable
+      // during the app-switch, causing the query to fail. resolveGuardState treats
+      // any query error as "unauthorized" and calls signOut() — which navigates
+      // the user to /admin/login, losing the upload entirely.
       //
-      // The loading state is only needed for the *initial* session check above.
-      // For subsequent auth events (TOKEN_REFRESHED, SIGNED_OUT, etc.) we resolve
-      // the new guard state and apply it directly with no visible flash.
+      // Safe rule: only re-evaluate guard state for events that genuinely change
+      // who the user is. TOKEN_REFRESHED only rotates the session token; the user
+      // identity and authorization are unchanged.
+      if (event === "TOKEN_REFRESHED") return;
+
       const result = await resolveGuardState(session);
       if (!cancelled) setState(result);
     });
