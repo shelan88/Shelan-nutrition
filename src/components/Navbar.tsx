@@ -23,6 +23,7 @@ import AuthModal from "@/components/AuthModal";
 import { getSetting } from "@/admin/repositories/settings.repository";
 import { supabase } from "@/lib/supabase";
 import { getSectionHref } from "@/lib/sectionAnchors";
+import { dbg, dbgOk, dbgError } from "@/shared/debug/uploadDebug";
 import type { Session } from "@supabase/supabase-js";
 
 // ── Nav item shape coming from DB (site.nav) ──────────────────────────────────
@@ -179,15 +180,39 @@ export default function Navbar() {
         setIsAdmin(admin);
 
         if (!admin) {
-          // Fetch avatar_url from client row only for non-admin users
+          // Non-admin: avatar lives in the clients table
+          dbg("navbar:avatar:source", "clients table (non-admin)");
           const { data } = await supabase
             .from("clients")
             .select("avatar_url")
             .eq("user_id", session.user.id)
             .maybeSingle();
-          if (!cancelled) setAvatarUrl((data as any)?.avatar_url ?? null);
+          const url = (data as any)?.avatar_url ?? null;
+          if (!cancelled) {
+            if (url) {
+              dbgOk("navbar:avatar:loaded", `url="${String(url).slice(0, 80)}"`);
+            } else {
+              dbg("navbar:avatar:fallback", "no avatar_url in clients row — showing initials");
+            }
+            setAvatarUrl(url);
+          }
         } else {
-          setAvatarUrl(null);
+          // Admin: avatar lives in admin_profiles — fetch it instead of defaulting to null
+          dbg("navbar:avatar:source", "admin_profiles table (admin user)");
+          const { data } = await supabase
+            .from("admin_profiles")
+            .select("avatar_url")
+            .eq("user_id", session.user.id)
+            .maybeSingle();
+          const url = (data as any)?.avatar_url ?? null;
+          if (!cancelled) {
+            if (url) {
+              dbgOk("navbar:avatar:loaded", `admin url="${String(url).slice(0, 80)}"`);
+            } else {
+              dbg("navbar:avatar:fallback", "no avatar_url in admin_profiles — showing initials");
+            }
+            setAvatarUrl(url);
+          }
         }
       } else {
         setUserInitials("");
@@ -209,18 +234,34 @@ export default function Navbar() {
     return () => { cancelled = true; subscription.unsubscribe(); };
   }, []);
 
-  // Re-fetch avatar when ProfilePage signals a successful save
+  // Re-fetch avatar when ProfilePage signals a successful save.
+  // Must route to the correct table depending on whether the user is an admin.
   useEffect(() => {
     let cancelled = false;
     const handler = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user || cancelled) return;
+
+      const admin = await checkAdminProfile(session);
+      if (cancelled) return;
+
+      const table  = admin ? "admin_profiles" : "clients";
+      dbg("navbar:avatar:refetch", `shelan:avatar-updated fired — querying ${table}`);
+
       const { data } = await supabase
-        .from("clients")
+        .from(table)
         .select("avatar_url")
         .eq("user_id", session.user.id)
         .maybeSingle();
-      if (!cancelled) setAvatarUrl((data as any)?.avatar_url ?? null);
+
+      if (cancelled) return;
+      const url = (data as any)?.avatar_url ?? null;
+      if (url) {
+        dbgOk("navbar:avatar:refetched", `url="${String(url).slice(0, 80)}"`);
+      } else {
+        dbg("navbar:avatar:refetch-fallback", `no avatar_url in ${table} — keeping initials`);
+      }
+      setAvatarUrl(url);
     };
     window.addEventListener("shelan:avatar-updated", handler);
     return () => { cancelled = true; window.removeEventListener("shelan:avatar-updated", handler); };
@@ -282,10 +323,15 @@ export default function Navbar() {
           src={src}
           alt="avatar"
           className={`${dim} rounded-full object-cover border border-white/20 select-none`}
-          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          onLoad={() => dbgOk("navbar:avatar:imgLoaded", `src="${src.slice(0, 80)}"`)}
+          onError={(e) => {
+            dbgError("navbar:avatar:imgFailed", `src="${src.slice(0, 80)}" — hiding img, initials will show on next render`);
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+          }}
         />
       );
     }
+    dbg("navbar:avatar:showingInitials", `initials="${userInitials}" reason="avatarUrl is ${avatarUrl === null ? "null" : "empty"}"`);
     return (
       <span
         className={`${dim} rounded-full bg-primary-pink/80 flex items-center justify-center font-bold text-white select-none`}
