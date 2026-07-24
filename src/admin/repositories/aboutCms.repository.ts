@@ -8,6 +8,7 @@
  *   • about_certifications_settings — section-level config (single row)
  */
 import { supabase } from "@/lib/supabase";
+import { uploadToStorage } from "@/lib/upload/upload.service";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -297,19 +298,35 @@ export async function updateSectionVisible(
 // ── Logo upload ───────────────────────────────────────────────────────────────
 
 export async function uploadCertLogo(certId: string, file: File): Promise<string | null> {
-  const ext = file.name.split(".").pop() ?? "png";
-  const path = `${certId}.${ext}`;
-  const { error } = await supabase.storage
-    .from("cert-logos")
-    .upload(path, file, { upsert: true, contentType: file.type });
-  if (error) { console.error("[aboutCms] uploadCertLogo:", error.message); return null; }
-  const { data } = supabase.storage.from("cert-logos").getPublicUrl(path);
-  return data.publicUrl + `?t=${Date.now()}`;
+  // Always store as .jpg so HEIC/Samsung-Gallery files are converted to JPEG
+  // by uploadToStorage's compressImage step (which handles HEIC via createImageBitmap).
+  // SVG files skip compression and are also stored at this path — the extension
+  // is cosmetic for public URLs and doesn't affect rendering.
+  const isSvg = file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg");
+  const ext   = isSvg ? "svg" : "jpg";
+  const path  = `${certId}.${ext}`;
+
+  const { url, error } = await uploadToStorage(file, {
+    bucket:       "cert-logos",
+    path,
+    upsert:       true,
+    allowedTypes: ["image/*"],
+    compress:     !isSvg,      // convert HEIC → JPEG; skip for SVG (canvas can't encode SVG)
+    maxWidthPx:   800,         // logos don't need to be wider than 800 px
+    quality:      0.9,
+  });
+
+  if (error || !url) {
+    console.error("[aboutCms] uploadCertLogo:", error);
+    return null;
+  }
+  // Bust CDN cache so the new logo appears immediately
+  return url + `?t=${Date.now()}`;
 }
 
 export async function deleteCertLogo(certId: string): Promise<void> {
   // Try all common extensions — if one fails silently we don't care
-  const exts = ["png", "jpg", "jpeg", "webp", "svg"];
+  const exts = ["jpg", "jpeg", "png", "webp", "svg"];
   await Promise.allSettled(
     exts.map((ext) =>
       supabase.storage.from("cert-logos").remove([`${certId}.${ext}`])
