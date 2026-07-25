@@ -13,7 +13,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useClientProfile } from "@/hooks/useClientProfile";
 import { useLanguage } from "@/context/LanguageContext";
-import { deactivateOwnAccount, updateOwnProfile } from "@/portal/repositories/profile.repository";
+import { deleteAccount, updateOwnProfile } from "@/portal/repositories/profile.repository";
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
@@ -289,19 +289,26 @@ function DeleteAccountSection() {
   const handleDelete = async () => {
     if (!profile) return;
     setLoading(true);
-    const ok = await deactivateOwnAccount(profile.id);
+    const { ok, error } = await deleteAccount();
     if (!ok) {
-      setToast({ type: "error", msg: isAr ? "فشل إلغاء تفعيل الحساب. يرجى التواصل مع الدعم." : "Failed to deactivate account. Please contact support." });
+      setToast({
+        type: "error",
+        msg: isAr
+          ? `فشل حذف الحساب. ${error ?? "يرجى التواصل مع الدعم."}`
+          : `Failed to delete account. ${error ?? "Please contact support."}`,
+      });
       setLoading(false);
     }
+    // on success: supabase.auth.signOut() was already called inside deleteAccount()
+    // → AuthGuard will detect the cleared session and redirect to /portal/login
   };
 
   return (
     <SectionCard title={isAr ? "حذف الحساب" : "Delete Account"} icon={<Trash2 size={15} />}>
       <p className="text-sm text-ivory/50 mb-3">
         {isAr
-          ? "سيؤدي حذف حسابك إلى تسجيل خروجك وتعطيل ملفك الشخصي. سيتم الاحتفاظ ببياناتك في سجلات أخصائية التغذية."
-          : "Deleting your account will sign you out and mark your profile as inactive. Your data will be retained for the nutritionist's records."}
+          ? "سيؤدي حذف حسابك إلى إزالة إمكانية تسجيل الدخول نهائياً. سيتم الاحتفاظ ببياناتك في سجلات أخصائية التغذية ولن يتمكن أحد من الوصول إلى حسابك مجدداً."
+          : "Deleting your account permanently disables login — you will never be able to sign in again. Your nutrition records are kept for the nutritionist's archive and can only be removed by an admin."}
       </p>
       {!open ? (
         <button

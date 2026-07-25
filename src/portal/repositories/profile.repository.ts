@@ -165,19 +165,41 @@ export async function uploadAvatar(
   return { url, error: null };
 }
 
-// ─── Delete account (soft — marks Inactive + clears user_id link) ─────────────
+// ─── Delete account — permanent ───────────────────────────────────────────────
+// Calls the secure server-side endpoint /api/delete-account which:
+//   1. Verifies the caller's JWT
+//   2. Archives the clients row (status=Inactive, deleted_at, user_id=NULL)
+//   3. Hard-deletes the Supabase Auth user → login permanently disabled
+// The service_role key never leaves the server.
 
-export async function deactivateOwnAccount(clientId: string): Promise<boolean> {
-  const { error } = await supabase
-    .from("clients")
-    .update({ status: "Inactive", user_id: null })
-    .eq("id", clientId);
-
-  if (error) {
-    console.error("[portal/profile] deactivateOwnAccount:", error.message);
-    return false;
+export async function deleteAccount(): Promise<{ ok: boolean; error?: string }> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    return { ok: false, error: "No active session." };
   }
 
+  let resp: Response;
+  try {
+    resp = await fetch("/api/delete-account", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+    });
+  } catch (networkErr) {
+    console.error("[portal/profile] deleteAccount network error:", networkErr);
+    return { ok: false, error: "Network error — please try again." };
+  }
+
+  if (!resp.ok) {
+    let msg = `Server error (${resp.status})`;
+    try { const body = await resp.json(); msg = body.error ?? msg; } catch { /* ignore */ }
+    console.error("[portal/profile] deleteAccount API error:", msg);
+    return { ok: false, error: msg };
+  }
+
+  // Auth user is now deleted on the server — sign out locally to clear tokens
   await supabase.auth.signOut();
-  return true;
+  return { ok: true };
 }

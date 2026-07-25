@@ -15,3 +15,4 @@
 - [Android file picker unmounts FileDropZone](android-file-picker-unmount.md) — root cause: AuthGuard called setState("loading") inside onAuthStateChange; Supabase fires TOKEN_REFRESHED on visibilitychange, tearing down entire admin layout.
 - [Free Guide system + Nav architecture](free-guide-and-nav-architecture.md) — lead_emails+free_guide_settings tables; SECTION_HREFS canonical map in sectionAnchors.ts; Navbar derives hrefs from sectionId, never stores them.
 - [About page CMS](about-cms.md) — 4 tables (qualifications/expertise/certifications/cert_settings); logo-or-initials display mode; admin at /admin/about-cms; public components DB-driven with fallback.
+- [Delete Account architecture](delete-account-architecture.md) — service_role stays in api/server.js (port 3001); Vite proxies /api; concurrently runs both; Node 20 needs ws transport for supabase-js.

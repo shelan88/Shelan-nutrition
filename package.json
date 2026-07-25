@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently --kill-others-on-fail \"node api/server.js\" \"vite\"",
+    "api": "node api/server.js",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
@@ -13,6 +14,8 @@
     "@react-pdf/renderer": "^4.5.1",
     "@supabase/supabase-js": "^2.109.0",
     "@tailwindcss/vite": "^4.3.2",
+    "concurrently": "^9.2.4",
+    "express": "^5.2.1",
     "framer-motion": "^12.42.2",
     "lucide-react": "^1.24.0",
     "pg": "^8.22.0",
