@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useClientProfile } from "@/hooks/useClientProfile";
 import { useLanguage } from "@/context/LanguageContext";
 import { deleteAccount, updateOwnProfile } from "@/portal/repositories/profile.repository";
+import { localizeAuthError } from "@/lib/authErrors";
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
@@ -95,7 +96,7 @@ function ChangePasswordSection() {
     const { error } = await supabase.auth.updateUser({ password: next });
     setLoading(false);
     if (error) {
-      setToast({ type: "error", msg: error.message });
+      setToast({ type: "error", msg: localizeAuthError(error, lang) });
     } else {
       setToast({ type: "success", msg: isAr ? "تم تحديث كلمة المرور بنجاح." : "Password updated successfully." });
       setCurrent(""); setNext(""); setConfirm("");

@@ -5,6 +5,7 @@ import { X, Mail, Lock, User, ArrowLeft, ArrowRight, CheckCircle2, AlertCircle, 
 import { useLanguage } from "@/context/LanguageContext";
 import { authModal } from "@/content/content";
 import { supabase } from "@/lib/supabase";
+import { localizeAuthError } from "@/lib/authErrors";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { upsertClientFromAuth } from "@/admin/repositories/clients.repository";
 
@@ -61,7 +62,7 @@ export default function AuthModal({ onClose, onSuccess, initialView = "login" }:
     });
     setLoginLoading(false);
     if (error) {
-      setLoginError(error.message);
+      setLoginError(localizeAuthError(error, lang));
       return;
     }
     if (data.user) {
@@ -88,7 +89,7 @@ export default function AuthModal({ onClose, onSuccess, initialView = "login" }:
     });
     setSignupLoading(false);
     if (error) {
-      setSignupError(error.message);
+      setSignupError(localizeAuthError(error, lang));
       return;
     }
     if (data.user && !data.session) {
