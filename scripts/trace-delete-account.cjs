@@ -199,12 +199,15 @@ function dbg(category, label, payload) {
     note: 'RLS USING: user_id = auth.uid()  |  WITH CHECK: user_id=uid OR user_id IS NULL',
   });
 
+  // NOTE: The real deactivateOwnAccount() does NOT call .select().
+  // Adding .select() forces PostgREST to re-apply the SELECT RLS policy to the
+  // returned row — after user_id becomes NULL the client can no longer see their
+  // own row, which triggers a spurious 403.  Match the real code exactly.
   const { data: updateData, error: updateError, count: updateCount, status: updateStatus, statusText } =
     await supabase
       .from('clients')
       .update({ status: 'Inactive', user_id: null })
-      .eq('id', clientId)
-      .select();          // .select() forces PostgREST to return the updated rows
+      .eq('id', clientId);
 
   console.log('\n  ┌─ RAW SUPABASE RESPONSE ─────────────────────────────────┐');
   console.log('  │ HTTP status:  ', updateStatus, statusText || '');
