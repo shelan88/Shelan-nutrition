@@ -57,3 +57,9 @@ publicDir = "dist"
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 60000
+
+[userenv]
+
+[userenv.shared]
+ADMIN_NOTIFICATION_EMAIL = "shelancircle@gmail.com"
+FROM_EMAIL = "onboarding@resend.dev"
