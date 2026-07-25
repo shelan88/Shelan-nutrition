@@ -1,7 +1,8 @@
 /**
  * BookingFlow — Multi-step booking UI.
  * Step 1: Service selection. Step 2: Calendar + time. Step 3: Personal info. Step 4: Summary + payment.
- * Confirms by creating a row in the Supabase appointments table.
+ * Confirms by creating a row in the Supabase appointments table, then sending
+ * confirmation emails via /api/send-booking-emails.
  * NOTE: The payment card on Step 4 is a UI placeholder — a payment integration (Stripe/Tap) is required
  *       before real card processing can happen.
  * Props-only for data and strings. CMS-ready.
@@ -18,18 +19,57 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
 import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Calendar, Star, RefreshCw, ChevronLeft, ChevronRight, CheckCircle2, Lock, Tag, Clock } from "lucide-react";
+import {
+  Check, Calendar, Star, RefreshCw, ChevronLeft, ChevronRight,
+  CheckCircle2, Lock, Tag, Clock, AlertCircle,
+} from "lucide-react";
 import type { CMSBookingData, CMSBookingService } from "@/types/cms.types";
+import PhoneInput from "@/components/PhoneInput";
 
 // ─── Icon resolver ────────────────────────────────────────────────────────────
 const SERVICE_ICONS: Record<string, React.ElementType> = { Calendar, Star, RefreshCw };
+
+// ─── Validation ───────────────────────────────────────────────────────────────
+type PersonalInfo = {
+  firstName: string; lastName: string;
+  email: string; phone: string; notes: string;
+};
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const E164_RE  = /^\+[1-9]\d{6,14}$/;
+
+function validatePersonalInfo(
+  info: PersonalInfo,
+  lang: string,
+): Partial<Record<keyof PersonalInfo, string>> {
+  const isAr = lang === "ar";
+  const errors: Partial<Record<keyof PersonalInfo, string>> = {};
+
+  if (!info.firstName.trim())
+    errors.firstName = isAr ? "الاسم الأول مطلوب." : "First name is required.";
+
+  if (!info.lastName.trim())
+    errors.lastName = isAr ? "الاسم الأخير مطلوب." : "Last name is required.";
+
+  if (!info.email.trim())
+    errors.email = isAr ? "البريد الإلكتروني مطلوب." : "Email address is required.";
+  else if (!EMAIL_RE.test(info.email.trim()))
+    errors.email = isAr ? "يرجى إدخال بريد إلكتروني صحيح." : "Please enter a valid email address.";
+
+  if (!info.phone.trim())
+    errors.phone = isAr ? "رقم الهاتف مطلوب." : "Phone number is required.";
+  else if (!E164_RE.test(info.phone.trim()))
+    errors.phone = isAr ? "يرجى إدخال رقم هاتف صحيح بصيغة دولية." : "Please enter a valid phone number.";
+
+  return errors;
+}
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 function StepIndicator({ steps, current }: { steps: string[]; current: number }) {
   return (
     <div className="flex items-center justify-center gap-0 mb-12">
       {steps.map((label, i) => {
-        const done = i < current;
+        const done   = i < current;
         const active = i === current;
         return (
           <div key={i} className="flex items-center">
@@ -72,7 +112,7 @@ function SelectService({
   return (
     <div className="space-y-4">
       {services.map((svc) => {
-        const Icon = SERVICE_ICONS[svc.iconName] ?? Calendar;
+        const Icon   = SERVICE_ICONS[svc.iconName] ?? Calendar;
         const active = selected === svc.id;
         return (
           <button
@@ -132,11 +172,8 @@ function PickTime({
   const today = new Date();
   const [viewYear,    setViewYear]    = useState(today.getFullYear());
   const [viewMonth,   setViewMonth]   = useState(today.getMonth());
-  // Booked time values for the currently selected date
   const [bookedTimes, setBookedTimes] = useState<string[]>([]);
 
-  // Fetch already-booked slots when the selected date changes.
-  // Appointments table uses `date` (DATE) and `time` (TEXT) columns.
   useEffect(() => {
     if (!selectedDate) { setBookedTimes([]); return; }
     supabase
@@ -150,24 +187,18 @@ function PickTime({
   }, [selectedDate]);
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
-  const monthName = new Date(viewYear, viewMonth).toLocaleString("en-US", { month: "long", year: "numeric" });
+  const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
+  const monthName   = new Date(viewYear, viewMonth).toLocaleString("en-US", { month: "long", year: "numeric" });
 
-  const isPast = (day: number) => {
-    const d = new Date(viewYear, viewMonth, day);
-    return d < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  };
-
+  const isPast   = (day: number) => new Date(viewYear, viewMonth, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const isSunday = (day: number) => new Date(viewYear, viewMonth, day).getDay() === 0;
-
-  const dateStr = (day: number) =>
+  const dateStr  = (day: number) =>
     `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
   const prevMonth = () => {
     if (viewMonth === 0) { setViewMonth(11); setViewYear((y) => y - 1); }
     else setViewMonth((m) => m - 1);
   };
-
   const nextMonth = () => {
     if (viewMonth === 11) { setViewMonth(0); setViewYear((y) => y + 1); }
     else setViewMonth((m) => m + 1);
@@ -188,21 +219,17 @@ function PickTime({
               <ChevronRight size={16} className="text-deep-purple rtl:rotate-180" />
             </button>
           </div>
-          {/* Day headers */}
           <div className="grid grid-cols-7 mb-2">
             {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
               <span key={i} className="text-center text-xs font-bold text-deep-purple/35 py-1">{d}</span>
             ))}
           </div>
-          {/* Date cells */}
           <div className="grid grid-cols-7 gap-1">
             {Array.from({ length: firstDay }).map((_, i) => <span key={`empty-${i}`} />)}
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
-              const ds = dateStr(day);
-              const past = isPast(day);
-              const sun = isSunday(day);
-              const disabled = past || sun;
-              const sel = selectedDate === ds;
+              const ds       = dateStr(day);
+              const disabled = isPast(day) || isSunday(day);
+              const sel      = selectedDate === ds;
               return (
                 <button
                   key={day}
@@ -233,10 +260,9 @@ function PickTime({
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-1 gap-2">
             {timeSlots.map((slot) => {
-              // A slot is unavailable if it's already booked OR if the CMS marks it unavailable
-              const alreadyBooked = bookedTimes.includes(slot.time);
-              const effectiveSlot = { ...slot, available: slot.available && !alreadyBooked };
-              const sel = selectedTime === effectiveSlot.time;
+              const alreadyBooked  = bookedTimes.includes(slot.time);
+              const effectiveSlot  = { ...slot, available: slot.available && !alreadyBooked };
+              const sel            = selectedTime === effectiveSlot.time;
               return (
                 <button
                   key={effectiveSlot.time}
@@ -264,51 +290,113 @@ function PickTime({
 }
 
 // ─── Step 3: Personal info ────────────────────────────────────────────────────
-type PersonalInfo = {
-  firstName: string; lastName: string;
-  email: string; phone: string; notes: string;
-};
-
 function PersonalInfoForm({
   info,
   onChange,
   strings,
+  lang,
+  forceShowErrors,
 }: {
   info: PersonalInfo;
   onChange: (info: PersonalInfo) => void;
   strings: Record<string, string>;
+  lang: string;
+  forceShowErrors: boolean;
 }) {
-  const set = (k: keyof PersonalInfo) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    onChange({ ...info, [k]: e.target.value });
+  const [touched, setTouched] = useState<Partial<Record<keyof PersonalInfo, boolean>>>({});
 
-  const inputCls = "w-full px-4 py-3 rounded-xl border border-soft-purple/20 bg-white text-heading text-sm placeholder:text-deep-purple/35 focus:outline-none focus:border-primary-pink/50 focus:ring-2 focus:ring-primary-pink/15 transition-all";
+  const markTouched = (k: keyof PersonalInfo) => () =>
+    setTouched((t) => ({ ...t, [k]: true }));
+
+  const set = (k: keyof PersonalInfo) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      onChange({ ...info, [k]: e.target.value });
+
+  const errors  = validatePersonalInfo(info, lang);
+  const visible = (k: keyof PersonalInfo) => (touched[k] || forceShowErrors) && !!errors[k];
+
+  const inputCls = (k: keyof PersonalInfo) =>
+    `w-full px-4 py-3 rounded-xl border transition-all text-heading text-sm placeholder:text-deep-purple/35 focus:outline-none focus:ring-2 bg-white ${
+      visible(k)
+        ? "border-red-400 focus:border-red-400 focus:ring-red-400/15"
+        : "border-soft-purple/20 focus:border-primary-pink/50 focus:ring-primary-pink/15"
+    }`;
+
   const labelCls = "block text-sm font-semibold text-heading mb-1.5";
+
+  const FieldError = ({ k }: { k: keyof PersonalInfo }) =>
+    visible(k) ? (
+      <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+        <AlertCircle size={11} className="shrink-0" />
+        {errors[k]}
+      </p>
+    ) : null;
 
   return (
     <div className="space-y-5">
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
           <label className={labelCls}>{strings.firstNameLabel}</label>
-          <input type="text" value={info.firstName} onChange={set("firstName")} placeholder={strings.firstNamePlaceholder} className={inputCls} />
+          <input
+            type="text"
+            value={info.firstName}
+            onChange={set("firstName")}
+            onBlur={markTouched("firstName")}
+            placeholder={strings.firstNamePlaceholder}
+            className={inputCls("firstName")}
+          />
+          <FieldError k="firstName" />
         </div>
         <div>
           <label className={labelCls}>{strings.lastNameLabel}</label>
-          <input type="text" value={info.lastName} onChange={set("lastName")} placeholder={strings.lastNamePlaceholder} className={inputCls} />
+          <input
+            type="text"
+            value={info.lastName}
+            onChange={set("lastName")}
+            onBlur={markTouched("lastName")}
+            placeholder={strings.lastNamePlaceholder}
+            className={inputCls("lastName")}
+          />
+          <FieldError k="lastName" />
         </div>
       </div>
+
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
           <label className={labelCls}>{strings.emailLabel}</label>
-          <input type="email" value={info.email} onChange={set("email")} placeholder={strings.emailPlaceholder} className={inputCls} />
+          <input
+            type="email"
+            value={info.email}
+            onChange={set("email")}
+            onBlur={markTouched("email")}
+            placeholder={strings.emailPlaceholder}
+            className={inputCls("email")}
+          />
+          <FieldError k="email" />
         </div>
         <div>
           <label className={labelCls}>{strings.phoneLabel}</label>
-          <input type="tel" value={info.phone} onChange={set("phone")} placeholder={strings.phonePlaceholder} className={inputCls} />
+          <PhoneInput
+            value={info.phone}
+            onChange={(e164) => onChange({ ...info, phone: e164 })}
+            onBlur={markTouched("phone")}
+            lang={lang as "en" | "ar"}
+            error={visible("phone")}
+            placeholder={strings.phonePlaceholder}
+          />
+          <FieldError k="phone" />
         </div>
       </div>
+
       <div>
         <label className={labelCls}>{strings.notesLabel}</label>
-        <textarea value={info.notes} onChange={set("notes")} placeholder={strings.notesPlaceholder} rows={4} className={`${inputCls} resize-none`} />
+        <textarea
+          value={info.notes}
+          onChange={set("notes")}
+          placeholder={strings.notesPlaceholder}
+          rows={4}
+          className={`w-full px-4 py-3 rounded-xl border border-soft-purple/20 bg-white text-heading text-sm placeholder:text-deep-purple/35 focus:outline-none focus:border-primary-pink/50 focus:ring-2 focus:ring-primary-pink/15 transition-all resize-none`}
+        />
       </div>
     </div>
   );
@@ -325,6 +413,7 @@ function BookingSummary({
   confirmed,
   confirming,
   lang,
+  error,
 }: {
   service: CMSBookingService | undefined;
   date: string;
@@ -335,8 +424,9 @@ function BookingSummary({
   confirmed: boolean;
   confirming: boolean;
   lang: string;
+  error?: string | null;
 }) {
-  const locale = lang === "ar" ? "ar-SA" : "en-US";
+  const locale        = lang === "ar" ? "ar-SA" : "en-US";
   const formattedDate = date
     ? new Date(`${date}T12:00:00`).toLocaleDateString(locale, { weekday: "long", month: "long", day: "numeric", year: "numeric" })
     : "—";
@@ -351,8 +441,14 @@ function BookingSummary({
         <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary-pink to-lavender-purple flex items-center justify-center shadow-xl shadow-deep-purple/25">
           <CheckCircle2 size={38} className="text-white" />
         </div>
-        <h3 className="font-heading text-2xl font-bold text-heading">{strings.successTitle ?? "Booking Confirmed!"}</h3>
-        <p className="text-body opacity-75 max-w-sm">{strings.successMessage ?? "Check your email for session details."}</p>
+        <h3 className="font-heading text-2xl font-bold text-heading">
+          {strings.successTitle ?? (lang === "ar" ? "تم تأكيد الحجز!" : "Booking Confirmed!")}
+        </h3>
+        <p className="text-body opacity-75 max-w-sm">
+          {strings.successMessage ?? (lang === "ar"
+            ? "تم إرسال بريد تأكيد إليكِ. نتطلع إلى لقائكِ!"
+            : "A confirmation email has been sent to you. We look forward to seeing you!")}
+        </p>
       </motion.div>
     );
   }
@@ -365,9 +461,9 @@ function BookingSummary({
         <ul className="space-y-4">
           {[
             { label: strings.serviceLabel, value: service?.name ?? "—" },
-            { label: strings.dateLabel, value: formattedDate },
-            { label: strings.timeLabel, value: time || "—" },
-            { label: strings.totalLabel, value: service?.price ?? "—" },
+            { label: strings.dateLabel,    value: formattedDate },
+            { label: strings.timeLabel,    value: time || "—" },
+            { label: strings.totalLabel,   value: service?.price ?? "—" },
           ].map(({ label, value }) => (
             <li key={label} className="flex items-center justify-between border-b border-soft-purple/10 pb-3 last:border-0 last:pb-0">
               <span className="text-sm text-deep-purple/50">{label}</span>
@@ -391,8 +487,16 @@ function BookingSummary({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <input placeholder="MM / YY" className="px-4 py-3 rounded-xl border border-soft-purple/20 bg-white text-sm placeholder:text-deep-purple/35 focus:outline-none focus:border-primary-pink/50 transition-all" />
-          <input placeholder="CVV" className="px-4 py-3 rounded-xl border border-soft-purple/20 bg-white text-sm placeholder:text-deep-purple/35 focus:outline-none focus:border-primary-pink/50 transition-all" />
+          <input placeholder="CVV"     className="px-4 py-3 rounded-xl border border-soft-purple/20 bg-white text-sm placeholder:text-deep-purple/35 focus:outline-none focus:border-primary-pink/50 transition-all" />
         </div>
+
+        {/* Booking error */}
+        {error && (
+          <div className="flex items-start gap-2.5 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+            <AlertCircle size={15} className="shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
 
         <motion.button
           onClick={onConfirm}
@@ -401,7 +505,9 @@ function BookingSummary({
           whileTap={{ scale: 0.98 }}
           className="w-full py-4 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple text-white font-semibold shadow-lg shadow-deep-purple/20 hover:shadow-xl hover:shadow-deep-purple/30 transition-shadow disabled:opacity-70 disabled:cursor-not-allowed"
         >
-          {confirming ? (strings.confirmingLabel ?? "Confirming…") : strings.confirmLabel}
+          {confirming
+            ? (strings.confirmingLabel ?? (lang === "ar" ? "جارٍ التأكيد…" : "Confirming…"))
+            : strings.confirmLabel}
         </motion.button>
         <div className="flex items-center justify-center gap-2 text-xs text-deep-purple/40">
           <Lock size={12} /> {paymentNote}
@@ -411,10 +517,10 @@ function BookingSummary({
   );
 }
 
-// ─── Program banner (shown when a program is pre-selected) ────────────────────
+// ─── Program banner ───────────────────────────────────────────────────────────
 function ProgramBanner({ program, lang }: { program: ProgramRow; lang?: string }) {
-  const name  = (lang === "ar" ? program.name_ar      : program.name_en)      ?? program.name_en;
-  const currency = program.currency ?? "$";
+  const name       = (lang === "ar" ? program.name_ar : program.name_en) ?? program.name_en;
+  const currency   = program.currency ?? "$";
   const hasDiscount =
     !!(program.discount_enabled &&
       program.discount_percent != null &&
@@ -442,11 +548,7 @@ function ProgramBanner({ program, lang }: { program: ProgramRow; lang?: string }
         {program.price != null && (
           <span className="flex items-center gap-1 text-sm font-bold px-3 py-1 rounded-full bg-primary-pink text-white" dir="ltr">
             <Tag size={12} strokeWidth={2} />
-            {hasDiscount ? (
-              <>{currency}{discountedPrice}</>
-            ) : (
-              <>{currency}{program.price}</>
-            )}
+            {hasDiscount ? <>{currency}{discountedPrice}</> : <>{currency}{program.price}</>}
           </span>
         )}
       </div>
@@ -460,17 +562,14 @@ interface Props {
   strings: Record<string, string | string[]>;
   preselectedServiceId?: string;
   preselectedProgramId?: string;
-  /** English-locale services used to persist the canonical service name
-   *  regardless of the visitor's display language. */
   canonicalServices?: CMSBookingService[];
 }
 
 export default function BookingFlow({ data, strings, preselectedServiceId, preselectedProgramId, canonicalServices }: Props) {
-  const steps = (strings.steps as string[]) ?? [];
-
-  // When a program is pre-selected we skip service-selection (step 0).
+  const steps       = (strings.steps as string[]) ?? [];
   const programMode = !!preselectedProgramId;
-  const [program, setProgram] = useState<ProgramRow | null>(null);
+
+  const [program,        setProgram]        = useState<ProgramRow | null>(null);
   const [programLoading, setProgramLoading] = useState(programMode);
 
   useEffect(() => {
@@ -482,26 +581,26 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
     });
   }, [preselectedProgramId]);
 
-  // Start at step 1 (date/time) when a program is pre-selected.
-  const [step, setStep] = useState(programMode ? 1 : 0);
-  const [serviceId, setServiceId] = useState(preselectedServiceId ?? "");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
+  const [step,            setStep]            = useState(programMode ? 1 : 0);
+  const [serviceId,       setServiceId]       = useState(preselectedServiceId ?? "");
+  const [date,            setDate]            = useState("");
+  const [time,            setTime]            = useState("");
+  const [personalInfo,    setPersonalInfo]    = useState<PersonalInfo>({
     firstName: "", lastName: "", email: "", phone: "", notes: "",
   });
-  const [confirmed,  setConfirmed]  = useState(false);
-  const [confirming, setConfirming] = useState(false);
+  const [confirmed,       setConfirmed]       = useState(false);
+  const [confirming,      setConfirming]      = useState(false);
+  const [bookingError,    setBookingError]    = useState<string | null>(null);
+  const [forceShowErrors, setForceShowErrors] = useState(false);
 
   const { user } = useAuth();
   const { lang } = useLanguage();
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
 
-  // Build a service-compatible object from the Supabase program so the
-  // BookingSummary can render the name and price without a separate component.
+  // ── Derived service objects ────────────────────────────────────────────────
   const programAsService: CMSBookingService | undefined = useMemo(() => {
     if (!program) return undefined;
-    const currency = program.currency ?? "$";
+    const currency    = program.currency ?? "$";
     const hasDiscount =
       !!(program.discount_enabled &&
         program.discount_percent != null &&
@@ -510,20 +609,18 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
     const price = hasDiscount
       ? Math.round(program.price! * (1 - program.discount_percent! / 100) * 100) / 100
       : program.price;
-    const name = (lang === "ar" ? program.name_ar : program.name_en) ?? program.name_en ?? "";
+    const name  = (lang === "ar" ? program.name_ar : program.name_en) ?? program.name_en ?? "";
     return {
-      id: program.id,
+      id:          program.id,
       name,
-      duration: program.duration_weeks != null
+      duration:    program.duration_weeks != null
         ? `${program.duration_weeks}${lang === "ar" ? " أسابيع" : " weeks"}`
         : "",
-      price: price != null ? `${currency}${price}` : "—",
-      priceNote: "",
-      description:
-        (lang === "ar" ? program.short_description_ar : program.short_description_en) ??
-        program.short_description_en ??
-        "",
-      iconName: "Calendar",
+      price:       price != null ? `${currency}${price}` : "—",
+      priceNote:   "",
+      description: (lang === "ar" ? program.short_description_ar : program.short_description_en) ??
+        program.short_description_en ?? "",
+      iconName:    "Calendar",
     };
   }, [program, lang]);
 
@@ -532,36 +629,67 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
     return data.services.find((s) => s.id === serviceId);
   }, [programMode, programAsService, data.services, serviceId]);
 
+  // ── Validation ─────────────────────────────────────────────────────────────
+  const personalInfoErrors = useMemo(
+    () => validatePersonalInfo(personalInfo, lang),
+    [personalInfo, lang],
+  );
+  const personalInfoValid = Object.keys(personalInfoErrors).length === 0;
+
   const canNext = [
-    programMode ? true : !!serviceId,  // step 0: skipped in program mode
-    !!date && !!time,
-    !!(personalInfo.firstName && personalInfo.email),
-    true,
+    programMode ? true : !!serviceId,   // step 0
+    !!date && !!time,                    // step 1
+    personalInfoValid,                   // step 2
+    true,                                // step 3 (confirm button has its own handler)
   ];
 
+  // ── Navigation ─────────────────────────────────────────────────────────────
   const handleNext = () => {
-    if (step < steps.length - 1 && canNext[step]) setStep((s) => s + 1);
+    if (step === 2) {
+      // If invalid: reveal all errors but don't advance
+      if (!personalInfoValid) {
+        setForceShowErrors(true);
+        return;
+      }
+      setForceShowErrors(false);
+    }
+    if (step < steps.length - 1 && canNext[step]) {
+      setStep((s) => s + 1);
+    }
   };
 
-  // In program mode never go back to step 0 (service selection is bypassed).
-  const handleBack = () => setStep((s) => Math.max(programMode ? 1 : 0, s - 1));
+  const handleBack = () => {
+    setForceShowErrors(false);
+    setStep((s) => Math.max(programMode ? 1 : 0, s - 1));
+  };
 
+  // ── Confirm ────────────────────────────────────────────────────────────────
   const handleConfirm = async () => {
     setConfirming(true);
+    setBookingError(null);
+
+    const isAr      = lang === "ar";
+    const t0        = performance.now();
     const fieldCount = Object.values(personalInfo).filter((v) => String(v).trim()).length + (date ? 1 : 0) + (time ? 1 : 0);
+
     debugLog({
       level: "log", category: "forms",
       module: "Booking", component: "BookingFlow", action: "confirm",
       result: "info",
       data: { fieldCount, programMode, hasDate: !!date, hasTime: !!time },
     });
-    const t0 = performance.now();
+
     try {
-      // Use the program id (if in program mode) or the selected service id.
-      const lookupId = programMode ? (program?.id ?? "") : serviceId;
-      // Check if this service has an assessment template assigned
-      const template = lookupId ? await getTemplateForService(lookupId) : null;
+      const lookupId   = programMode ? (program?.id ?? "") : serviceId;
+      const template   = lookupId ? await getTemplateForService(lookupId) : null;
       const hasTemplate = !!(template?.active);
+
+      // Canonical service name — always store English for admin consistency
+      const serviceType = (
+        programMode
+          ? (program?.name_en ?? selectedService?.name)
+          : (canonicalServices?.find((s) => s.id === serviceId)?.name ?? selectedService?.name)
+      ) ?? "Consultation";
 
       const appt = await createAppointment({
         client_name:  `${personalInfo.firstName} ${personalInfo.lastName}`.trim() || personalInfo.email,
@@ -569,45 +697,77 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
         user_id:      user?.id ?? null,
         date,
         time,
-        // Always store the canonical English name regardless of the visitor's UI language.
-        // Program mode: use name_en from the Supabase row.
-        // CMS service mode: look up the matching English service by id; fall back to
-        //   the display name only if canonicalServices was not provided.
-        type: (
-          programMode
-            ? (program?.name_en ?? selectedService?.name)
-            : (canonicalServices?.find((s) => s.id === serviceId)?.name ?? selectedService?.name)
-        ) ?? "Consultation",
-        status:    "scheduled",
-        notes:     personalInfo.notes || null,
-        client_id: null,
+        type:         serviceType,
+        status:       "scheduled",
+        notes:        personalInfo.notes || null,
+        client_id:    null,
         ...(hasTemplate && {
           assessment_template_id: template!.id,
-          assessment_status: "awaiting_assessment",
+          assessment_status:      "awaiting_assessment",
         }),
       });
 
-      if (appt && hasTemplate) {
-        // Pre-create the blank response row so the questionnaire page can find it
-        await createResponse(template!.id, appt.id, user?.id ?? null, null);
-        debugLog({
-          level: "log", category: "forms",
-          module: "Booking", component: "BookingFlow", action: "confirm",
-          result: "success", durationMs: Math.round(performance.now() - t0),
-          recordId: appt.id,
-          data: { fieldCount, hasTemplate: true },
+      if (!appt) {
+        throw new Error("createAppointment returned null");
+      }
+
+      // ── Send confirmation + admin notification emails ──────────────────────
+      let emailResp: Response;
+      try {
+        emailResp = await fetch("/api/send-booking-emails", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({
+            appointmentId: appt.id,
+            clientName:    `${personalInfo.firstName} ${personalInfo.lastName}`.trim(),
+            clientEmail:   personalInfo.email,
+            phone:         personalInfo.phone || null,
+            service:       serviceType,
+            date,
+            time,
+            notes:         personalInfo.notes || null,
+            lang,
+          }),
         });
+      } catch (networkErr) {
+        console.error("[BookingFlow] email network error:", networkErr);
+        setBookingError(
+          isAr
+            ? "تم حفظ حجزك، لكن تعذّر الاتصال بخدمة البريد. يرجى التواصل مع العيادة مباشرة."
+            : "Your booking was saved but we couldn't reach the email service. Please contact the clinic directly.",
+        );
+        setConfirming(false);
+        return;
+      }
+
+      if (!emailResp.ok) {
+        const body = await emailResp.json().catch(() => ({}));
+        console.error("[BookingFlow] email API error:", body);
+        setBookingError(
+          isAr
+            ? "تم حفظ حجزك، لكن تعذّر إرسال بريد التأكيد. يرجى التواصل مع العيادة مباشرة."
+            : "Your booking was saved but we couldn't send the confirmation email. Please contact the clinic directly.",
+        );
+        setConfirming(false);
+        return;
+      }
+
+      // ── All succeeded ─────────────────────────────────────────────────────
+      debugLog({
+        level: "log", category: "forms",
+        module: "Booking", component: "BookingFlow", action: "confirm",
+        result: "success", durationMs: Math.round(performance.now() - t0),
+        recordId: appt.id,
+        data: { fieldCount, hasTemplate, emailSent: true },
+      });
+
+      if (hasTemplate) {
+        await createResponse(template!.id, appt.id, user?.id ?? null, null);
         navigate(`/assessment/respond/${appt.id}`);
       } else {
-        debugLog({
-          level: "log", category: "forms",
-          module: "Booking", component: "BookingFlow", action: "confirm",
-          result: "success", durationMs: Math.round(performance.now() - t0),
-          recordId: appt?.id,
-          data: { fieldCount, hasTemplate: false },
-        });
         setConfirmed(true);
       }
+
     } catch (err) {
       debugLog({
         level: "error", category: "forms",
@@ -615,7 +775,11 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
         result: "error", durationMs: Math.round(performance.now() - t0),
         error: err instanceof Error ? err.message : String(err),
       });
-      throw err;
+      setBookingError(
+        lang === "ar"
+          ? "حدث خطأ غير متوقع. يرجى المحاولة مجدداً."
+          : "An unexpected error occurred. Please try again.",
+      );
     } finally {
       setConfirming(false);
     }
@@ -623,7 +787,6 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
 
   const str = strings as Record<string, string>;
 
-  // While fetching the pre-selected program, show a spinner.
   if (programMode && programLoading) {
     return (
       <div className="max-w-3xl mx-auto flex items-center justify-center min-h-64">
@@ -634,10 +797,7 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
 
   return (
     <div className="max-w-3xl mx-auto">
-      {/* Program banner — shown for every step when coming from a program detail page */}
-      {programMode && program && (
-        <ProgramBanner program={program} lang={lang} />
-      )}
+      {programMode && program && <ProgramBanner program={program} lang={lang} />}
 
       <StepIndicator steps={steps} current={step} />
 
@@ -661,15 +821,21 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
                 onDateChange={(d) => { setDate(d); setTime(""); }}
                 onTimeChange={setTime}
                 strings={{
-                  calendarLabel: str.calendarLabel,
-                  selectTimeLabel: str.selectTimeLabel,
+                  calendarLabel:    str.calendarLabel,
+                  selectTimeLabel:  str.selectTimeLabel,
                   unavailableLabel: str.unavailableLabel,
-                  noSlotsMessage: str.noSlotsMessage,
+                  noSlotsMessage:   str.noSlotsMessage,
                 }}
               />
             )}
             {step === 2 && (
-              <PersonalInfoForm info={personalInfo} onChange={setPersonalInfo} strings={str} />
+              <PersonalInfoForm
+                info={personalInfo}
+                onChange={setPersonalInfo}
+                strings={str}
+                lang={lang}
+                forceShowErrors={forceShowErrors}
+              />
             )}
             {step === 3 && (
               <BookingSummary
@@ -682,6 +848,7 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
                 confirmed={confirmed}
                 confirming={confirming}
                 lang={lang}
+                error={bookingError}
               />
             )}
           </motion.div>
@@ -699,10 +866,13 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
             <ChevronLeft size={16} className="rtl:rotate-180" />
             {str.backLabel}
           </button>
+
           {step < steps.length - 1 && (
             <button
               onClick={handleNext}
-              disabled={!canNext[step]}
+              // Step 2: always clickable so clicking reveals validation errors.
+              // All other steps: disabled until their canNext condition is met.
+              disabled={step !== 2 && !canNext[step]}
               className="flex items-center gap-2 px-8 py-3 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple text-white text-sm font-semibold shadow-md shadow-deep-purple/18 hover:shadow-lg hover:shadow-deep-purple/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               {str.nextLabel}
