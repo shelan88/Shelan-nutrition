@@ -62,4 +62,5 @@ timeoutMs = 60000
 
 [userenv.shared]
 ADMIN_NOTIFICATION_EMAIL = "shelancircle@gmail.com"
-FROM_EMAIL = "onboarding@resend.dev"
+FROM_EMAIL = "Shelan Nutrition <noreply@shilan.com>"
+WEBSITE_URL = "https://shelan-nutrition-raaddevlogic.replit.app"
