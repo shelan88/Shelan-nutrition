@@ -78,89 +78,264 @@ function formatDate(dateStr, lang) {
   }
 }
 
+// ── Shared: brand-header HTML block ──────────────────────────────────────────
+// Renders the SHELAN wordmark header. gradientStart/End control direction so
+// client and admin emails are visually distinct.
+
+function brandHeader({ gradientStart, gradientEnd, eyebrow, title, isAr }) {
+  const align = isAr ? "right" : "center";
+  return `
+    <!-- Brand header — bgcolor is Outlook fallback; gradient shows in modern clients -->
+    <tr>
+      <td align="center" bgcolor="${gradientStart}"
+          style="background:linear-gradient(135deg,${gradientStart} 0%,${gradientEnd} 100%);
+                 padding:36px 40px 28px;">
+
+        <!-- Monogram circle -->
+        <table border="0" cellpadding="0" cellspacing="0" role="presentation"
+               style="margin:0 auto 14px;">
+          <tr>
+            <td width="54" height="54" bgcolor="#ffffff"
+                style="width:54px;height:54px;border-radius:27px;text-align:center;
+                       vertical-align:middle;background-color:#ffffff;">
+              <span style="font-family:Georgia,'Times New Roman',serif;font-size:26px;
+                           font-weight:700;color:#6a35b5;line-height:54px;
+                           display:block;text-align:center;">S</span>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Wordmark -->
+        <p style="margin:0 0 4px;font-family:Arial,'Helvetica Neue',sans-serif;
+                  font-size:22px;font-weight:700;color:#ffffff;letter-spacing:6px;
+                  text-align:center;text-transform:uppercase;">SHELAN</p>
+        <p style="margin:0 0 16px;font-family:Arial,'Helvetica Neue',sans-serif;
+                  font-size:11px;color:rgba(255,255,255,0.75);letter-spacing:2px;
+                  text-align:center;text-transform:uppercase;">
+          ${isAr ? "شيلان للتغذية" : "Nutrition &amp; Lipedema Care"}
+        </p>
+
+        <!-- Divider -->
+        <table border="0" cellpadding="0" cellspacing="0" role="presentation"
+               style="margin:0 auto 16px;">
+          <tr>
+            <td width="40" height="1" bgcolor="rgba(255,255,255,0.3)"
+                style="background-color:rgba(255,255,255,0.3);font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+        </table>
+
+        ${eyebrow ? `<p style="margin:0 0 6px;font-family:Arial,'Helvetica Neue',sans-serif;
+                               font-size:11px;color:rgba(255,255,255,0.8);letter-spacing:2px;
+                               text-align:center;text-transform:uppercase;">${eyebrow}</p>` : ""}
+
+        <h1 style="margin:0;font-family:Arial,'Helvetica Neue',sans-serif;
+                   font-size:20px;font-weight:700;color:#ffffff;text-align:center;
+                   line-height:1.3;">${title}</h1>
+      </td>
+    </tr>`;
+}
+
 // ── Email HTML: client confirmation ──────────────────────────────────────────
 
 function clientEmailHtml({ clientName, service, date, time, lang }) {
-  const isAr = lang === "ar";
-  const dir  = isAr ? "rtl" : "ltr";
+  const isAr          = lang === "ar";
+  const dir           = isAr ? "rtl" : "ltr";
+  const textAlign     = isAr ? "right" : "left";
   const formattedDate = formatDate(date, lang);
+  const websiteUrl    = process.env.WEBSITE_URL || "https://shelan.com";
+  const supportEmail  = process.env.SUPPORT_EMAIL
+                     || process.env.ADMIN_NOTIFICATION_EMAIL
+                     || "";
 
-  const heading   = isAr ? "تم تأكيد حجزكِ ✓"   : "Booking Confirmed ✓";
-  const greeting  = isAr ? `عزيزتي <strong>${clientName}</strong>،` : `Dear <strong>${clientName}</strong>,`;
-  const intro     = isAr
-    ? "تم تأكيد موعدكِ مع شيلان للتغذية. إليكِ تفاصيل الجلسة:"
-    : "Your session with Shelan Nutrition is confirmed. Here are your booking details:";
-  const lblSvc    = isAr ? "الخدمة"   : "Service";
-  const lblDate   = isAr ? "التاريخ"  : "Date";
-  const lblTime   = isAr ? "الوقت"    : "Time";
-  const closing   = isAr
-    ? "نتطلع إلى لقائكِ! إذا كنتِ بحاجة إلى إعادة الجدولة، يرجى التواصل معنا مباشرة."
-    : "We look forward to seeing you! If you need to reschedule or have any questions, please contact us directly.";
-  const footer    = isAr ? "شيلان للتغذية · استشارات تغذية متخصصة" : "Shelan Nutrition · Professional Nutrition Consultation";
+  // ── Copy
+  const pageTitle   = isAr ? "تأكيد الحجز — شيلان" : "Booking Confirmed — SHELAN";
+  const eyebrow     = isAr ? "تأكيد الحجز" : "BOOKING CONFIRMED";
+  const headerTitle = isAr ? "تم تأكيد موعدكِ ✓" : "Your appointment is confirmed ✓";
+  const greeting    = isAr
+    ? `عزيزتي <strong style="color:#6a35b5;">${clientName}</strong>،`
+    : `Dear <strong style="color:#6a35b5;">${clientName}</strong>,`;
+  const intro       = isAr
+    ? "يسعدنا إخباركِ بأن حجزكِ مع شيلان للتغذية قد تم تأكيده بنجاح. إليكِ ملخص جلستكِ القادمة:"
+    : "We\u2019re delighted to confirm your upcoming session with Shelan Nutrition. Here is a summary of your appointment:";
+  const lblSvc      = isAr ? "الخدمة"  : "Service";
+  const lblDate     = isAr ? "التاريخ" : "Date";
+  const lblTime     = isAr ? "الوقت"   : "Time";
+  const closing1    = isAr
+    ? "نتطلع إلى مرافقتكِ في رحلة الصحة والعافية."
+    : "We look forward to supporting you on your health and wellness journey.";
+  const closing2    = isAr
+    ? "إذا كنتِ بحاجة إلى تعديل الموعد أو لديكِ أي استفسار، لا تترددي في التواصل معنا."
+    : "If you need to reschedule or have any questions, please don\u2019t hesitate to reach out.";
+  const ctaLabel    = isAr ? "زيارة الموقع" : "Visit Our Website";
+  const footerBrand = isAr ? "شيلان للتغذية" : "SHELAN Nutrition";
+  const footerSub   = isAr
+    ? "استشارات تغذية متخصصة · إدارة الليبيديما"
+    : "Personalized Nutrition \xb7 Lipedema Management";
+  const footerAuto  = isAr
+    ? "هذا البريد أُرسل تلقائياً — يُرجى عدم الرد عليه مباشرة."
+    : "This email was sent automatically. Please do not reply directly.";
+  const supportLine = supportEmail
+    ? (isAr ? `للتواصل: <a href="mailto:${supportEmail}" style="color:#f35e98;text-decoration:none;">${supportEmail}</a>` : `Questions? <a href="mailto:${supportEmail}" style="color:#f35e98;text-decoration:none;">${supportEmail}</a>`)
+    : "";
+
+  const header = brandHeader({
+    gradientStart: "#6a35b5",
+    gradientEnd:   "#f35e98",
+    eyebrow,
+    title: headerTitle,
+    isAr,
+  });
 
   return `<!DOCTYPE html>
 <html lang="${lang}" dir="${dir}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>${heading}</title>
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>${pageTitle}</title>
+  <!--[if mso]>
+  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+  <![endif]-->
+  <style>
+    @media only screen and (max-width:600px){
+      .email-card{width:100%!important;border-radius:0!important;}
+      .email-body{padding:24px 20px!important;}
+      .email-footer{padding:20px!important;}
+    }
+  </style>
 </head>
-<body style="margin:0;padding:0;background:#f9f5ff;font-family:Arial,'Helvetica Neue',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#f9f5ff;">
-    <tr><td align="center" style="padding:32px 16px;">
-      <table width="520" cellpadding="0" cellspacing="0" role="presentation"
-             style="max-width:520px;width:100%;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(180,100,160,.10);">
+<body style="margin:0;padding:0;background-color:#f5f0ff;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;"
+      bgcolor="#f5f0ff">
 
-        <!-- Header -->
-        <tr>
-          <td style="background:linear-gradient(135deg,#e8a4c4 0%,#b8a0d8 100%);padding:32px 40px;text-align:center;">
-            <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;letter-spacing:-.3px;">${heading}</h1>
-          </td>
-        </tr>
+  <!-- Outer wrapper -->
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation"
+         bgcolor="#f5f0ff" style="background-color:#f5f0ff;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
 
-        <!-- Body -->
-        <tr>
-          <td style="padding:32px 40px;" dir="${dir}">
-            <p style="margin:0 0 8px;font-size:15px;color:#2d1b4e;">${greeting}</p>
-            <p style="margin:0 0 24px;font-size:14px;color:#6b6b8a;line-height:1.7;">${intro}</p>
+        <!-- Card -->
+        <table class="email-card" width="580" border="0" cellpadding="0" cellspacing="0"
+               role="presentation"
+               style="max-width:580px;width:100%;background-color:#ffffff;border-radius:20px;
+                      overflow:hidden;box-shadow:0 8px 40px rgba(106,53,181,0.12);">
 
-            <!-- Details -->
-            <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
-                   style="background:#f9f5ff;border-radius:12px;overflow:hidden;margin-bottom:24px;">
-              <tr>
-                <td style="padding:14px 20px;border-bottom:1px solid #e8e0f5;">
-                  <span style="font-size:11px;color:#9b87b8;text-transform:uppercase;letter-spacing:.5px;">${lblSvc}</span><br>
-                  <span style="font-size:15px;font-weight:600;color:#2d1b4e;">${service}</span>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:14px 20px;border-bottom:1px solid #e8e0f5;">
-                  <span style="font-size:11px;color:#9b87b8;text-transform:uppercase;letter-spacing:.5px;">${lblDate}</span><br>
-                  <span style="font-size:15px;font-weight:600;color:#2d1b4e;">${formattedDate}</span>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:14px 20px;">
-                  <span style="font-size:11px;color:#9b87b8;text-transform:uppercase;letter-spacing:.5px;">${lblTime}</span><br>
-                  <span style="font-size:15px;font-weight:600;color:#2d1b4e;" dir="ltr">${time}</span>
-                </td>
-              </tr>
-            </table>
+          ${header}
 
-            <p style="margin:0;font-size:14px;color:#6b6b8a;line-height:1.7;">${closing}</p>
-          </td>
-        </tr>
+          <!-- Body -->
+          <tr>
+            <td class="email-body" dir="${dir}"
+                style="padding:36px 40px;background-color:#ffffff;text-align:${textAlign};">
 
-        <!-- Footer -->
-        <tr>
-          <td style="background:#f9f5ff;padding:20px 40px;text-align:center;border-top:1px solid #e8e0f5;">
-            <p style="margin:0;font-size:12px;color:#9b87b8;">${footer}</p>
-          </td>
-        </tr>
+              <!-- Greeting -->
+              <p style="margin:0 0 8px;font-family:Arial,'Helvetica Neue',sans-serif;
+                         font-size:16px;color:#1c1033;line-height:1.5;">${greeting}</p>
+              <p style="margin:0 0 28px;font-family:Arial,'Helvetica Neue',sans-serif;
+                         font-size:14px;color:#7b6997;line-height:1.8;">${intro}</p>
 
-      </table>
-    </td></tr>
+              <!-- Booking details card -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation"
+                     style="border-radius:14px;overflow:hidden;border:1px solid #e8d5f5;
+                            margin-bottom:28px;">
+
+                <!-- Service row -->
+                <tr>
+                  <td bgcolor="#f9f5ff"
+                      style="padding:16px 20px;border-bottom:1px solid #e8d5f5;
+                             background-color:#f9f5ff;text-align:${textAlign};">
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:10px;font-weight:700;color:#9b87b8;
+                                 text-transform:uppercase;letter-spacing:1px;
+                                 margin-bottom:5px;">${lblSvc}</span>
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:15px;font-weight:700;color:#1c1033;">${service}</span>
+                  </td>
+                </tr>
+
+                <!-- Date row -->
+                <tr>
+                  <td bgcolor="#ffffff"
+                      style="padding:16px 20px;border-bottom:1px solid #e8d5f5;
+                             background-color:#ffffff;text-align:${textAlign};">
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:10px;font-weight:700;color:#9b87b8;
+                                 text-transform:uppercase;letter-spacing:1px;
+                                 margin-bottom:5px;">${lblDate}</span>
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:15px;font-weight:700;color:#1c1033;">${formattedDate}</span>
+                  </td>
+                </tr>
+
+                <!-- Time row -->
+                <tr>
+                  <td bgcolor="#f9f5ff"
+                      style="padding:16px 20px;background-color:#f9f5ff;
+                             text-align:${textAlign};">
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:10px;font-weight:700;color:#9b87b8;
+                                 text-transform:uppercase;letter-spacing:1px;
+                                 margin-bottom:5px;">${lblTime}</span>
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:15px;font-weight:700;color:#1c1033;"
+                          dir="ltr">${time}</span>
+                  </td>
+                </tr>
+
+              </table>
+              <!-- End booking details card -->
+
+              <!-- Closing copy -->
+              <p style="margin:0 0 10px;font-family:Arial,'Helvetica Neue',sans-serif;
+                         font-size:14px;color:#4a3566;line-height:1.8;">${closing1}</p>
+              <p style="margin:0 0 28px;font-family:Arial,'Helvetica Neue',sans-serif;
+                         font-size:14px;color:#7b6997;line-height:1.8;">${closing2}</p>
+
+              <!-- CTA button -->
+              <table border="0" cellpadding="0" cellspacing="0" role="presentation"
+                     style="${isAr ? "margin-right:0;" : ""}">
+                <tr>
+                  <td bgcolor="#f35e98"
+                      style="border-radius:50px;background-color:#f35e98;
+                             box-shadow:0 4px 14px rgba(243,94,152,0.35);">
+                    <a href="${websiteUrl}"
+                       style="display:inline-block;padding:13px 32px;
+                              font-family:Arial,'Helvetica Neue',sans-serif;
+                              font-size:14px;font-weight:700;color:#ffffff;
+                              text-decoration:none;letter-spacing:0.3px;"
+                       target="_blank">${ctaLabel}</a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+          <!-- End body -->
+
+          <!-- Footer -->
+          <tr>
+            <td class="email-footer" bgcolor="#f9f5ff"
+                style="padding:24px 40px;background-color:#f9f5ff;
+                       border-top:1px solid #e8d5f5;text-align:center;">
+              <p style="margin:0 0 4px;font-family:Arial,'Helvetica Neue',sans-serif;
+                         font-size:13px;font-weight:700;color:#6a35b5;">${footerBrand}</p>
+              <p style="margin:0 0 10px;font-family:Arial,'Helvetica Neue',sans-serif;
+                         font-size:11px;color:#9b87b8;">${footerSub}</p>
+              ${supportLine
+                ? `<p style="margin:0 0 10px;font-family:Arial,'Helvetica Neue',sans-serif;
+                              font-size:12px;color:#7b6997;">${supportLine}</p>`
+                : ""}
+              <p style="margin:0;font-family:Arial,'Helvetica Neue',sans-serif;
+                         font-size:11px;color:#b3a6c9;">${footerAuto}</p>
+            </td>
+          </tr>
+
+        </table>
+        <!-- End card -->
+
+      </td>
+    </tr>
   </table>
+
 </body>
 </html>`;
 }
@@ -169,86 +344,237 @@ function clientEmailHtml({ clientName, service, date, time, lang }) {
 
 function adminEmailHtml({ clientName, clientEmail, phone, service, date, time, notes }) {
   const formattedDate = formatDate(date, "en");
-  const notesRow = notes
-    ? `<tr><td style="padding:14px 20px;border-bottom:1px solid #e8e0f5;">
-         <span style="font-size:11px;color:#9b87b8;text-transform:uppercase;letter-spacing:.5px;">Notes</span><br>
-         <span style="font-size:14px;color:#2d1b4e;">${notes.replace(/</g,"&lt;").replace(/>/g,"&gt;")}</span>
-       </td></tr>`
+
+  // WhatsApp link — strip non-digits from E.164 phone
+  const waPhone = phone ? phone.replace(/\D/g, "") : "";
+  const waHref  = waPhone ? `https://wa.me/${waPhone}` : "";
+
+  // Escape user-supplied HTML in notes
+  const safeNotes = notes
+    ? notes.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     : "";
+
+  const header = brandHeader({
+    gradientStart: "#f35e98",
+    gradientEnd:   "#6a35b5",
+    eyebrow:       "NEW BOOKING",
+    title:         "A new session has been booked",
+    isAr:          false,
+  });
 
   return `<!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
   <title>New Booking — ${clientName}</title>
+  <!--[if mso]>
+  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+  <![endif]-->
+  <style>
+    @media only screen and (max-width:600px){
+      .email-card{width:100%!important;border-radius:0!important;}
+      .email-body{padding:24px 20px!important;}
+      .wa-btn{display:block!important;text-align:center!important;}
+    }
+  </style>
 </head>
-<body style="margin:0;padding:0;background:#f9f5ff;font-family:Arial,'Helvetica Neue',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#f9f5ff;">
-    <tr><td align="center" style="padding:32px 16px;">
-      <table width="560" cellpadding="0" cellspacing="0" role="presentation"
-             style="max-width:560px;width:100%;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(180,100,160,.10);">
+<body style="margin:0;padding:0;background-color:#f5f0ff;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;"
+      bgcolor="#f5f0ff">
 
-        <!-- Header -->
-        <tr>
-          <td style="background:linear-gradient(135deg,#b8a0d8 0%,#e8a4c4 100%);padding:24px 40px;">
-            <h1 style="margin:0;color:#fff;font-size:18px;font-weight:700;">📋 New Booking Received</h1>
-          </td>
-        </tr>
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation"
+         bgcolor="#f5f0ff" style="background-color:#f5f0ff;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
 
-        <!-- Body -->
-        <tr>
-          <td style="padding:32px 40px;">
-            <p style="margin:0 0 20px;font-size:14px;color:#6b6b8a;">A new session has been booked. Details below:</p>
+        <!-- Card -->
+        <table class="email-card" width="580" border="0" cellpadding="0" cellspacing="0"
+               role="presentation"
+               style="max-width:580px;width:100%;background-color:#ffffff;border-radius:20px;
+                      overflow:hidden;box-shadow:0 8px 40px rgba(106,53,181,0.12);">
 
-            <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
-                   style="background:#f9f5ff;border-radius:12px;overflow:hidden;margin-bottom:24px;">
-              <tr>
-                <td style="padding:14px 20px;border-bottom:1px solid #e8e0f5;">
-                  <span style="font-size:11px;color:#9b87b8;text-transform:uppercase;letter-spacing:.5px;">Client</span><br>
-                  <span style="font-size:15px;font-weight:600;color:#2d1b4e;">${clientName}</span>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:14px 20px;border-bottom:1px solid #e8e0f5;">
-                  <span style="font-size:11px;color:#9b87b8;text-transform:uppercase;letter-spacing:.5px;">Email</span><br>
-                  <a href="mailto:${clientEmail}" style="font-size:14px;color:#c4608c;text-decoration:none;">${clientEmail}</a>
-                </td>
-              </tr>
-              ${phone ? `<tr>
-                <td style="padding:14px 20px;border-bottom:1px solid #e8e0f5;">
-                  <span style="font-size:11px;color:#9b87b8;text-transform:uppercase;letter-spacing:.5px;">Phone</span><br>
-                  <span style="font-size:14px;color:#2d1b4e;" dir="ltr">${phone}</span>
-                </td>
-              </tr>` : ""}
-              <tr>
-                <td style="padding:14px 20px;border-bottom:1px solid #e8e0f5;">
-                  <span style="font-size:11px;color:#9b87b8;text-transform:uppercase;letter-spacing:.5px;">Service</span><br>
-                  <span style="font-size:15px;font-weight:600;color:#2d1b4e;">${service}</span>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:14px 20px;border-bottom:1px solid #e8e0f5;">
-                  <span style="font-size:11px;color:#9b87b8;text-transform:uppercase;letter-spacing:.5px;">Date</span><br>
-                  <span style="font-size:15px;font-weight:600;color:#2d1b4e;">${formattedDate}</span>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:14px 20px;${notes ? "border-bottom:1px solid #e8e0f5;" : ""}">
-                  <span style="font-size:11px;color:#9b87b8;text-transform:uppercase;letter-spacing:.5px;">Time</span><br>
-                  <span style="font-size:15px;font-weight:600;color:#2d1b4e;" dir="ltr">${time}</span>
-                </td>
-              </tr>
-              ${notesRow}
-            </table>
+          ${header}
 
-            <p style="margin:0;font-size:13px;color:#9b87b8;">This notification was sent automatically from Shelan Nutrition.</p>
-          </td>
-        </tr>
+          <!-- Body -->
+          <tr>
+            <td class="email-body" style="padding:36px 40px;background-color:#ffffff;">
 
-      </table>
-    </td></tr>
+              <!-- ── Client info card ── -->
+              <p style="margin:0 0 12px;font-family:Arial,'Helvetica Neue',sans-serif;
+                         font-size:10px;font-weight:700;color:#9b87b8;
+                         text-transform:uppercase;letter-spacing:1.5px;">Client Details</p>
+
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation"
+                     style="border-radius:14px;overflow:hidden;border:1px solid #e8d5f5;
+                            margin-bottom:28px;">
+
+                <!-- Name -->
+                <tr>
+                  <td bgcolor="#f9f5ff"
+                      style="padding:16px 20px;border-bottom:1px solid #e8d5f5;
+                             background-color:#f9f5ff;">
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:10px;font-weight:700;color:#9b87b8;
+                                 text-transform:uppercase;letter-spacing:1px;
+                                 margin-bottom:5px;">Name</span>
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:16px;font-weight:700;color:#1c1033;">${clientName}</span>
+                  </td>
+                </tr>
+
+                <!-- Email -->
+                <tr>
+                  <td bgcolor="#ffffff"
+                      style="padding:16px 20px;border-bottom:1px solid #e8d5f5;
+                             background-color:#ffffff;">
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:10px;font-weight:700;color:#9b87b8;
+                                 text-transform:uppercase;letter-spacing:1px;
+                                 margin-bottom:5px;">Email</span>
+                    <a href="mailto:${clientEmail}"
+                       style="font-family:Arial,'Helvetica Neue',sans-serif;font-size:15px;
+                              font-weight:600;color:#f35e98;text-decoration:none;"
+                    >${clientEmail}</a>
+                  </td>
+                </tr>
+
+                ${phone ? `
+                <!-- Phone + WhatsApp -->
+                <tr>
+                  <td bgcolor="#f9f5ff"
+                      style="padding:16px 20px;background-color:#f9f5ff;">
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:10px;font-weight:700;color:#9b87b8;
+                                 text-transform:uppercase;letter-spacing:1px;
+                                 margin-bottom:8px;">Phone</span>
+                    <!-- Phone number + action buttons on same row -->
+                    <table border="0" cellpadding="0" cellspacing="0" role="presentation"
+                           style="width:100%;">
+                      <tr>
+                        <td style="vertical-align:middle;">
+                          <a href="tel:${phone}"
+                             style="font-family:Arial,'Helvetica Neue',sans-serif;font-size:15px;
+                                    font-weight:600;color:#6a35b5;text-decoration:none;"
+                             dir="ltr">${phone}</a>
+                        </td>
+                        ${waHref ? `
+                        <td style="vertical-align:middle;text-align:right;padding-left:12px;">
+                          <a class="wa-btn" href="${waHref}" target="_blank"
+                             style="display:inline-block;padding:7px 16px;
+                                    background-color:#25d366;border-radius:50px;
+                                    font-family:Arial,'Helvetica Neue',sans-serif;
+                                    font-size:12px;font-weight:700;color:#ffffff;
+                                    text-decoration:none;white-space:nowrap;"
+                          >&#128241; WhatsApp</a>
+                        </td>` : ""}
+                      </tr>
+                    </table>
+                  </td>
+                </tr>` : ""}
+
+              </table>
+              <!-- End client info card -->
+
+              <!-- ── Booking details card ── -->
+              <p style="margin:0 0 12px;font-family:Arial,'Helvetica Neue',sans-serif;
+                         font-size:10px;font-weight:700;color:#9b87b8;
+                         text-transform:uppercase;letter-spacing:1.5px;">Booking Details</p>
+
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation"
+                     style="border-radius:14px;overflow:hidden;border:1px solid #e8d5f5;
+                            margin-bottom:24px;">
+
+                <!-- Service — highlighted -->
+                <tr>
+                  <td bgcolor="#6a35b5"
+                      style="padding:16px 20px;background-color:#6a35b5;
+                             border-bottom:1px solid rgba(255,255,255,0.15);">
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:10px;font-weight:700;color:rgba(255,255,255,0.7);
+                                 text-transform:uppercase;letter-spacing:1px;
+                                 margin-bottom:5px;">Service</span>
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:15px;font-weight:700;color:#ffffff;">${service}</span>
+                  </td>
+                </tr>
+
+                <!-- Date -->
+                <tr>
+                  <td bgcolor="#f9f5ff"
+                      style="padding:16px 20px;border-bottom:1px solid #e8d5f5;
+                             background-color:#f9f5ff;">
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:10px;font-weight:700;color:#9b87b8;
+                                 text-transform:uppercase;letter-spacing:1px;
+                                 margin-bottom:5px;">Date</span>
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:15px;font-weight:700;color:#1c1033;">${formattedDate}</span>
+                  </td>
+                </tr>
+
+                <!-- Time -->
+                <tr>
+                  <td bgcolor="#ffffff"
+                      style="padding:16px 20px;${safeNotes ? "border-bottom:1px solid #e8d5f5;" : ""}
+                             background-color:#ffffff;">
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:10px;font-weight:700;color:#9b87b8;
+                                 text-transform:uppercase;letter-spacing:1px;
+                                 margin-bottom:5px;">Time</span>
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:15px;font-weight:700;color:#1c1033;"
+                          dir="ltr">${time}</span>
+                  </td>
+                </tr>
+
+                ${safeNotes ? `
+                <!-- Notes -->
+                <tr>
+                  <td bgcolor="#fffaf0"
+                      style="padding:16px 20px;background-color:#fffaf0;">
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:10px;font-weight:700;color:#9b87b8;
+                                 text-transform:uppercase;letter-spacing:1px;
+                                 margin-bottom:5px;">Notes</span>
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:14px;color:#4a3566;line-height:1.7;">${safeNotes}</span>
+                  </td>
+                </tr>` : ""}
+
+              </table>
+              <!-- End booking details card -->
+
+              <!-- Auto-send note -->
+              <p style="margin:0;font-family:Arial,'Helvetica Neue',sans-serif;
+                         font-size:12px;color:#b3a6c9;line-height:1.6;">
+                This notification was sent automatically by Shelan Nutrition when a new booking was confirmed.
+              </p>
+
+            </td>
+          </tr>
+          <!-- End body -->
+
+          <!-- Footer -->
+          <tr>
+            <td bgcolor="#f9f5ff"
+                style="padding:20px 40px;background-color:#f9f5ff;
+                       border-top:1px solid #e8d5f5;text-align:center;">
+              <p style="margin:0 0 4px;font-family:Arial,'Helvetica Neue',sans-serif;
+                         font-size:13px;font-weight:700;color:#6a35b5;">SHELAN Nutrition</p>
+              <p style="margin:0;font-family:Arial,'Helvetica Neue',sans-serif;
+                         font-size:11px;color:#b3a6c9;">Admin Notification System</p>
+            </td>
+          </tr>
+
+        </table>
+        <!-- End card -->
+
+      </td>
+    </tr>
   </table>
+
 </body>
 </html>`;
 }
