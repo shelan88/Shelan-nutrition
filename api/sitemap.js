@@ -13,7 +13,7 @@
 
 import { adminClient } from "./_lib/clients.js";
 
-const SITE_URL = process.env.WEBSITE_URL ?? "https://shilan.com";
+const SITE_URL = process.env.WEBSITE_URL ?? "https://shelancircle.com";
 
 function urlEntry(loc, opts = {}) {
   const { lastmod, changefreq = "monthly", priority = "0.7" } = opts;

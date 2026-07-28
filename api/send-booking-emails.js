@@ -22,7 +22,7 @@ import { adminClient } from "./_lib/clients.js";
 
 // ── Fallback domain used when WEBSITE_URL env var is not set ─────────────────
 // Defined once here so brandHeader() and clientEmailHtml() can't drift apart.
-const DEFAULT_WEBSITE_URL = "https://shilan.com";
+const DEFAULT_WEBSITE_URL = "https://shelancircle.com";
 
 // ── Env vars are read inside the handler (not at module load) so that changes
 // to Vercel / Replit env vars take effect on the next request without a
@@ -31,7 +31,7 @@ const DEFAULT_WEBSITE_URL = "https://shilan.com";
 function getEnv() {
   return {
     RESEND_API_KEY: process.env.RESEND_API_KEY,
-    FROM_EMAIL:     process.env.FROM_EMAIL ?? "Shelan Nutrition <noreply@shilan.com>",
+    FROM_EMAIL:     process.env.FROM_EMAIL ?? "Shelan Nutrition <noreply@shelancircle.com>",
     ADMIN_EMAIL:    process.env.ADMIN_NOTIFICATION_EMAIL ?? process.env.ADMIN_EMAIL,
   };
 }

@@ -4,72 +4,72 @@
 
   <!-- Home -->
   <url>
-    <loc>https://shilan.com/</loc>
+    <loc>https://shelancircle.com/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://shilan.com/"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://shilan.com/"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://shilan.com/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://shelancircle.com/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://shelancircle.com/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://shelancircle.com/"/>
   </url>
 
   <!-- About -->
   <url>
-    <loc>https://shilan.com/about</loc>
+    <loc>https://shelancircle.com/about</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://shilan.com/about"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://shilan.com/about"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://shilan.com/about"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://shelancircle.com/about"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://shelancircle.com/about"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://shelancircle.com/about"/>
   </url>
 
   <!-- Services listing -->
   <url>
-    <loc>https://shilan.com/services</loc>
+    <loc>https://shelancircle.com/services</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://shilan.com/services"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://shilan.com/services"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://shilan.com/services"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://shelancircle.com/services"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://shelancircle.com/services"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://shelancircle.com/services"/>
   </url>
 
   <!-- Blog listing -->
   <url>
-    <loc>https://shilan.com/blog</loc>
+    <loc>https://shelancircle.com/blog</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://shilan.com/blog"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://shilan.com/blog"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://shilan.com/blog"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://shelancircle.com/blog"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://shelancircle.com/blog"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://shelancircle.com/blog"/>
   </url>
 
   <!-- Contact -->
   <url>
-    <loc>https://shilan.com/contact</loc>
+    <loc>https://shelancircle.com/contact</loc>
     <changefreq>yearly</changefreq>
     <priority>0.7</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://shilan.com/contact"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://shilan.com/contact"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://shilan.com/contact"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://shelancircle.com/contact"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://shelancircle.com/contact"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://shelancircle.com/contact"/>
   </url>
 
   <!-- Booking -->
   <url>
-    <loc>https://shilan.com/booking</loc>
+    <loc>https://shelancircle.com/booking</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://shilan.com/booking"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://shilan.com/booking"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://shilan.com/booking"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://shelancircle.com/booking"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://shelancircle.com/booking"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://shelancircle.com/booking"/>
   </url>
 
   <!-- Health Assessment -->
   <url>
-    <loc>https://shilan.com/assessment</loc>
+    <loc>https://shelancircle.com/assessment</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://shilan.com/assessment"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://shilan.com/assessment"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://shilan.com/assessment"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://shelancircle.com/assessment"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://shelancircle.com/assessment"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://shelancircle.com/assessment"/>
   </url>
 
 </urlset>

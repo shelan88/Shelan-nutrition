@@ -21,7 +21,7 @@ import { useEffect } from "react";
 // ---------------------------------------------------------------------------
 
 export const SITE_URL: string =
-  (import.meta.env.VITE_SITE_URL as string | undefined) ?? "https://shilan.com";
+  (import.meta.env.VITE_SITE_URL as string | undefined) ?? "https://shelancircle.com";
 
 const DEFAULT_OG_IMAGE = "/portrait.jpg";
 const TWITTER_HANDLE   = "@shelannutrition";
