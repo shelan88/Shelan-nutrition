@@ -23,12 +23,12 @@ export default function ContactPage() {
   useSEO({
     title:
       lang === "ar"
-        ? "تواصلي معي | SHELAN — أخصائية تغذية"
-        : "Contact | SHELAN — Get in Touch with Your Nutritionist",
+        ? "تواصلي معي | SHELAN — أخصائية تغذية أونلاين"
+        : "Contact | SHELAN — Reach Your Online Nutrition Consultant",
     description:
       lang === "ar"
-        ? "تواصلي مع شيلان — أخصائية تغذية معتمدة. أرسلي رسالة، تواصلي عبر واتساب، أو احجزي استشارتك الأولى مباشرةً."
-        : "Get in touch with Shelan, certified nutritionist. Send a message, reach out on WhatsApp, or book your first consultation.",
+        ? "تواصلي مع شيلان — أخصائية تغذية أونلاين معتمدة. أرسلي رسالة، تواصلي عبر واتساب، أو احجزي استشارتكِ الافتراضية من أي مكان في العالم."
+        : "Get in touch with Shelan, certified online nutrition consultant. Send a message, reach out on WhatsApp, or book your virtual consultation from anywhere in the world.",
     path: "/contact",
     lang,
     jsonLd: buildBreadcrumbLd(breadcrumbs),

@@ -42,12 +42,12 @@ export default function BookingPage() {
   useSEO({
     title:
       lang === "ar"
-        ? "احجزي استشارتكِ | SHELAN — أخصائية تغذية"
-        : "Book a Consultation | SHELAN Nutrition",
+        ? "احجزي استشارة أونلاين | SHELAN — تغذية متخصصة"
+        : "Book an Online Consultation | SHELAN Nutrition",
     description:
       lang === "ar"
-        ? "احجزي استشارتكِ الأولى مع شيلان — أخصائية تغذية معتمدة. اختاري الخدمة المناسبة وحددي موعدك في دقائق."
-        : "Book your first consultation with Shelan, certified nutritionist. Choose your service and schedule your appointment in minutes.",
+        ? "احجزي استشارتكِ التغذوية الافتراضية مع شيلان — جلسات أونلاين متاحة من أي مكان في العالم. متخصصة في الليبيديما، صحة المرأة، والتغذية الشمولية."
+        : "Book your virtual nutrition consultation with Shelan — online sessions available worldwide. Specializing in Lipedema, Lymphedema, women's health & holistic nutrition.",
     path: "/booking",
     lang,
     jsonLd: buildBreadcrumbLd(breadcrumbs),

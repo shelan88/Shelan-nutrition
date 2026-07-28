@@ -4,7 +4,7 @@
  */
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import { useSEO, buildBreadcrumbLd, buildOrganizationLd } from "@/hooks/useSEO";
+import { useSEO, buildBreadcrumbLd, SITE_URL } from "@/hooks/useSEO";
 import { aboutData } from "@/data/about.data";
 import PageHero from "@/components/ui/PageHero";
 import CTABanner from "@/components/ui/CTABanner";
@@ -46,24 +46,43 @@ export default function AboutPage() {
   useSEO({
     title:
       lang === "ar"
-        ? "من أنا | شيلان — أخصائية تغذية ومتخصصة في الليبيديما"
-        : "About Shelan | Certified Nutritionist & Lipedema Specialist",
+        ? "من أنا | شيلان — أخصائية تغذية أونلاين، الليبيديما وصحة المرأة"
+        : "About Shelan | Certified Online Nutrition Consultant — Lipedema & Women's Health",
     description:
       lang === "ar"
-        ? "تعرّفي على شيلان — أخصائية تغذية معتمدة ومتخصصة في الليبيديما. رحلتي، فلسفتي في التغذية، وكيف أساعدك في استعادة صحتك."
-        : "Meet Shelan — certified nutritionist and Lipedema specialist. Learn about her journey, philosophy, and evidence-based approach to lasting health.",
+        ? "تعرّفي على شيلان — أخصائية تغذية معتمدة تقدم استشارات أونلاين متخصصة في الليبيديما، الليمفيديما، صحة المرأة، والتغذية الشمولية. خدماتها متاحة افتراضياً لكل مكان في العالم."
+        : "Meet Shelan — certified online nutrition consultant specializing in Lipedema, Lymphedema, women's health & anti-inflammatory nutrition. Virtual consultations available worldwide.",
     path: "/about",
     lang,
     image: "/portrait.jpg",
     jsonLd: [
       buildBreadcrumbLd(breadcrumbs),
       {
-        ...buildOrganizationLd(lang),
+        "@context": "https://schema.org",
         "@type": ["Person", "Nutritionist"],
         name: "Shelan",
-        jobTitle: lang === "ar" ? "أخصائية تغذية" : "Certified Nutritionist",
-        url: "https://shilan.com/about",
-        image: "https://shilan.com/portrait.jpg",
+        jobTitle:
+          lang === "ar"
+            ? "أخصائية تغذية أونلاين — الليبيديما وصحة المرأة"
+            : "Certified Online Nutrition Consultant — Lipedema & Women's Health",
+        url: `${SITE_URL}/about`,
+        image: `${SITE_URL}/portrait.jpg`,
+        worksFor: { "@id": `${SITE_URL}/#organization` },
+        knowsAbout: [
+          "Online Nutrition Consultation",
+          "Virtual Nutrition Consultation",
+          "Lipedema Nutrition",
+          "Lymphedema Support",
+          "Holistic Nutrition",
+          "Women's Health Nutrition",
+          "Weight Loss",
+          "Anti-inflammatory Nutrition",
+        ],
+        hasOccupation: {
+          "@type": "Occupation",
+          name: lang === "ar" ? "أخصائية تغذية أونلاين" : "Online Nutrition Consultant",
+          occupationLocation: { "@type": "AdministrativeArea", name: "Worldwide" },
+        },
       },
     ],
   });

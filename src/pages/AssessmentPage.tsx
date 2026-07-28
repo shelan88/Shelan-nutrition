@@ -26,12 +26,12 @@ export default function AssessmentPage() {
   useSEO({
     title:
       lang === "ar"
-        ? "تقييم صحي مجاني | SHELAN — ابدئي رحلتكِ"
-        : "Free Health Assessment | SHELAN — Start Your Journey",
+        ? "تقييم صحي مجاني أونلاين | SHELAN — ابدئي رحلتكِ"
+        : "Free Online Health Assessment | SHELAN — Start Your Journey",
     description:
       lang === "ar"
-        ? "أجيبي على بعض الأسئلة السريعة عن صحتكِ وأهدافكِ لنتمكن من تصميم خطة تغذية مخصصة لكِ."
-        : "Answer a few quick questions about your health and goals so we can design a personalised nutrition plan just for you.",
+        ? "أجيبي على بعض الأسئلة السريعة عن صحتكِ وأهدافكِ لنصمّم لكِ خطة تغذية أونلاين مخصصة — للليبيديما، صحة المرأة، أو إدارة الوزن."
+        : "Answer a few quick questions about your health and goals so we can design a personalised online nutrition plan — for Lipedema, Lymphedema, women's health or weight loss.",
     path: "/assessment",
     lang,
     jsonLd: buildBreadcrumbLd(breadcrumbs),

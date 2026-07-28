@@ -42,12 +42,12 @@ export default function HomePage() {
   useSEO({
     title:
       lang === "ar"
-        ? "SHELAN | أخصائية تغذية ومتخصصة في الليبيديما"
-        : "SHELAN | Nutritionist & Lipedema Specialist",
+        ? "SHELAN | استشارات تغذية أونلاين — الليبيديما، صحة المرأة، التغذية الشمولية"
+        : "SHELAN | Online Nutrition Consultant — Lipedema, Women's Health & Holistic Nutrition",
     description:
       lang === "ar"
-        ? "خطط تغذية مخصصة وإدارة متخصصة للليبيديما مع شيلان — أخصائية تغذية معتمدة. احجزي استشارتك الأولى اليوم."
-        : "Personalized nutrition plans and specialized Lipedema management with Shelan, certified nutritionist. Book your first consultation today.",
+        ? "استشارات تغذية افتراضية من أي مكان في العالم — متخصصة في الليبيديما، الليمفيديما، صحة المرأة، إدارة الوزن، والتغذية المضادة للالتهابات. احجزي جلستكِ الأونلاين اليوم."
+        : "Virtual nutrition consultations available worldwide — specializing in Lipedema, Lymphedema, women's health, weight loss & anti-inflammatory nutrition. Book your online session today.",
     path: "/",
     lang,
     jsonLd: buildBreadcrumbLd([

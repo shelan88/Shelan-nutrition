@@ -79,12 +79,12 @@ export default function ServicesPage() {
   useSEO({
     title:
       lang === "ar"
-        ? "الخدمات | SHELAN — خطط تغذية ومتابعة صحية"
-        : "Services | SHELAN — Nutrition Plans & Health Consultations",
+        ? "خدمات التغذية الأونلاين | SHELAN — استشارات افتراضية عالمية"
+        : "Online Nutrition Services | SHELAN — Virtual Consultations Worldwide",
     description:
       lang === "ar"
-        ? "اكتشفي خدمات SHELAN: خطط تغذية مخصصة، استشارات الليبيديما، إدارة الوزن، والمتابعة الصحية الشاملة."
-        : "Explore SHELAN's services: personalized nutrition plans, Lipedema consultations, weight management, and holistic health support.",
+        ? "استشارات تغذية أونلاين متخصصة في الليبيديما، الليمفيديما، صحة المرأة، إدارة الوزن، والتغذية المضادة للالتهابات — جلسات افتراضية متاحة من أي مكان في العالم."
+        : "Online nutrition consultations specializing in Lipedema, Lymphedema, women's health, weight loss & anti-inflammatory nutrition — virtual sessions available worldwide.",
     path: "/services",
     lang,
     jsonLd: buildBreadcrumbLd(breadcrumbs),

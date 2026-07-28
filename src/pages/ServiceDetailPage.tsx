@@ -110,11 +110,11 @@ export default function ServiceDetailPage() {
       : "SHELAN Nutrition",
     description: service
       ? service.shortDescription || (lang === "ar"
-          ? `تعرّفي على خدمة ${service.title} من SHELAN — استشارة تغذية متخصصة.`
-          : `Learn about ${service.title} from SHELAN — specialized nutrition consultation.`)
+          ? `تعرّفي على خدمة ${service.title} من SHELAN — استشارة تغذية أونلاين متخصصة متاحة من أي مكان في العالم.`
+          : `Learn about ${service.title} from SHELAN — a specialized online nutrition consultation available virtually worldwide.`)
       : lang === "ar"
-      ? "اكتشفي خدمات التغذية المتخصصة من SHELAN."
-      : "Explore specialized nutrition services from SHELAN.",
+      ? "خدمات استشارة التغذية الأونلاين من SHELAN — متاحة افتراضياً من أي مكان في العالم."
+      : "Online nutrition consultation services from SHELAN — available virtually worldwide.",
     path: `/services/${slug ?? ""}`,
     lang,
     noIndex: notFound,

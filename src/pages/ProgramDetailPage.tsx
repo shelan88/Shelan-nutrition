@@ -63,11 +63,11 @@ export default function ProgramDetailPage() {
       ? shortDesc
       : name
       ? lang === "ar"
-        ? `تعرّفي على برنامج ${name} من SHELAN — خطة تغذية متكاملة ومتخصصة.`
-        : `Learn about the ${name} program from SHELAN — a comprehensive, specialized nutrition plan.`
+        ? `تعرّفي على برنامج ${name} من SHELAN — خطة تغذية أونلاين متكاملة متاحة افتراضياً من أي مكان في العالم.`
+        : `Learn about the ${name} program from SHELAN — a comprehensive online nutrition plan available virtually worldwide.`
       : lang === "ar"
-      ? "برامج التغذية المتخصصة من SHELAN."
-      : "Specialized nutrition programs from SHELAN.",
+      ? "برامج التغذية الأونلاين المتخصصة من SHELAN — متاحة افتراضياً من أي مكان في العالم."
+      : "Specialized online nutrition programs from SHELAN — available virtually worldwide.",
     path: `/programs/${id ?? ""}`,
     lang,
     noIndex: notFound,

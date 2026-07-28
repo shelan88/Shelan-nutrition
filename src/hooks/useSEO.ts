@@ -20,7 +20,7 @@ import { useEffect } from "react";
 // Constants
 // ---------------------------------------------------------------------------
 
-const SITE_URL: string =
+export const SITE_URL: string =
   (import.meta.env.VITE_SITE_URL as string | undefined) ?? "https://shilan.com";
 
 const DEFAULT_OG_IMAGE = "/portrait.jpg";
@@ -99,7 +99,7 @@ function injectJsonLd(id: string, data: unknown) {
 export function buildOrganizationLd(lang: "en" | "ar"): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
-    "@type": ["Organization", "MedicalBusiness"],
+    "@type": ["Organization", "ProfessionalService"],
     "@id": `${SITE_URL}/#organization`,
     name: "SHELAN",
     alternateName: lang === "ar" ? "شيلان للتغذية" : "Shelan Nutrition",
@@ -113,10 +113,26 @@ export function buildOrganizationLd(lang: "en" | "ar"): Record<string, unknown> 
     image: `${SITE_URL}/portrait.jpg`,
     description:
       lang === "ar"
-        ? "أخصائية تغذية معتمدة ومتخصصة في الليبيديما — خطط تغذية مخصصة ومتابعة صحية شاملة."
-        : "Certified nutritionist and Lipedema specialist — personalized nutrition plans and holistic health support.",
-    medicalSpecialty: "DietNutrition",
-    priceRange: "$$",
+        ? "أخصائية تغذية معتمدة تقدم استشارات أونلاين متخصصة في الليبيديما، الليمفيديما، صحة المرأة، التغذية الشمولية، وإدارة الوزن — متاحة من أي مكان في العالم."
+        : "Certified online nutrition consultant specializing in Lipedema, Lymphedema, women's health, holistic nutrition, anti-inflammatory diets, and weight loss — virtual consultations available worldwide.",
+    serviceType: "Online Nutrition Consultation",
+    areaServed: "Worldwide",
+    availableChannel: {
+      "@type": "ServiceChannel",
+      serviceUrl: SITE_URL,
+      serviceType: "Online",
+      availableLanguage: ["Arabic", "English"],
+    },
+    knowsAbout: [
+      "Online Nutrition Consultation",
+      "Virtual Nutrition Consultation",
+      "Lipedema Nutrition",
+      "Lymphedema Support",
+      "Holistic Nutrition",
+      "Women's Health Nutrition",
+      "Weight Loss",
+      "Anti-inflammatory Nutrition",
+    ],
   };
 }
 
@@ -194,11 +210,19 @@ export function buildMedicalServiceLd(opts: {
 }): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
-    "@type": "MedicalProcedure",
+    "@type": "Service",
     name: opts.name,
     description: opts.description,
     url: `${SITE_URL}${opts.path}`,
+    serviceType: "Online Nutrition Consultation",
+    areaServed: "Worldwide",
+    availableChannel: {
+      "@type": "ServiceChannel",
+      serviceUrl: `${SITE_URL}${opts.path}`,
+      serviceType: "Online",
+    },
     provider: { "@id": `${SITE_URL}/#organization` },
+    inLanguage: opts.lang === "ar" ? "ar" : "en",
   };
 }
 
