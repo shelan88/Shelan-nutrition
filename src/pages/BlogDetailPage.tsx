@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSEO, buildBreadcrumbLd, buildArticleLd } from "@/hooks/useSEO";
 import { supabase } from "@/lib/supabase";
 import type { BlogPostRow } from "@/types/database.types";
 import type { CMSBlogPost } from "@/types/cms.types";
@@ -72,7 +73,6 @@ export default function BlogDetailPage() {
         const mapped = mapPost(row, lang);
         setPost(mapped);
 
-        // Fetch related posts (same category, different slug)
         const { data: relatedRows } = await supabase
           .from("blog_posts")
           .select("*")
@@ -86,13 +86,52 @@ export default function BlogDetailPage() {
       });
   }, [slug, lang]);
 
-  useEffect(() => {
-    document.title = post
+  const breadcrumbs = [
+    { label: lang === "ar" ? "الرئيسية" : "Home", href: "/" },
+    { label: lang === "ar" ? "المدونة" : "Blog", href: "/blog" },
+    ...(post ? [{ label: post.title }] : []),
+  ];
+
+  useSEO({
+    title: post
       ? `${post.title} | SHELAN Nutrition`
       : notFound
-      ? "Post Not Found | SHELAN Nutrition"
-      : "SHELAN Nutrition";
-  }, [post, notFound]);
+      ? (lang === "ar" ? "المقال غير موجود | SHELAN" : "Post Not Found | SHELAN Nutrition")
+      : "SHELAN Nutrition",
+    description: post
+      ? post.excerpt || (lang === "ar"
+          ? `اقرئي مقال "${post.title}" من شيلان — أخصائية تغذية معتمدة.`
+          : `Read "${post.title}" by Shelan, certified nutritionist.`)
+      : lang === "ar"
+      ? "مقالات التغذية والصحة من أخصائية تغذية معتمدة."
+      : "Nutrition and health articles from a certified nutritionist.",
+    path: `/blog/${slug ?? ""}`,
+    lang,
+    type: post ? "article" : "website",
+    image: post?.author.avatarUrl,
+    noIndex: notFound,
+    article: post
+      ? {
+          publishedTime: post.publishedAt,
+          author: post.author.name,
+          tags: post.tags,
+        }
+      : undefined,
+    jsonLd: post
+      ? [
+          buildBreadcrumbLd(breadcrumbs),
+          buildArticleLd({
+            title: post.title,
+            description: post.excerpt,
+            path: `/blog/${slug ?? ""}`,
+            image: post.author.avatarUrl,
+            publishedTime: post.publishedAt,
+            author: post.author.name,
+            tags: post.tags,
+          }),
+        ]
+      : undefined,
+  });
 
   if (loading) {
     return (
@@ -118,12 +157,6 @@ export default function BlogDetailPage() {
     );
   }
 
-  const breadcrumbs = [
-    { label: lang === "ar" ? "الرئيسية" : "Home", href: "/" },
-    { label: lang === "ar" ? "المدونة" : "Blog", href: "/blog" },
-    { label: post.title },
-  ];
-
   const ctaData = {
     kicker: lang === "ar" ? "ابدأي الآن" : "Take Action",
     headline: lang === "ar" ? "جاهزة لتطبيق ما تعلمتِه؟" : "Ready to Put This Into Practice?",
@@ -143,16 +176,16 @@ export default function BlogDetailPage() {
         <div className="absolute -top-24 -end-24 w-96 h-96 rounded-full bg-white/10 blur-3xl pointer-events-none" />
         <div className="relative max-w-4xl mx-auto px-6 lg:px-10">
           {/* Breadcrumb */}
-          <nav className="flex flex-wrap items-center gap-1 mb-6">
+          <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1 mb-6">
             {breadcrumbs.map((item, i) => (
               <span key={i} className="flex items-center gap-1">
-                {i > 0 && <span className="text-white/30 text-xs mx-0.5">›</span>}
+                {i > 0 && <span className="text-white/30 text-xs mx-0.5" aria-hidden="true">›</span>}
                 {item.href ? (
                   <Link to={item.href} className="text-xs text-white/60 hover:text-white transition-colors">
                     {item.label}
                   </Link>
                 ) : (
-                  <span className="text-xs text-white/85 line-clamp-1 max-w-[200px]">{item.label}</span>
+                  <span className="text-xs text-white/85 line-clamp-1 max-w-[200px]" aria-current="page">{item.label}</span>
                 )}
               </span>
             ))}

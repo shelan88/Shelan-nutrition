@@ -1,13 +1,10 @@
 /**
  * AboutPage — Thin orchestrator.
  * Language is selected here; all section components receive pre-translated typed props.
- *
- * To connect Supabase (future):
- *   Replace `aboutData[lang]` with an async fetch from `supabase.from('about_page')...`
- *   Nothing else in this file changes.
  */
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSEO, buildBreadcrumbLd, buildOrganizationLd } from "@/hooks/useSEO";
 import { aboutData } from "@/data/about.data";
 import PageHero from "@/components/ui/PageHero";
 import CTABanner from "@/components/ui/CTABanner";
@@ -24,14 +21,8 @@ import {
 
 export default function AboutPage() {
   const { lang } = useLanguage();
-  // ↓ Only this line changes when Supabase is connected
   const data = aboutData[lang];
 
-  // Certifications section visibility — same three-state pattern as
-  // Qualifications / Expertise in About.tsx:
-  //   undefined  = still loading   → show optimistically
-  //   null       = no DB row found → show by default
-  //   row object = use row.visible
   const [certSectionRow, setCertSectionRow] = useState<
     SectionSettingsRow | null | undefined
   >(undefined);
@@ -39,22 +30,43 @@ export default function AboutPage() {
   useEffect(() => {
     getSectionSettings("certifications")
       .then((row) => setCertSectionRow(row))
-      .catch(() => setCertSectionRow(null)); // network error → treat as visible
+      .catch(() => setCertSectionRow(null));
   }, []);
 
   const certVisible =
-    certSectionRow === undefined ? true  // loading
-    : certSectionRow === null    ? true  // no row → default visible
-    : certSectionRow.visible;           // use the admin's setting
-
-  useEffect(() => {
-    document.title = lang === "ar" ? "من أنا | SHELAN" : "About Shelan | SHELAN Nutrition";
-  }, [lang]);
+    certSectionRow === undefined ? true
+    : certSectionRow === null    ? true
+    : certSectionRow.visible;
 
   const breadcrumbs = [
     { label: lang === "ar" ? "الرئيسية" : "Home", href: "/" },
     { label: lang === "ar" ? "من أنا" : "About" },
   ];
+
+  useSEO({
+    title:
+      lang === "ar"
+        ? "من أنا | شيلان — أخصائية تغذية ومتخصصة في الليبيديما"
+        : "About Shelan | Certified Nutritionist & Lipedema Specialist",
+    description:
+      lang === "ar"
+        ? "تعرّفي على شيلان — أخصائية تغذية معتمدة ومتخصصة في الليبيديما. رحلتي، فلسفتي في التغذية، وكيف أساعدك في استعادة صحتك."
+        : "Meet Shelan — certified nutritionist and Lipedema specialist. Learn about her journey, philosophy, and evidence-based approach to lasting health.",
+    path: "/about",
+    lang,
+    image: "/portrait.jpg",
+    jsonLd: [
+      buildBreadcrumbLd(breadcrumbs),
+      {
+        ...buildOrganizationLd(lang),
+        "@type": ["Person", "Nutritionist"],
+        name: "Shelan",
+        jobTitle: lang === "ar" ? "أخصائية تغذية" : "Certified Nutritionist",
+        url: "https://shilan.com/about",
+        image: "https://shilan.com/portrait.jpg",
+      },
+    ],
+  });
 
   return (
     <>

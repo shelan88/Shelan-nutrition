@@ -58,7 +58,7 @@ function ArticleSection({ section }: { section: CMSArticleSection }) {
       return (
         <figure className="my-8">
           {section.imageUrl && (
-            <img src={section.imageUrl} alt={section.imageAlt ?? ""} className="w-full rounded-2xl shadow-lg" />
+            <img src={section.imageUrl} alt={section.imageAlt ?? ""} loading="lazy" className="w-full rounded-2xl shadow-lg" />
           )}
           {section.caption && (
             <figcaption className="text-xs text-center text-deep-purple/40 mt-3">{section.caption}</figcaption>
@@ -220,6 +220,9 @@ export default function BlogArticleBody({ post, relatedPosts, strings }: Props) 
                 <img
                   src={post.author.avatarUrl}
                   alt={post.author.name}
+                  loading="lazy"
+                  width={44}
+                  height={44}
                   className="w-11 h-11 rounded-full object-cover border-2 border-light-pink"
                 />
                 <div>

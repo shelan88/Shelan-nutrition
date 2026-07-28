@@ -3,15 +3,9 @@
  *
  * Composes PageHero + AssessmentWizard.
  * All content is pulled from typed data files and content strings.
- *
- * To connect Supabase:
- *   - In AssessmentWizard.tsx, replace the two TODO comments with real DB calls.
- *   - Here, you can optionally fetch data.steps and data.questions dynamically:
- *       const { data: steps } = await supabase.from('assessment_steps').select('*').eq('locale', lang).order('order')
- *       const { data: questions } = await supabase.from('assessment_questions').select('*').eq('locale', lang).order('order')
  */
-import { useEffect } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSEO, buildBreadcrumbLd } from "@/hooks/useSEO";
 import { assessmentData } from "@/data/assessment.data";
 import { assessmentStrings } from "@/content/content";
 import PageHero from "@/components/ui/PageHero";
@@ -24,17 +18,24 @@ export default function AssessmentPage() {
   const data = assessmentData[lang];
   const str = assessmentStrings[lang];
 
-  useEffect(() => {
-    document.title =
-      lang === "ar"
-        ? "تقييم صحي | SHELAN"
-        : "Health Assessment | SHELAN Nutrition";
-  }, [lang]);
-
   const breadcrumbs = [
     { label: lang === "ar" ? "الرئيسية" : "Home", href: "/" },
     { label: lang === "ar" ? "تقييم صحي" : "Health Assessment" },
   ];
+
+  useSEO({
+    title:
+      lang === "ar"
+        ? "تقييم صحي مجاني | SHELAN — ابدئي رحلتكِ"
+        : "Free Health Assessment | SHELAN — Start Your Journey",
+    description:
+      lang === "ar"
+        ? "أجيبي على بعض الأسئلة السريعة عن صحتكِ وأهدافكِ لنتمكن من تصميم خطة تغذية مخصصة لكِ."
+        : "Answer a few quick questions about your health and goals so we can design a personalised nutrition plan just for you.",
+    path: "/assessment",
+    lang,
+    jsonLd: buildBreadcrumbLd(breadcrumbs),
+  });
 
   return (
     <>

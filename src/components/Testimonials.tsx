@@ -169,6 +169,9 @@ export default function Testimonials() {
                       <img
                         src={quote.avatarUrl}
                         alt={quote.authorName}
+                        loading="lazy"
+                        width={36}
+                        height={36}
                         className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-white/20"
                       />
                     ) : (

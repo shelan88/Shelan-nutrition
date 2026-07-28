@@ -4,6 +4,7 @@
  */
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSEO, buildBreadcrumbLd } from "@/hooks/useSEO";
 import { servicesData } from "@/data/services.data";
 import { servicesStrings } from "@/content/content";
 import { supabase } from "@/lib/supabase";
@@ -70,9 +71,24 @@ export default function ServicesPage() {
   const [serviceRows, setServiceRows] = useState<ServiceRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    document.title = lang === "ar" ? "الخدمات | SHELAN" : "Services | SHELAN Nutrition";
-  }, [lang]);
+  const breadcrumbs = [
+    { label: lang === "ar" ? "الرئيسية" : "Home", href: "/" },
+    { label: lang === "ar" ? "الخدمات" : "Services" },
+  ];
+
+  useSEO({
+    title:
+      lang === "ar"
+        ? "الخدمات | SHELAN — خطط تغذية ومتابعة صحية"
+        : "Services | SHELAN — Nutrition Plans & Health Consultations",
+    description:
+      lang === "ar"
+        ? "اكتشفي خدمات SHELAN: خطط تغذية مخصصة، استشارات الليبيديما، إدارة الوزن، والمتابعة الصحية الشاملة."
+        : "Explore SHELAN's services: personalized nutrition plans, Lipedema consultations, weight management, and holistic health support.",
+    path: "/services",
+    lang,
+    jsonLd: buildBreadcrumbLd(breadcrumbs),
+  });
 
   useEffect(() => {
     setLoading(true);
@@ -88,11 +104,6 @@ export default function ServicesPage() {
   }, []);
 
   const services = serviceRows.map(s => mapService(s, lang));
-
-  const breadcrumbs = [
-    { label: lang === "ar" ? "الرئيسية" : "Home", href: "/" },
-    { label: lang === "ar" ? "الخدمات" : "Services" },
-  ];
 
   const ctaData = {
     kicker: lang === "ar" ? "ابدأي اليوم" : "Start Today",

@@ -87,6 +87,9 @@ function BlogCard({
             <img
               src={post.author.avatarUrl}
               alt={post.author.name}
+              loading="lazy"
+              width={28}
+              height={28}
               className="w-7 h-7 rounded-full object-cover border border-light-pink"
             />
             <span className="text-xs font-medium text-deep-purple/60">{post.author.name}</span>

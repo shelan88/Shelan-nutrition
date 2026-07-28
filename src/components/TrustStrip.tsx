@@ -51,6 +51,7 @@ function CertCard({ cert, index, isAr }: CardProps) {
           <img
             src={cert.logo_url!}
             alt={name}
+            loading="lazy"
             className="w-full h-full object-contain p-1.5"
             style={{ imageRendering: "crisp-edges" }}
           />

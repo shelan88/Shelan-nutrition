@@ -1,12 +1,8 @@
 /**
  * ContactPage — Contact form + info panel in a two-column layout.
- *
- * To connect Supabase (form submission):
- *   In ContactForm.tsx, replace the setTimeout in handleSubmit with:
- *   await supabase.from('contact_submissions').insert({ ...form, created_at: new Date().toISOString() })
  */
-import { useEffect } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSEO, buildBreadcrumbLd } from "@/hooks/useSEO";
 import { contactData } from "@/data/contact.data";
 import { contactFormStrings } from "@/content/content";
 import PageHero from "@/components/ui/PageHero";
@@ -19,14 +15,24 @@ export default function ContactPage() {
   const data = contactData[lang];
   const str = contactFormStrings[lang];
 
-  useEffect(() => {
-    document.title = lang === "ar" ? "تواصلي معي | SHELAN" : "Contact | SHELAN Nutrition";
-  }, [lang]);
-
   const breadcrumbs = [
     { label: lang === "ar" ? "الرئيسية" : "Home", href: "/" },
     { label: lang === "ar" ? "تواصلي معي" : "Contact" },
   ];
+
+  useSEO({
+    title:
+      lang === "ar"
+        ? "تواصلي معي | SHELAN — أخصائية تغذية"
+        : "Contact | SHELAN — Get in Touch with Your Nutritionist",
+    description:
+      lang === "ar"
+        ? "تواصلي مع شيلان — أخصائية تغذية معتمدة. أرسلي رسالة، تواصلي عبر واتساب، أو احجزي استشارتك الأولى مباشرةً."
+        : "Get in touch with Shelan, certified nutritionist. Send a message, reach out on WhatsApp, or book your first consultation.",
+    path: "/contact",
+    lang,
+    jsonLd: buildBreadcrumbLd(breadcrumbs),
+  });
 
   const ctaData = {
     kicker: lang === "ar" ? "أو ابدأي مباشرةً" : "Or Jump Right In",

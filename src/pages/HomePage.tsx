@@ -7,6 +7,8 @@
  */
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useLanguage } from "@/context/LanguageContext";
+import { useSEO, buildBreadcrumbLd } from "@/hooks/useSEO";
 import Hero from "@/components/Hero";
 import About from "@/components/About";
 import TrustStrip from "@/components/TrustStrip";
@@ -29,12 +31,29 @@ import {
 } from "@/admin/repositories/aboutCms.repository";
 
 export default function HomePage() {
+  const { lang } = useLanguage();
   const [isAdmin, setIsAdmin] = useState(false);
 
   // undefined = loading (show optimistically), null = no DB row (show by default), row = use row.visible
   const [certSectionRow, setCertSectionRow] = useState<
     SectionSettingsRow | null | undefined
   >(undefined);
+
+  useSEO({
+    title:
+      lang === "ar"
+        ? "SHELAN | أخصائية تغذية ومتخصصة في الليبيديما"
+        : "SHELAN | Nutritionist & Lipedema Specialist",
+    description:
+      lang === "ar"
+        ? "خطط تغذية مخصصة وإدارة متخصصة للليبيديما مع شيلان — أخصائية تغذية معتمدة. احجزي استشارتك الأولى اليوم."
+        : "Personalized nutrition plans and specialized Lipedema management with Shelan, certified nutritionist. Book your first consultation today.",
+    path: "/",
+    lang,
+    jsonLd: buildBreadcrumbLd([
+      { label: lang === "ar" ? "الرئيسية" : "Home", href: "/" },
+    ]),
+  });
 
   useEffect(() => {
     getSectionSettings("certifications")

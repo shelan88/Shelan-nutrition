@@ -28,6 +28,7 @@ export default function AboutStory({ story }: Props) {
               src={story.imageUrl}
               alt={story.imageAlt}
               draggable="false"
+              loading="lazy"
               onContextMenu={(e) => e.preventDefault()}
               className="protected-image w-full aspect-[4/5] object-cover rounded-[2rem] shadow-2xl shadow-deep-purple/25"
             />

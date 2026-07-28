@@ -96,6 +96,7 @@ export default function About() {
               src={portraitSrc}
               alt={t.imageAlt}
               draggable="false"
+              fetchPriority="high"
               onContextMenu={(e) => e.preventDefault()}
               className="protected-image w-full aspect-[4/5] object-cover rounded-[2rem] shadow-2xl shadow-deep-purple/30"
             />

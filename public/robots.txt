@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+
+# Block admin and portal routes — private, auth-gated
+Disallow: /admin/
+Disallow: /portal/
+
+# Block assessment response pages — private per-appointment links
+Disallow: /assessment/respond/
+
+# Block search/filter query strings from creating duplicate pages
+Disallow: /*?*
+
+# Allow clean paginated/service/blog URLs
+Allow: /blog/
+Allow: /services/
+Allow: /programs/
+
+Sitemap: https://shilan.com/sitemap.xml

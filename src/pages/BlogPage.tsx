@@ -4,6 +4,7 @@
  */
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSEO, buildBreadcrumbLd } from "@/hooks/useSEO";
 import { blogData } from "@/data/blog.data";
 import { blogStrings } from "@/content/content";
 import { supabase } from "@/lib/supabase";
@@ -51,9 +52,24 @@ export default function BlogPage() {
   const [posts, setPosts] = useState<BlogPostRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    document.title = lang === "ar" ? "المدونة | SHELAN" : "Blog | SHELAN Nutrition";
-  }, [lang]);
+  const breadcrumbs = [
+    { label: lang === "ar" ? "الرئيسية" : "Home", href: "/" },
+    { label: lang === "ar" ? "المدونة" : "Blog" },
+  ];
+
+  useSEO({
+    title:
+      lang === "ar"
+        ? "المدونة | SHELAN — مقالات التغذية والصحة"
+        : "Blog | SHELAN — Nutrition & Health Articles",
+    description:
+      lang === "ar"
+        ? "اقرئي أحدث المقالات حول التغذية الشمولية، إدارة الليبيديما، والصحة العامة من أخصائية تغذية معتمدة."
+        : "Read the latest articles on holistic nutrition, Lipedema management, and general wellness from a certified nutritionist.",
+    path: "/blog",
+    lang,
+    jsonLd: buildBreadcrumbLd(breadcrumbs),
+  });
 
   useEffect(() => {
     setLoading(true);
@@ -77,11 +93,6 @@ export default function BlogPage() {
     lang === "ar"
       ? ["الكل", ...Array.from(new Set(mappedPosts.map(p => p.category)))]
       : ["All", ...Array.from(new Set(mappedPosts.map(p => p.category)))];
-
-  const breadcrumbs = [
-    { label: lang === "ar" ? "الرئيسية" : "Home", href: "/" },
-    { label: lang === "ar" ? "المدونة" : "Blog" },
-  ];
 
   const ctaData = {
     kicker: lang === "ar" ? "ابدأي رحلتكِ" : "Start Your Journey",

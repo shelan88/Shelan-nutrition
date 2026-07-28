@@ -83,6 +83,9 @@ export default function BlogFeatured({
               <img
                 src={post.author.avatarUrl}
                 alt={post.author.name}
+                loading="lazy"
+                width={36}
+                height={36}
                 className="w-9 h-9 rounded-full object-cover border-2 border-light-pink"
               />
               <div>

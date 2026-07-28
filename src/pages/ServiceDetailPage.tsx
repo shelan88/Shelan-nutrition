@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSEO, buildBreadcrumbLd, buildMedicalServiceLd } from "@/hooks/useSEO";
 import { servicesStrings } from "@/content/content";
 import { supabase } from "@/lib/supabase";
 import type { ServiceRow } from "@/types/database.types";
@@ -95,13 +96,40 @@ export default function ServiceDetailPage() {
       });
   }, [slug, lang]);
 
-  useEffect(() => {
-    if (service) {
-      document.title = `${service.title} | SHELAN Nutrition`;
-    } else if (notFound) {
-      document.title = "Service Not Found | SHELAN Nutrition";
-    }
-  }, [service, notFound]);
+  const breadcrumbs = [
+    { label: lang === "ar" ? "الرئيسية" : "Home", href: "/" },
+    { label: lang === "ar" ? "الخدمات" : "Services", href: "/services" },
+    ...(service ? [{ label: service.title }] : []),
+  ];
+
+  useSEO({
+    title: service
+      ? `${service.title} | SHELAN Nutrition`
+      : notFound
+      ? (lang === "ar" ? "الخدمة غير موجودة | SHELAN" : "Service Not Found | SHELAN")
+      : "SHELAN Nutrition",
+    description: service
+      ? service.shortDescription || (lang === "ar"
+          ? `تعرّفي على خدمة ${service.title} من SHELAN — استشارة تغذية متخصصة.`
+          : `Learn about ${service.title} from SHELAN — specialized nutrition consultation.`)
+      : lang === "ar"
+      ? "اكتشفي خدمات التغذية المتخصصة من SHELAN."
+      : "Explore specialized nutrition services from SHELAN.",
+    path: `/services/${slug ?? ""}`,
+    lang,
+    noIndex: notFound,
+    jsonLd: service
+      ? [
+          buildBreadcrumbLd(breadcrumbs),
+          buildMedicalServiceLd({
+            name: service.title,
+            description: service.shortDescription,
+            path: `/services/${slug ?? ""}`,
+            lang,
+          }),
+        ]
+      : undefined,
+  });
 
   if (loading) {
     return (
@@ -126,12 +154,6 @@ export default function ServiceDetailPage() {
       </div>
     );
   }
-
-  const breadcrumbs = [
-    { label: lang === "ar" ? "الرئيسية" : "Home", href: "/" },
-    { label: lang === "ar" ? "الخدمات" : "Services", href: "/services" },
-    { label: service.title },
-  ];
 
   return (
     <>
