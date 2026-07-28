@@ -26,6 +26,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { debugLog } from "@/shared/debug/logger";
+import { trackPageView } from "@/lib/analytics";
 import { LanguageProvider } from "@/context/LanguageContext";
 import ScrollToTop from "@/components/ui/ScrollToTop";
 
@@ -129,16 +130,23 @@ function PublicLayout() {
   );
 }
 
-/** Logs every client-side route change into the debug panel (DEV only). */
+/** Logs every client-side route change and fires GA4 page_view. */
 function RouteLogger() {
   const { pathname } = useLocation();
   useEffect(() => {
+    // DEV: feed the floating debug panel
     debugLog({
       level: "log", category: "navigation",
       module: "Router", component: "RouteLogger",
       action: `route → ${pathname}`,
       result: "info",
     });
+
+    // GA4 SPA page tracking — deferred one tick so useSEO has set document.title first
+    const id = setTimeout(() => {
+      trackPageView(pathname, document.title);
+    }, 0);
+    return () => clearTimeout(id);
   }, [pathname]);
   return null;
 }

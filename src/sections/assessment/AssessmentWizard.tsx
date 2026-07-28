@@ -18,6 +18,7 @@
  */
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { trackEvent } from "@/lib/analytics";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, CheckCircle2, Loader2 } from "lucide-react";
 import { debugLog } from "@/shared/debug/logger";
@@ -336,6 +337,7 @@ export default function AssessmentWizard({ data, strings }: AssessmentWizardProp
     if (isSubmitting) return;
 
     if (view === "welcome") {
+      trackEvent("assessment_started");
       setDirection(1);
       setView("questions");
       setStepIndex(0);
@@ -434,6 +436,7 @@ export default function AssessmentWizard({ data, strings }: AssessmentWizardProp
           data: { fieldCount, isExistingClient: !!existingClient, riskLevel: result.riskLevel },
         });
 
+        trackEvent("assessment_completed");
         setDirection(1);
         setView("success");
         window.scrollTo({ top: 0, behavior: "smooth" });

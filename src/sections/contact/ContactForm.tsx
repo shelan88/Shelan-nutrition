@@ -8,6 +8,7 @@ import { sendMessage } from "@/admin/repositories/messages.repository";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 import { debugLog } from "@/shared/debug/logger";
+import { trackEvent } from "@/lib/analytics";
 
 interface ContactFormStrings {
   nameLabel: string;
@@ -110,6 +111,7 @@ export default function ContactForm({ strings }: Props) {
         data: { fieldCount: Object.keys(INITIAL).length },
       });
       setSuccess(true);
+      trackEvent("contact_form_submitted");
     } else {
       debugLog({
         level: "error", category: "forms",

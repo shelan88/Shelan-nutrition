@@ -10,6 +10,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { debugLog } from "@/shared/debug/logger";
+import { trackEvent } from "@/lib/analytics";
 import { createAppointment } from "@/admin/repositories/appointments.repository";
 import { getTemplateForService } from "@/admin/repositories/assessment-templates.repository";
 import { createResponse } from "@/admin/repositories/assessment-responses.repository";
@@ -759,6 +760,13 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
         result: "success", durationMs: Math.round(performance.now() - t0),
         recordId: appt.id,
         data: { fieldCount, hasTemplate, emailSent: true },
+      });
+
+      // GA4: appointment created + confirmation email sent — fire once regardless
+      // of whether an assessment follows, because the booking itself succeeded.
+      trackEvent("booking_submitted", {
+        service_type:   serviceType,
+        has_assessment: hasTemplate,
       });
 
       if (hasTemplate) {
