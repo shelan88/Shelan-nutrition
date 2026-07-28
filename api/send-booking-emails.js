@@ -20,29 +20,49 @@
 
 import { adminClient } from "./_lib/clients.js";
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL     = process.env.FROM_EMAIL ?? "Shelan Nutrition <noreply@shilan.com>";
-const ADMIN_EMAIL    = process.env.ADMIN_NOTIFICATION_EMAIL;
+// ── Env vars are read inside the handler (not at module load) so that changes
+// to Vercel / Replit env vars take effect on the next request without a
+// full redeployment, and so the per-request diagnostic always reflects the
+// live process environment.
+function getEnv() {
+  return {
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    FROM_EMAIL:     process.env.FROM_EMAIL ?? "Shelan Nutrition <noreply@shilan.com>",
+    ADMIN_EMAIL:    process.env.ADMIN_NOTIFICATION_EMAIL ?? process.env.ADMIN_EMAIL,
+  };
+}
 
 // ── Resend helper ─────────────────────────────────────────────────────────────
 
-async function sendEmail({ to, subject, html }) {
+async function sendEmail({ to, subject, html, label }) {
+  const { RESEND_API_KEY, FROM_EMAIL } = getEnv();
   if (!RESEND_API_KEY) {
     throw new Error("RESEND_API_KEY environment variable is not configured.");
   }
+  const payload = {
+    from:    FROM_EMAIL,
+    to:      Array.isArray(to) ? to : [to],
+    subject,
+    html,
+  };
+  console.log(`[send-booking-emails] → ${label} | to: ${payload.to.join(", ")} | from: ${FROM_EMAIL}`);
+
   const resp = await fetch("https://api.resend.com/emails", {
     method:  "POST",
     headers: {
       "Authorization": `Bearer ${RESEND_API_KEY}`,
       "Content-Type":  "application/json",
     },
-    body: JSON.stringify({ from: FROM_EMAIL, to: Array.isArray(to) ? to : [to], subject, html }),
+    body: JSON.stringify(payload),
   });
+
+  const respBody = await resp.json().catch(() => ({}));
   if (!resp.ok) {
-    const body = await resp.json().catch(() => ({}));
-    throw new Error(`Resend ${resp.status}: ${body.message ?? JSON.stringify(body)}`);
+    console.error(`[send-booking-emails] ✗ ${label} | HTTP ${resp.status} | ${JSON.stringify(respBody)}`);
+    throw new Error(`Resend ${resp.status}: ${respBody.message ?? JSON.stringify(respBody)}`);
   }
-  return resp.json();
+  console.log(`[send-booking-emails] ✓ ${label} | id: ${respBody.id ?? "unknown"} | ${JSON.stringify(respBody)}`);
+  return respBody;
 }
 
 // ── Date formatter (works in both Node 18+ and browser) ──────────────────────
@@ -270,6 +290,13 @@ export default async function handler(req, res) {
     return res.status(404).json({ error: "Appointment not found." });
   }
 
+  // ── Per-request env diagnostic ───────────────────────────────────────────────
+  const { RESEND_API_KEY, ADMIN_EMAIL } = getEnv();
+  console.log(
+    `[send-booking-emails] env check | RESEND_API_KEY=${RESEND_API_KEY ? "SET" : "MISSING"} | ` +
+    `ADMIN_EMAIL=${ADMIN_EMAIL || "MISSING (ADMIN_NOTIFICATION_EMAIL not set)"}`
+  );
+
   // ── Send client confirmation (required — failure blocks success response) ──
   try {
     await sendEmail({
@@ -278,26 +305,27 @@ export default async function handler(req, res) {
         ? "تأكيد الحجز — شيلان للتغذية"
         : "Booking Confirmed — Shelan Nutrition",
       html:    clientEmailHtml({ clientName, service, date, time, lang }),
+      label:   "client-confirmation",
     });
-    console.log(`[send-booking-emails] confirmation sent → ${clientEmail}`);
   } catch (err) {
-    console.error("[send-booking-emails] client email failed:", err.message);
+    console.error("[send-booking-emails] ✗ client email failed:", err.message);
     return res.status(500).json({ error: "Failed to send confirmation email. " + err.message });
   }
 
-  // ── Send admin notification (optional — failure is logged but ignored) ──────
+  // ── Send admin notification (optional — failure is logged but never blocks) ─
   if (ADMIN_EMAIL) {
     try {
       await sendEmail({
         to:      ADMIN_EMAIL,
         subject: `New Booking: ${clientName} — ${service}`,
         html:    adminEmailHtml({ clientName, clientEmail, phone, service, date, time, notes }),
+        label:   "admin-notification",
       });
-      console.log(`[send-booking-emails] admin notification sent → ${ADMIN_EMAIL}`);
     } catch (err) {
-      // Non-critical: log but don't fail the response
-      console.error("[send-booking-emails] admin notification failed (non-fatal):", err.message);
+      console.error("[send-booking-emails] ✗ admin notification failed (non-fatal):", err.message);
     }
+  } else {
+    console.warn("[send-booking-emails] ⚠ admin notification skipped — ADMIN_NOTIFICATION_EMAIL is not set");
   }
 
   return res.status(200).json({ ok: true });
