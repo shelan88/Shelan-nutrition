@@ -79,11 +79,15 @@ function formatDate(dateStr, lang) {
 }
 
 // ── Shared: brand-header HTML block ──────────────────────────────────────────
-// Renders the SHELAN wordmark header. gradientStart/End control direction so
+// Renders the SHELAN logo header. gradientStart/End control direction so
 // client and admin emails are visually distinct.
+// Logo is served from ${WEBSITE_URL}/logo-email.png (12 KB optimised PNG).
+// The "S" monogram text is kept as <img> alt-text fallback for image-blocked clients.
 
 function brandHeader({ gradientStart, gradientEnd, eyebrow, title, isAr }) {
-  const align = isAr ? "right" : "center";
+  const websiteUrl = process.env.WEBSITE_URL || "https://shilan.com";
+  const logoSrc    = `${websiteUrl}/logo-email.png`;
+
   return `
     <!-- Brand header — bgcolor is Outlook fallback; gradient shows in modern clients -->
     <tr>
@@ -91,24 +95,29 @@ function brandHeader({ gradientStart, gradientEnd, eyebrow, title, isAr }) {
           style="background:linear-gradient(135deg,${gradientStart} 0%,${gradientEnd} 100%);
                  padding:36px 40px 28px;">
 
-        <!-- Monogram circle -->
+        <!-- Logo image (fallback: "S" monogram text shown when images are blocked) -->
         <table border="0" cellpadding="0" cellspacing="0" role="presentation"
                style="margin:0 auto 14px;">
           <tr>
-            <td width="54" height="54" bgcolor="#ffffff"
-                style="width:54px;height:54px;border-radius:27px;text-align:center;
-                       vertical-align:middle;background-color:#ffffff;">
-              <span style="font-family:Georgia,'Times New Roman',serif;font-size:26px;
-                           font-weight:700;color:#6a35b5;line-height:54px;
-                           display:block;text-align:center;">S</span>
+            <td align="center"
+                style="background-color:#ffffff;border-radius:16px;
+                       padding:8px 12px;display:inline-block;">
+              <!--[if mso]>
+              <table border="0" cellpadding="0" cellspacing="0"><tr><td width="200" style="background-color:#ffffff;padding:8px 12px;">
+              <![endif]-->
+              <img src="${logoSrc}"
+                   alt="SHELAN"
+                   width="200"
+                   height="auto"
+                   style="display:block;border:0;outline:none;text-decoration:none;
+                          max-width:200px;height:auto;"
+                   loading="eager">
+              <!--[if mso]></td></tr></table><![endif]-->
             </td>
           </tr>
         </table>
 
-        <!-- Wordmark -->
-        <p style="margin:0 0 4px;font-family:Arial,'Helvetica Neue',sans-serif;
-                  font-size:22px;font-weight:700;color:#ffffff;letter-spacing:6px;
-                  text-align:center;text-transform:uppercase;">SHELAN</p>
+        <!-- Subtitle — visible below logo; acts as second-level fallback copy -->
         <p style="margin:0 0 16px;font-family:Arial,'Helvetica Neue',sans-serif;
                   font-size:11px;color:rgba(255,255,255,0.75);letter-spacing:2px;
                   text-align:center;text-transform:uppercase;">
