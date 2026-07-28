@@ -20,6 +20,10 @@
 
 import { adminClient } from "./_lib/clients.js";
 
+// ── Fallback domain used when WEBSITE_URL env var is not set ─────────────────
+// Defined once here so brandHeader() and clientEmailHtml() can't drift apart.
+const DEFAULT_WEBSITE_URL = "https://shilan.com";
+
 // ── Env vars are read inside the handler (not at module load) so that changes
 // to Vercel / Replit env vars take effect on the next request without a
 // full redeployment, and so the per-request diagnostic always reflects the
@@ -85,7 +89,7 @@ function formatDate(dateStr, lang) {
 // The "S" monogram text is kept as <img> alt-text fallback for image-blocked clients.
 
 function brandHeader({ gradientStart, gradientEnd, eyebrow, title, isAr }) {
-  const websiteUrl = process.env.WEBSITE_URL || "https://shilan.com";
+  const websiteUrl = process.env.WEBSITE_URL || DEFAULT_WEBSITE_URL;
   const logoSrc    = `${websiteUrl}/logo-email.png`;
 
   return `
@@ -151,7 +155,7 @@ function clientEmailHtml({ clientName, service, date, time, lang }) {
   const dir           = isAr ? "rtl" : "ltr";
   const textAlign     = isAr ? "right" : "left";
   const formattedDate = formatDate(date, lang);
-  const websiteUrl    = process.env.WEBSITE_URL || "https://shelan.com";
+  const websiteUrl    = process.env.WEBSITE_URL || DEFAULT_WEBSITE_URL;
   const supportEmail  = process.env.SUPPORT_EMAIL
                      || process.env.ADMIN_NOTIFICATION_EMAIL
                      || "";
