@@ -16,4 +16,4 @@ Allow: /blog/
 Allow: /services/
 Allow: /programs/
 
-Sitemap: https://shilan.com/sitemap.xml
+Sitemap: https://shelancircle.com/sitemap.xml
