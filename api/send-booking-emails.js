@@ -274,6 +274,11 @@ export default async function handler(req, res) {
     lang = "en",
   } = req.body ?? {};
 
+  // Log the exact body received so we can trace any data mismatch
+  console.log("[send-booking-emails] body received:", JSON.stringify({
+    appointmentId, clientName, clientEmail, phone, service, date, time, notes, lang,
+  }));
+
   if (!appointmentId || !clientEmail) {
     return res.status(400).json({ error: "Missing required fields: appointmentId, clientEmail." });
   }
