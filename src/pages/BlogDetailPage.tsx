@@ -124,6 +124,7 @@ export default function BlogDetailPage() {
             title: post.title,
             description: post.excerpt,
             path: `/blog/${slug ?? ""}`,
+            lang,
             image: post.author.avatarUrl,
             publishedTime: post.publishedAt,
             author: post.author.name,

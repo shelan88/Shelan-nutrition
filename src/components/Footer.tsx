@@ -113,7 +113,7 @@ export default function Footer() {
                   href={link.url || "#"}
                   aria-label={link.platform}
                   target={link.url && link.url !== "#" ? "_blank" : undefined}
-                  rel="noopener noreferrer"
+                  rel={link.url && link.url !== "#" ? "noopener noreferrer" : "nofollow noopener"}
                   style={{ animationDelay: `${i * 0.15}s` }}
                   className={[
                     "social-icon-active",

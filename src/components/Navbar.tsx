@@ -321,7 +321,7 @@ export default function Navbar() {
       return (
         <img
           src={src}
-          alt="avatar"
+          alt={lang === "ar" ? "صورتكِ الشخصية" : "Your profile photo"}
           className={`${dim} rounded-full object-cover border border-white/20 select-none`}
           onLoad={() => dbgOk("navbar:avatar:imgLoaded", `src="${src.slice(0, 80)}"`)}
           onError={(e) => {

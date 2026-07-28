@@ -218,7 +218,7 @@ export default function SuccessStories() {
                 <div className={`grid gap-3 mb-6 ${active.beforeImage && active.afterImage ? "grid-cols-2" : "grid-cols-1"}`}>
                   {active.beforeImage && (
                     <div className="relative rounded-xl overflow-hidden aspect-[4/3]">
-                      <img src={active.beforeImage} alt={lang === "ar" ? "قبل" : "Before"} className="w-full h-full object-cover" />
+                      <img src={active.beforeImage} alt={active.clientName ? `${lang === "ar" ? "قبل" : "Before"} — ${active.clientName}` : (lang === "ar" ? "صورة ما قبل التحول" : "Before transformation photo")} loading="lazy" className="w-full h-full object-cover" />
                       <span className="absolute bottom-2 start-2 text-[11px] font-bold text-white bg-black/50 rounded-full px-2 py-0.5">
                         {lang === "ar" ? "قبل" : "Before"}
                       </span>
@@ -226,7 +226,7 @@ export default function SuccessStories() {
                   )}
                   {active.afterImage && (
                     <div className="relative rounded-xl overflow-hidden aspect-[4/3]">
-                      <img src={active.afterImage} alt={lang === "ar" ? "بعد" : "After"} className="w-full h-full object-cover" />
+                      <img src={active.afterImage} alt={active.clientName ? `${lang === "ar" ? "بعد" : "After"} — ${active.clientName}` : (lang === "ar" ? "صورة ما بعد التحول" : "After transformation photo")} loading="lazy" className="w-full h-full object-cover" />
                       <span className="absolute bottom-2 start-2 text-[11px] font-bold text-white bg-black/50 rounded-full px-2 py-0.5">
                         {lang === "ar" ? "بعد" : "After"}
                       </span>

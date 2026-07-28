@@ -73,6 +73,7 @@ export default function PageHero({
               <img
                 src={image.src}
                 alt={image.alt}
+                fetchPriority="high"
                 className="w-full aspect-[4/5] object-cover rounded-[2rem] shadow-2xl shadow-black/30"
               />
             </div>

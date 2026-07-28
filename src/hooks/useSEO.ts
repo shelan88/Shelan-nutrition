@@ -174,6 +174,7 @@ export function buildArticleLd(opts: {
   title: string;
   description: string;
   path: string;
+  lang?: "en" | "ar";
   image?: string;
   publishedTime?: string;
   modifiedTime?: string;
@@ -198,7 +199,7 @@ export function buildArticleLd(opts: {
     },
     publisher: { "@id": `${SITE_URL}/#organization` },
     keywords: opts.tags?.join(", "),
-    inLanguage: "ar",
+    inLanguage: opts.lang === "en" ? "en" : "ar",
   };
 }
 

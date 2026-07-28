@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 
 import { useAuth } from "@/hooks/useAuth";
+import { useSEO } from "@/hooks/useSEO";
 import { useLanguage } from "@/context/LanguageContext";
 import { getAppointmentById } from "@/admin/repositories/appointments.repository";
 import { getTemplateWithDetails } from "@/admin/repositories/assessment-templates.repository";
@@ -28,6 +29,17 @@ export default function AssessmentResponsePage() {
   const navigate = useNavigate();
   const { lang } = useLanguage();
   const isAr = lang === "ar";
+
+  // noIndex — private, auth-gated, per-appointment transactional page
+  useSEO({
+    title: isAr ? "تقييم صحي | SHELAN" : "Health Assessment | SHELAN",
+    description: isAr
+      ? "أجيبي على أسئلة التقييم الصحي الخاص باستشارتكِ."
+      : "Complete your personal health assessment questionnaire for your consultation.",
+    path: `/assessment/respond/${appointmentId ?? ""}`,
+    lang,
+    noIndex: true,
+  });
 
   const [appt,           setAppt]           = useState<AppointmentRow | null>(null);
   const [template,       setTemplate]       = useState<TemplateWithDetails | null>(null);
