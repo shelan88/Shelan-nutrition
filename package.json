@@ -4,13 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently --kill-others-on-fail \"node api/server.js\" \"vite\"",
+    "dev": "concurrently \"node api/server.js\" \"vite\"",
     "api": "node api/server.js",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google-analytics/data": "^6.1.0",
     "@react-pdf/renderer": "^4.5.1",
     "@supabase/supabase-js": "^2.109.0",
     "@tailwindcss/vite": "^4.3.2",

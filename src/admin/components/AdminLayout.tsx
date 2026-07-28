@@ -37,6 +37,7 @@ import WebsiteSettingsPage from "../pages/WebsiteSettingsPage";
 import SocialMediaAdminPage from "../pages/SocialMediaAdminPage";
 import MediaLibraryPage from "../pages/MediaLibraryPage";
 import PlaceholderPage from "../pages/PlaceholderPage";
+import AnalyticsPage from "../pages/AnalyticsPage";
 import MessagesAdminPage from "../pages/MessagesAdminPage";
 import BookingsAdminPage from "../pages/BookingsAdminPage";
 import SEOPage from "../pages/SEOPage";
@@ -106,7 +107,7 @@ export default function AdminLayout() {
               <Route path="messages"              element={<MessagesAdminPage />} />
 
               {/* Insights */}
-              <Route path="analytics"             element={<PlaceholderPage pageId="analytics" />} />
+              <Route path="analytics"             element={<AnalyticsPage />} />
               <Route path="seo"                   element={<SEOPage />} />
 
               {/* System */}
