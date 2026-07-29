@@ -8,7 +8,8 @@
     "api": "node api/server.js",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "fix-lockfile": "sed -i 's|http://package-firewall.replit.local/npm/|https://registry.npmjs.org/|g' package-lock.json && echo 'Replit proxy URLs replaced with registry.npmjs.org'"
   },
   "dependencies": {
     "@google-analytics/data": "^6.1.0",

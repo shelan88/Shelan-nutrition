@@ -31,5 +31,27 @@ support with a language toggle in the navbar.
 ## Placeholders
 Shilan's photo and final bio copy are placeholders (gradient boxes with labels) pending real assets from the user — swap into `About.tsx` / `Hero.tsx` and `content.ts` when available.
 
+## ⚠️ Known: Replit corrupts package-lock.json for Vercel deploys
+
+Replit proxies all npm traffic through `http://package-firewall.replit.local/npm/` at the
+network level. This URL gets written into `package-lock.json` as `resolved` fields whenever
+`npm install` or `npm update` runs inside Replit. Those internal URLs are **unreachable from
+Vercel** (or any external CI), causing `npm ci` to hang and emit:
+
+```
+npm ERR! Exit handler never called!
+```
+
+**After every `npm install` / `npm update` inside Replit, run before committing:**
+
+```bash
+npm run fix-lockfile
+git add package-lock.json
+```
+
+This replaces all `http://package-firewall.replit.local/npm/` resolved URLs with
+`https://registry.npmjs.org/` — the exact same packages, just publicly reachable.
+The SHA-512 integrity hashes are unchanged and remain valid.
+
 ## User preferences
 None recorded yet.
