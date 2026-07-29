@@ -433,6 +433,9 @@ function BookingSummary({
   confirming,
   lang,
   error,
+  cardComplete,
+  cardError,
+  onCardChange,
 }: {
   service: CMSBookingService | undefined;
   date: string;
@@ -444,6 +447,9 @@ function BookingSummary({
   confirming: boolean;
   lang: string;
   error?: string | null;
+  cardComplete: boolean;
+  cardError: string | null;
+  onCardChange: (complete: boolean, error: string | null) => void;
 }) {
   const locale        = lang === "ar" ? "ar-SA" : "en-US";
   const formattedDate = date
@@ -501,12 +507,26 @@ function BookingSummary({
           <label className="block text-sm font-semibold text-heading mb-1.5">
             {strings.cardLabel}
           </label>
-          <div className="w-full px-4 py-3.5 rounded-xl border border-soft-purple/20 bg-white focus-within:border-primary-pink/50 focus-within:ring-2 focus-within:ring-primary-pink/15 transition-all">
-            <CardElement options={CARD_ELEMENT_OPTIONS} />
+          <div className={`w-full px-4 py-3.5 rounded-xl border bg-white focus-within:ring-2 transition-all ${
+            cardError
+              ? "border-red-400 focus-within:border-red-400 focus-within:ring-red-400/15"
+              : "border-soft-purple/20 focus-within:border-primary-pink/50 focus-within:ring-primary-pink/15"
+          }`}>
+            <CardElement
+              options={CARD_ELEMENT_OPTIONS}
+              onChange={(e) => onCardChange(e.complete, e.error?.message ?? null)}
+            />
           </div>
+          {/* Inline Stripe card-field error */}
+          {cardError && (
+            <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+              <AlertCircle size={11} className="shrink-0" />
+              {cardError}
+            </p>
+          )}
         </div>
 
-        {/* Booking / payment error */}
+        {/* General booking / payment error */}
         {error && (
           <div className="flex items-start gap-2.5 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
             <AlertCircle size={15} className="shrink-0 mt-0.5" />
@@ -516,10 +536,10 @@ function BookingSummary({
 
         <motion.button
           onClick={onConfirm}
-          disabled={confirming}
-          whileHover={{ scale: 1.02, y: -1 }}
-          whileTap={{ scale: 0.98 }}
-          className="w-full py-4 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple text-white font-semibold shadow-lg shadow-deep-purple/20 hover:shadow-xl hover:shadow-deep-purple/30 transition-shadow disabled:opacity-70 disabled:cursor-not-allowed"
+          disabled={confirming || !cardComplete}
+          whileHover={cardComplete && !confirming ? { scale: 1.02, y: -1 } : {}}
+          whileTap={cardComplete && !confirming ? { scale: 0.98 } : {}}
+          className="w-full py-4 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple text-white font-semibold shadow-lg shadow-deep-purple/20 hover:shadow-xl hover:shadow-deep-purple/30 transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {confirming
             ? (strings.confirmingLabel ?? (lang === "ar" ? "جارٍ التأكيد…" : "Confirming…"))
@@ -611,6 +631,9 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
   const [confirming,      setConfirming]      = useState(false);
   const [bookingError,    setBookingError]    = useState<string | null>(null);
   const [forceShowErrors, setForceShowErrors] = useState(false);
+  // Card element completeness — tracked via CardElement onChange in BookingSummary
+  const [cardComplete,    setCardComplete]    = useState(false);
+  const [cardFieldError,  setCardFieldError]  = useState<string | null>(null);
 
   const { user } = useAuth();
   const { lang } = useLanguage();
@@ -706,6 +729,18 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
       const cardElement = elements.getElement(CardElement);
       if (!cardElement) {
         throw new Error(isAr ? "لم يتم العثور على حقل البطاقة." : "Card field not found. Please refresh.");
+      }
+
+      // ── Guard: require complete card details before touching Stripe API ────
+      // cardComplete is set by CardElement's onChange — if false the card is
+      // empty or incomplete and confirmCardPayment would fail anyway, but we
+      // stop here to avoid creating an orphaned PaymentIntent on Stripe.
+      if (!cardComplete) {
+        throw new Error(
+          isAr
+            ? "يرجى إدخال بيانات البطاقة كاملةً قبل تأكيد الحجز."
+            : "Please complete your card details before confirming.",
+        );
       }
 
       const lookupId    = programMode ? (program?.id ?? "") : serviceId;
@@ -934,6 +969,12 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
                 confirming={confirming}
                 lang={lang}
                 error={bookingError}
+                cardComplete={cardComplete}
+                cardError={cardFieldError}
+                onCardChange={(complete, err) => {
+                  setCardComplete(complete);
+                  setCardFieldError(err);
+                }}
               />
             )}
           </motion.div>

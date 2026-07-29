@@ -188,12 +188,15 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
   const stripe    = useStripe();
   const elements  = useElements();
 
-  const [step,   setStep]   = useState<0 | 1>(0);
-  const [date,   setDate]   = useState("");
-  const [time,   setTime]   = useState("");
-  const [name,   setName]   = useState("");
-  const [status, setStatus] = useState<"idle" | "processing" | "success">("idle");
-  const [error,  setError]  = useState<string | null>(null);
+  const [step,          setStep]          = useState<0 | 1>(0);
+  const [date,          setDate]          = useState("");
+  const [time,          setTime]          = useState("");
+  const [name,          setName]          = useState("");
+  const [status,        setStatus]        = useState<"idle" | "processing" | "success">("idle");
+  const [error,         setError]         = useState<string | null>(null);
+  // Card element completeness — tracked via CardElement onChange
+  const [cardComplete,  setCardComplete]  = useState(false);
+  const [cardError,     setCardError]     = useState<string | null>(null);
 
   const canProceed = !!date && !!time;
 
@@ -204,6 +207,13 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
     const cardElement = elements.getElement(CardElement);
     if (!cardElement) {
       setError("Card element not loaded. Please refresh and try again.");
+      return;
+    }
+
+    // Guard: require complete card details before touching Stripe API.
+    // Stops here to avoid creating an orphaned PaymentIntent on Stripe.
+    if (!cardComplete) {
+      setError("Please complete your card details before paying.");
       return;
     }
 
@@ -324,7 +334,7 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setStatus("idle");
     }
-  }, [status, stripe, elements, plan, date, time, name, user, navigate, onClose]);
+  }, [status, stripe, elements, plan, date, time, name, user, navigate, onClose, cardComplete]);
 
   const stepLabel = step === 0
     ? "Step 1 of 2 — Pick a Date & Time"
@@ -444,13 +454,30 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                     Card Details
                   </label>
-                  <div className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 focus-within:ring-2 focus-within:ring-primary-pink/40 focus-within:border-primary-pink/60 transition-all">
-                    <CardElement options={CARD_ELEMENT_OPTIONS} />
+                  <div className={`w-full rounded-xl border bg-white px-4 py-3.5 focus-within:ring-2 transition-all ${
+                    cardError
+                      ? "border-red-400 focus-within:ring-red-400/40 focus-within:border-red-400"
+                      : "border-gray-300 focus-within:ring-primary-pink/40 focus-within:border-primary-pink/60"
+                  }`}>
+                    <CardElement
+                      options={CARD_ELEMENT_OPTIONS}
+                      onChange={(e) => {
+                        setCardComplete(e.complete);
+                        setCardError(e.error?.message ?? null);
+                      }}
+                    />
                   </div>
+                  {/* Inline Stripe card-field error */}
+                  {cardError && (
+                    <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                      <span className="shrink-0">⚠</span>
+                      {cardError}
+                    </p>
+                  )}
                 </div>
 
-                <button type="submit" disabled={status === "processing" || !stripe}
-                  className="w-full mt-2 py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white font-semibold hover:from-primary-pink hover:to-lavender-purple transition-colors shadow-lg shadow-deep-purple/25 disabled:opacity-70 flex items-center justify-center gap-2"
+                <button type="submit" disabled={status === "processing" || !stripe || !cardComplete}
+                  className="w-full mt-2 py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white font-semibold hover:from-primary-pink hover:to-lavender-purple transition-colors shadow-lg shadow-deep-purple/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {status === "processing" ? (
                     <>
