@@ -3,8 +3,6 @@
  * Step 1: Service selection. Step 2: Calendar + time. Step 3: Personal info. Step 4: Summary + payment.
  * Confirms by creating a row in the Supabase appointments table, then sending
  * confirmation emails via /api/send-booking-emails.
- * NOTE: The payment card on Step 4 is a UI placeholder — a payment integration (Stripe/Tap) is required
- *       before real card processing can happen.
  * Props-only for data and strings. CMS-ready.
  */
 import { useState, useMemo, useEffect } from "react";
@@ -15,6 +13,7 @@ import { createAppointment } from "@/admin/repositories/appointments.repository"
 import { getTemplateForService } from "@/admin/repositories/assessment-templates.repository";
 import { createResponse } from "@/admin/repositories/assessment-responses.repository";
 import { getProgramById } from "@/admin/repositories/programs.repository";
+import { recordPayment } from "@/admin/repositories/payments.repository";
 import type { ProgramRow } from "@/types/database.types";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/context/LanguageContext";
@@ -26,6 +25,25 @@ import {
 } from "lucide-react";
 import type { CMSBookingData, CMSBookingService } from "@/types/cms.types";
 import PhoneInput from "@/components/PhoneInput";
+import {
+  Elements,
+  CardElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
+import { stripePromise, parsePriceCents } from "@/lib/stripe";
+
+const CARD_ELEMENT_OPTIONS = {
+  style: {
+    base: {
+      fontSize:        "14px",
+      color:           "#1f1635",
+      fontFamily:      "inherit",
+      "::placeholder": { color: "#9ca3af" },
+    },
+    invalid: { color: "#ef4444" },
+  },
+};
 
 // ─── Icon resolver ────────────────────────────────────────────────────────────
 const SERVICE_ICONS: Record<string, React.ElementType> = { Calendar, Star, RefreshCw };
@@ -474,24 +492,21 @@ function BookingSummary({
         </ul>
       </div>
 
-      {/* Payment placeholder */}
+      {/* Payment — Stripe Card Element */}
       <div className="space-y-4">
         <h3 className="font-heading font-bold text-heading">{strings.paymentTitle}</h3>
+
+        {/* Stripe Card Element */}
         <div>
-          <label className="block text-sm font-semibold text-heading mb-1.5">{strings.cardLabel}</label>
-          <input
-            type="text"
-            placeholder={strings.cardPlaceholder}
-            maxLength={19}
-            className="w-full px-4 py-3 rounded-xl border border-soft-purple/20 bg-white text-heading text-sm placeholder:text-deep-purple/35 focus:outline-none focus:border-primary-pink/50 focus:ring-2 focus:ring-primary-pink/15 transition-all tracking-widest"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <input placeholder="MM / YY" className="px-4 py-3 rounded-xl border border-soft-purple/20 bg-white text-sm placeholder:text-deep-purple/35 focus:outline-none focus:border-primary-pink/50 transition-all" />
-          <input placeholder="CVV"     className="px-4 py-3 rounded-xl border border-soft-purple/20 bg-white text-sm placeholder:text-deep-purple/35 focus:outline-none focus:border-primary-pink/50 transition-all" />
+          <label className="block text-sm font-semibold text-heading mb-1.5">
+            {strings.cardLabel}
+          </label>
+          <div className="w-full px-4 py-3.5 rounded-xl border border-soft-purple/20 bg-white focus-within:border-primary-pink/50 focus-within:ring-2 focus-within:ring-primary-pink/15 transition-all">
+            <CardElement options={CARD_ELEMENT_OPTIONS} />
+          </div>
         </div>
 
-        {/* Booking error */}
+        {/* Booking / payment error */}
         {error && (
           <div className="flex items-start gap-2.5 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
             <AlertCircle size={15} className="shrink-0 mt-0.5" />
@@ -566,7 +581,10 @@ interface Props {
   canonicalServices?: CMSBookingService[];
 }
 
-export default function BookingFlow({ data, strings, preselectedServiceId, preselectedProgramId, canonicalServices }: Props) {
+function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProgramId, canonicalServices }: Props) {
+  const stripe   = useStripe();
+  const elements = useElements();
+
   const steps       = (strings.steps as string[]) ?? [];
   const programMode = !!preselectedProgramId;
 
@@ -669,8 +687,8 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
     setConfirming(true);
     setBookingError(null);
 
-    const isAr      = lang === "ar";
-    const t0        = performance.now();
+    const isAr       = lang === "ar";
+    const t0         = performance.now();
     const fieldCount = Object.values(personalInfo).filter((v) => String(v).trim()).length + (date ? 1 : 0) + (time ? 1 : 0);
 
     debugLog({
@@ -681,8 +699,17 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
     });
 
     try {
-      const lookupId   = programMode ? (program?.id ?? "") : serviceId;
-      const template   = lookupId ? await getTemplateForService(lookupId) : null;
+      // ── 0. Validate Stripe is ready ────────────────────────────────────────
+      if (!stripe || !elements) {
+        throw new Error(isAr ? "لم يتم تحميل نظام الدفع. يرجى تحديث الصفحة." : "Payment system not loaded. Please refresh.");
+      }
+      const cardElement = elements.getElement(CardElement);
+      if (!cardElement) {
+        throw new Error(isAr ? "لم يتم العثور على حقل البطاقة." : "Card field not found. Please refresh.");
+      }
+
+      const lookupId    = programMode ? (program?.id ?? "") : serviceId;
+      const template    = lookupId ? await getTemplateForService(lookupId) : null;
       const hasTemplate = !!(template?.active);
 
       // Canonical service name — always store English for admin consistency
@@ -692,8 +719,49 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
           : (canonicalServices?.find((s) => s.id === serviceId)?.name ?? selectedService?.name)
       ) ?? "Consultation";
 
+      // ── 1. Create PaymentIntent on server ──────────────────────────────────
+      const amountCents = parsePriceCents(selectedService?.price ?? "0");
+      const piResp = await fetch("/api/create-payment-intent", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          amount:   amountCents,
+          currency: "usd",
+          metadata: { service: serviceType, date, time },
+        }),
+      });
+
+      if (!piResp.ok) {
+        const body = await piResp.json().catch(() => ({}));
+        throw new Error(body.error ?? (isAr ? "تعذّر بدء عملية الدفع." : "Failed to initialise payment."));
+      }
+      const { clientSecret, paymentIntentId } = await piResp.json() as {
+        clientSecret: string;
+        paymentIntentId: string;
+      };
+
+      // ── 2. Confirm card payment with Stripe ────────────────────────────────
+      const clientName = `${personalInfo.firstName} ${personalInfo.lastName}`.trim() || personalInfo.email;
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
+        clientSecret,
+        {
+          payment_method: {
+            card:            cardElement,
+            billing_details: { name: clientName, email: personalInfo.email },
+          },
+        },
+      );
+
+      if (stripeError) {
+        throw new Error(stripeError.message ?? (isAr ? "فشلت عملية الدفع." : "Payment failed."));
+      }
+      if (paymentIntent?.status !== "succeeded") {
+        throw new Error(isAr ? "لم تكتمل عملية الدفع. يرجى المحاولة مجدداً." : "Payment was not completed. Please try again.");
+      }
+
+      // ── 3. Create appointment ──────────────────────────────────────────────
       const appt = await createAppointment({
-        client_name:  `${personalInfo.firstName} ${personalInfo.lastName}`.trim() || personalInfo.email,
+        client_name:  clientName,
         client_email: personalInfo.email || user?.email || null,
         user_id:      user?.id ?? null,
         date,
@@ -712,7 +780,19 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
         throw new Error("createAppointment returned null");
       }
 
-      // ── Send confirmation + admin notification emails ──────────────────────
+      // ── 4. Record payment in DB ────────────────────────────────────────────
+      await recordPayment({
+        stripe_payment_intent_id: paymentIntentId,
+        amount:                   amountCents,
+        currency:                 "usd",
+        status:                   "succeeded",
+        client_name:              clientName,
+        client_email:             personalInfo.email || user?.email || null,
+        service_name:             serviceType,
+        appointment_id:           appt.id,
+      });
+
+      // ── 5. Send confirmation + admin notification emails ───────────────────
       let emailResp: Response;
       try {
         emailResp = await fetch("/api/send-booking-emails", {
@@ -720,7 +800,7 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify({
             appointmentId: appt.id,
-            clientName:    `${personalInfo.firstName} ${personalInfo.lastName}`.trim(),
+            clientName,
             clientEmail:   personalInfo.email,
             phone:         personalInfo.phone || null,
             service:       serviceType,
@@ -734,8 +814,8 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
         console.error("[BookingFlow] email network error:", networkErr);
         setBookingError(
           isAr
-            ? "تم حفظ حجزك، لكن تعذّر الاتصال بخدمة البريد. يرجى التواصل مع العيادة مباشرة."
-            : "Your booking was saved but we couldn't reach the email service. Please contact the clinic directly.",
+            ? "تم الدفع وحجز موعدكِ، لكن تعذّر إرسال بريد التأكيد. يرجى التواصل مع العيادة مباشرة."
+            : "Payment successful and booking saved, but we couldn't send the confirmation email. Please contact the clinic directly.",
         );
         setConfirming(false);
         return;
@@ -746,14 +826,14 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
         console.error("[BookingFlow] email API error:", body);
         setBookingError(
           isAr
-            ? "تم حفظ حجزك، لكن تعذّر إرسال بريد التأكيد. يرجى التواصل مع العيادة مباشرة."
-            : "Your booking was saved but we couldn't send the confirmation email. Please contact the clinic directly.",
+            ? "تم الدفع وحجز موعدكِ، لكن تعذّر إرسال بريد التأكيد. يرجى التواصل مع العيادة مباشرة."
+            : "Payment successful and booking saved, but we couldn't send the confirmation email. Please contact the clinic directly.",
         );
         setConfirming(false);
         return;
       }
 
-      // ── All succeeded ─────────────────────────────────────────────────────
+      // ── All succeeded ──────────────────────────────────────────────────────
       debugLog({
         level: "log", category: "forms",
         module: "Booking", component: "BookingFlow", action: "confirm",
@@ -762,8 +842,6 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
         data: { fieldCount, hasTemplate, emailSent: true },
       });
 
-      // GA4: appointment created + confirmation email sent — fire once regardless
-      // of whether an assessment follows, because the booking itself succeeded.
       trackEvent("booking_submitted", {
         service_type:   serviceType,
         has_assessment: hasTemplate,
@@ -784,9 +862,8 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
         error: err instanceof Error ? err.message : String(err),
       });
       setBookingError(
-        lang === "ar"
-          ? "حدث خطأ غير متوقع. يرجى المحاولة مجدداً."
-          : "An unexpected error occurred. Please try again.",
+        err instanceof Error ? err.message
+          : (lang === "ar" ? "حدث خطأ غير متوقع. يرجى المحاولة مجدداً." : "An unexpected error occurred. Please try again."),
       );
     } finally {
       setConfirming(false);
@@ -890,5 +967,15 @@ export default function BookingFlow({ data, strings, preselectedServiceId, prese
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Public export — wrapped in <Elements> for Stripe hooks ──────────────────
+
+export default function BookingFlow(props: Props) {
+  return (
+    <Elements stripe={stripePromise}>
+      <BookingFlowInner {...props} />
+    </Elements>
   );
 }

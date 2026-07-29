@@ -13,6 +13,8 @@
   "dependencies": {
     "@google-analytics/data": "^6.1.0",
     "@react-pdf/renderer": "^4.5.1",
+    "@stripe/react-stripe-js": "^6.8.0",
+    "@stripe/stripe-js": "^9.12.1",
     "@supabase/supabase-js": "^2.109.0",
     "@tailwindcss/vite": "^4.3.2",
     "concurrently": "^9.2.4",
@@ -23,6 +25,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.1",
+    "stripe": "^22.3.2",
     "tailwindcss": "^4.3.2"
   },
   "devDependencies": {

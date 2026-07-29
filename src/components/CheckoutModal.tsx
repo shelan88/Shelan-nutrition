@@ -1,8 +1,16 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, ShieldCheck, X, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Lock, ShieldCheck, X, CheckCircle2, ChevronLeft, ChevronRight,
+} from "lucide-react";
+import {
+  Elements,
+  CardElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/hooks/useAuth";
 import { checkoutModal } from "@/content/content";
@@ -10,33 +18,22 @@ import { supabase } from "@/lib/supabase";
 import { createAppointment } from "@/admin/repositories/appointments.repository";
 import { getTemplateForService, getFirstAssignedActiveTemplate } from "@/admin/repositories/assessment-templates.repository";
 import { createResponse } from "@/admin/repositories/assessment-responses.repository";
+import { recordPayment } from "@/admin/repositories/payments.repository";
+import { stripePromise, parsePriceCents } from "@/lib/stripe";
 
-const inputClass =
-  "w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/60 transition-all";
+// ─── Card element styles ──────────────────────────────────────────────────────
 
-export interface CheckoutPlan {
-  name: string;
-  price: string;
-  period: string;
-  /** Supabase service UUID — used to look up assessment templates */
-  serviceId?: string;
-}
-
-interface CheckoutModalProps {
-  plan: CheckoutPlan;
-  onClose: () => void;
-}
-
-function formatCardNumber(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 16);
-  return digits.replace(/(.{4})/g, "$1 ").trim();
-}
-
-function formatExpiry(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 4);
-  if (digits.length <= 2) return digits;
-  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-}
+const CARD_ELEMENT_OPTIONS = {
+  style: {
+    base: {
+      fontSize:        "14px",
+      color:           "#1f1635",
+      fontFamily:      "inherit",
+      "::placeholder": { color: "#9ca3af" },
+    },
+    invalid: { color: "#ef4444" },
+  },
+};
 
 // ─── Static time slots ────────────────────────────────────────────────────────
 const TIME_SLOTS = [
@@ -67,17 +64,16 @@ function DateTimePicker({
   onTimeChange: (t: string) => void;
 }) {
   const today = new Date();
-  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [viewYear,  setViewYear]  = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const firstDay   = new Date(viewYear, viewMonth, 1).getDay();
-  const monthName  = new Date(viewYear, viewMonth).toLocaleString("en-US", {
-    month: "long",
-    year: "numeric",
+  const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
+  const monthName   = new Date(viewYear, viewMonth).toLocaleString("en-US", {
+    month: "long", year: "numeric",
   });
 
-  const isPast = (day: number) => {
+  const isPast    = (day: number) => {
     const d = new Date(viewYear, viewMonth, day);
     return d < new Date(today.getFullYear(), today.getMonth(), today.getDate());
   };
@@ -100,33 +96,22 @@ function DateTimePicker({
       <div>
         <p className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Select Date</p>
         <div className="border border-gray-200 rounded-2xl p-4 bg-gray-50/50">
-          {/* Month nav */}
           <div className="flex items-center justify-between mb-3">
-            <button
-              type="button"
-              onClick={prevMonth}
-              className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
-            >
+            <button type="button" onClick={prevMonth}
+              className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
               <ChevronLeft size={14} className="text-gray-600" />
             </button>
             <span className="text-sm font-bold text-gray-800">{monthName}</span>
-            <button
-              type="button"
-              onClick={nextMonth}
-              className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
-            >
+            <button type="button" onClick={nextMonth}
+              className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
               <ChevronRight size={14} className="text-gray-600" />
             </button>
           </div>
-
-          {/* Day headers */}
           <div className="grid grid-cols-7 mb-1">
-            {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+            {["S","M","T","W","T","F","S"].map((d, i) => (
               <span key={i} className="text-center text-[10px] font-bold text-gray-400 py-1">{d}</span>
             ))}
           </div>
-
-          {/* Date cells */}
           <div className="grid grid-cols-7 gap-0.5">
             {Array.from({ length: firstDay }).map((_, i) => <span key={`e-${i}`} />)}
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
@@ -134,17 +119,12 @@ function DateTimePicker({
               const disabled = isPast(day) || isSunday(day);
               const sel      = selectedDate === ds;
               return (
-                <button
-                  key={day}
-                  type="button"
-                  disabled={disabled}
+                <button key={day} type="button" disabled={disabled}
                   onClick={() => { onDateChange(ds); onTimeChange(""); }}
                   className={`aspect-square rounded-full text-[11px] font-medium transition-all flex items-center justify-center ${
-                    sel
-                      ? "bg-gradient-to-br from-primary-pink to-lavender-purple text-white shadow-sm scale-110"
-                      : disabled
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-700 hover:bg-pink-50"
+                    sel       ? "bg-gradient-to-br from-primary-pink to-lavender-purple text-white shadow-sm scale-110"
+                    : disabled ? "text-gray-300 cursor-not-allowed"
+                              : "text-gray-700 hover:bg-pink-50"
                   }`}
                 >
                   {day}
@@ -165,17 +145,12 @@ function DateTimePicker({
             {TIME_SLOTS.map((slot) => {
               const sel = selectedTime === slot.time;
               return (
-                <button
-                  key={slot.time}
-                  type="button"
-                  disabled={!slot.available}
+                <button key={slot.time} type="button" disabled={!slot.available}
                   onClick={() => onTimeChange(slot.time)}
                   className={`py-2 rounded-xl text-[11px] font-semibold transition-all text-center ${
-                    sel
-                      ? "bg-gradient-to-br from-primary-pink to-lavender-purple text-white shadow-sm"
-                      : !slot.available
-                      ? "bg-gray-50 text-gray-300 cursor-not-allowed line-through"
-                      : "bg-white border border-gray-200 text-gray-700 hover:border-pink-300 hover:bg-pink-50"
+                    sel ? "bg-gradient-to-br from-primary-pink to-lavender-purple text-white shadow-sm"
+                    : !slot.available ? "bg-gray-50 text-gray-300 cursor-not-allowed line-through"
+                    : "bg-white border border-gray-200 text-gray-700 hover:border-pink-300 hover:bg-pink-50"
                   }`}
                 >
                   {slot.time}
@@ -189,38 +164,94 @@ function DateTimePicker({
   );
 }
 
-// ─── Main modal ───────────────────────────────────────────────────────────────
-export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
+// ─── Props ────────────────────────────────────────────────────────────────────
+
+export interface CheckoutPlan {
+  name:      string;
+  price:     string;
+  period:    string;
+  serviceId?: string;
+}
+
+interface CheckoutModalProps {
+  plan:    CheckoutPlan;
+  onClose: () => void;
+}
+
+// ─── Inner modal (inside <Elements>) ─────────────────────────────────────────
+
+function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
   const { lang } = useLanguage();
-  const t = checkoutModal[lang];
+  const t        = checkoutModal[lang];
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const stripe    = useStripe();
+  const elements  = useElements();
 
-  // Step 0 = date/time, Step 1 = payment
-  const [step, setStep]   = useState<0 | 1>(0);
-  const [date, setDate]   = useState("");
-  const [time, setTime]   = useState("");
-
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry]         = useState("");
-  const [cvc, setCvc]               = useState("");
-  const [name, setName]             = useState("");
-  const [status, setStatus]         = useState<"idle" | "processing" | "success">("idle");
-  const [error, setError]           = useState<string | null>(null);
+  const [step,   setStep]   = useState<0 | 1>(0);
+  const [date,   setDate]   = useState("");
+  const [time,   setTime]   = useState("");
+  const [name,   setName]   = useState("");
+  const [status, setStatus] = useState<"idle" | "processing" | "success">("idle");
+  const [error,  setError]  = useState<string | null>(null);
 
   const canProceed = !!date && !!time;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (status !== "idle") return;
+    if (status !== "idle" || !stripe || !elements) return;
+
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      setError("Card element not loaded. Please refresh and try again.");
+      return;
+    }
+
     setStatus("processing");
     setError(null);
 
     try {
-      // ── 1. Resolve client_id from the authenticated user's profile ────────
-      // This links the appointment (and assessment response) to the client row
-      // so that the portal AssessmentsPage can display the response by client_id
-      // rather than relying on appointment_id or user_id alone.
+      // ── 1. Create PaymentIntent on server ─────────────────────────────────
+      const amountCents = parsePriceCents(plan.price);
+      const piResp = await fetch("/api/create-payment-intent", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          amount:   amountCents,
+          currency: "usd",
+          metadata: { plan: plan.name, date, time },
+        }),
+      });
+
+      if (!piResp.ok) {
+        const body = await piResp.json().catch(() => ({}));
+        throw new Error(body.error ?? "Failed to initialise payment.");
+      }
+
+      const { clientSecret, paymentIntentId } = await piResp.json() as {
+        clientSecret: string;
+        paymentIntentId: string;
+      };
+
+      // ── 2. Confirm the card payment with Stripe ───────────────────────────
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
+        clientSecret,
+        {
+          payment_method: {
+            card:             cardElement,
+            billing_details:  { name: name.trim() || user?.email || "Customer" },
+          },
+        },
+      );
+
+      if (stripeError) {
+        throw new Error(stripeError.message ?? "Payment failed.");
+      }
+      if (paymentIntent?.status !== "succeeded") {
+        throw new Error("Payment was not completed. Please try again.");
+      }
+
+      // ── 3. Resolve client_id ──────────────────────────────────────────────
       let resolvedClientId: string | null = null;
       if (user?.id) {
         const { data: clientRow } = await supabase
@@ -231,17 +262,13 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
         resolvedClientId = clientRow?.id ?? null;
       }
 
-      // ── 2. Look up assessment template ────────────────────────────────────
-      // Try the service-specific template first; fall back to any active template.
-      const template = plan.serviceId
+      // ── 4. Look up assessment template ────────────────────────────────────
+      const template   = plan.serviceId
         ? await getTemplateForService(plan.serviceId)
         : await getFirstAssignedActiveTemplate();
       const hasTemplate = !!(template?.active);
 
-      // ── 3. Create the appointment, fully linked ────────────────────────────
-      // status must always be a valid booking status value ("scheduled",
-      // "confirmed", "completed", "cancelled").
-      // "awaiting_assessment" lives on assessment_status only.
+      // ── 5. Create appointment ─────────────────────────────────────────────
       const appt = await createAppointment({
         client_name:  name.trim() || user?.email || "Customer",
         client_email: user?.email ?? null,
@@ -259,20 +286,30 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
       });
 
       if (!appt) {
-        setError("Could not create appointment. Please try again.");
+        setError("Payment succeeded but booking could not be saved. Please contact support.");
         setStatus("idle");
         return;
       }
 
-      // ── 4. Pre-create assessment response and redirect ─────────────────────
-      // If a template exists, always assign it and redirect to the questionnaire.
-      // No booking should complete without the client being directed to assess.
+      // ── 6. Record payment in DB ───────────────────────────────────────────
+      await recordPayment({
+        stripe_payment_intent_id: paymentIntentId,
+        amount:                   amountCents,
+        currency:                 "usd",
+        status:                   "succeeded",
+        client_name:              name.trim() || user?.email || null,
+        client_email:             user?.email ?? null,
+        service_name:             plan.name,
+        appointment_id:           appt.id,
+      });
+
+      // ── 7. Redirect to assessment or show success ─────────────────────────
       if (hasTemplate) {
         const response = await createResponse(
           template!.id,
           appt.id,
           user?.id          ?? null,
-          resolvedClientId,           // now always passed when logged in
+          resolvedClientId,
         );
         if (response) {
           onClose();
@@ -281,22 +318,21 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
         }
       }
 
-      // No template available — confirm the booking without assessment redirect.
       setStatus("success");
     } catch (err) {
-      console.error("[CheckoutModal] booking error:", err);
-      setError("Something went wrong. Please try again.");
+      console.error("[CheckoutModal] payment/booking error:", err);
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setStatus("idle");
     }
-  };
+  }, [status, stripe, elements, plan, date, time, name, user, navigate, onClose]);
 
-  const stepLabel = step === 0 ? "Step 1 of 2 — Pick a Date & Time" : "Step 2 of 2 — Payment Details";
+  const stepLabel = step === 0
+    ? "Step 1 of 2 — Pick a Date & Time"
+    : "Step 2 of 2 — Payment Details";
 
   return createPortal(
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
       className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto p-4 py-8 sm:p-6 bg-black/60 backdrop-blur-[4px]"
       onClick={onClose}
@@ -311,11 +347,8 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
       >
         {/* Header */}
         <div className="relative bg-gradient-to-br from-deep-purple to-soft-purple px-8 py-7 text-center">
-          <button
-            onClick={onClose}
-            aria-label={t.close}
-            className="absolute top-4 end-4 w-9 h-9 rounded-full flex items-center justify-center text-white/80 hover:bg-white/10 hover:text-white transition-colors"
-          >
+          <button onClick={onClose} aria-label={t.close}
+            className="absolute top-4 end-4 w-9 h-9 rounded-full flex items-center justify-center text-white/80 hover:bg-white/10 hover:text-white transition-colors">
             <X size={18} />
           </button>
           <div className="w-12 h-12 mx-auto rounded-2xl bg-white/15 flex items-center justify-center mb-3">
@@ -328,33 +361,23 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
         <div className="px-8 py-7">
           <AnimatePresence mode="wait">
             {status === "success" ? (
-              /* ── Success ── */
-              <motion.div
-                key="success"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
+              <motion.div key="success"
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 className="text-center py-6"
               >
                 <CheckCircle2 className="mx-auto text-primary-pink mb-4" size={48} />
                 <h4 className="font-heading text-lg font-bold text-gray-900 mb-2">{t.success}</h4>
                 <p className="text-sm text-gray-500 mb-6 leading-relaxed">{t.successNote}</p>
-                <button
-                  onClick={onClose}
-                  className="px-8 py-3 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white text-sm font-semibold shadow-md"
-                >
+                <button onClick={onClose}
+                  className="px-8 py-3 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white text-sm font-semibold shadow-md">
                   {t.close}
                 </button>
               </motion.div>
 
             ) : step === 0 ? (
-              /* ── Step 0: Date + Time ── */
-              <motion.div
-                key="datetime"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.22 }}
+              <motion.div key="datetime"
+                initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.22 }}
               >
                 {/* Plan summary */}
                 <div className="mb-5 flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
@@ -368,53 +391,38 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
                 <p className="text-[11px] text-gray-400 mb-4">{stepLabel}</p>
 
                 <DateTimePicker
-                  selectedDate={date}
-                  selectedTime={time}
-                  onDateChange={setDate}
-                  onTimeChange={setTime}
+                  selectedDate={date} selectedTime={time}
+                  onDateChange={setDate} onTimeChange={setTime}
                 />
 
-                <button
-                  type="button"
-                  disabled={!canProceed}
-                  onClick={() => setStep(1)}
-                  className="w-full mt-6 py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white font-semibold shadow-lg shadow-deep-purple/25 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2"
-                >
+                <button type="button" disabled={!canProceed} onClick={() => setStep(1)}
+                  className="w-full mt-6 py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white font-semibold shadow-lg shadow-deep-purple/25 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2">
                   Continue to Payment
                   <ChevronRight size={16} />
                 </button>
               </motion.div>
 
             ) : (
-              /* ── Step 1: Payment ── */
-              <motion.form
-                key="payment"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.22 }}
-                onSubmit={handleSubmit}
-                className="space-y-4"
+              <motion.form key="payment"
+                initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.22 }}
+                onSubmit={handleSubmit} className="space-y-4"
               >
                 {/* Back + step label */}
                 <div className="flex items-center gap-2 mb-1">
-                  <button
-                    type="button"
-                    onClick={() => setStep(0)}
-                    className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
-                  >
+                  <button type="button" onClick={() => setStep(0)}
+                    className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
                     <ChevronLeft size={14} className="text-gray-500" />
                   </button>
                   <p className="text-[11px] text-gray-400">{stepLabel}</p>
                 </div>
 
-                {/* Booking summary line */}
+                {/* Booking summary */}
                 <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100 text-xs text-gray-600 flex items-center justify-between gap-4">
                   <span className="font-semibold text-gray-800">{plan.name}</span>
                   <span>
                     {new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    {" · "}
-                    {time}
+                    {" · "}{time}
                   </span>
                 </div>
 
@@ -424,66 +432,24 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
                     {t.nameOnCard}
                   </label>
                   <input
-                    required
-                    type="text"
-                    value={name}
+                    required type="text" value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder={t.namePlaceholder}
-                    className={inputClass}
+                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-pink/40 focus:border-primary-pink/60 transition-all"
                   />
                 </div>
 
-                {/* Card number */}
+                {/* Stripe Card Element */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                    {t.cardNumber}
+                    Card Details
                   </label>
-                  <input
-                    required
-                    inputMode="numeric"
-                    value={cardNumber}
-                    onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                    placeholder="1234 5678 9012 3456"
-                    maxLength={19}
-                    className={`${inputClass} tracking-widest`}
-                  />
-                </div>
-
-                {/* Expiry + CVC */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                      {t.expiry}
-                    </label>
-                    <input
-                      required
-                      inputMode="numeric"
-                      value={expiry}
-                      onChange={(e) => setExpiry(formatExpiry(e.target.value))}
-                      placeholder="MM/YY"
-                      maxLength={5}
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                      {t.cvc}
-                    </label>
-                    <input
-                      required
-                      inputMode="numeric"
-                      value={cvc}
-                      onChange={(e) => setCvc(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                      placeholder="123"
-                      maxLength={4}
-                      className={inputClass}
-                    />
+                  <div className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 focus-within:ring-2 focus-within:ring-primary-pink/40 focus-within:border-primary-pink/60 transition-all">
+                    <CardElement options={CARD_ELEMENT_OPTIONS} />
                   </div>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={status === "processing"}
+                <button type="submit" disabled={status === "processing" || !stripe}
                   className="w-full mt-2 py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white font-semibold hover:from-primary-pink hover:to-lavender-purple transition-colors shadow-lg shadow-deep-purple/25 disabled:opacity-70 flex items-center justify-center gap-2"
                 >
                   {status === "processing" ? (
@@ -513,6 +479,16 @@ export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
         </div>
       </motion.div>
     </motion.div>,
-    document.body
+    document.body,
+  );
+}
+
+// ─── Public export — wrapped in <Elements> ────────────────────────────────────
+
+export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
+  return (
+    <Elements stripe={stripePromise}>
+      <CheckoutModalInner plan={plan} onClose={onClose} />
+    </Elements>
   );
 }

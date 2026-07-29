@@ -36,7 +36,7 @@ import SuccessStoriesAdminPage from "../pages/SuccessStoriesAdminPage";
 import WebsiteSettingsPage from "../pages/WebsiteSettingsPage";
 import SocialMediaAdminPage from "../pages/SocialMediaAdminPage";
 import MediaLibraryPage from "../pages/MediaLibraryPage";
-import PlaceholderPage from "../pages/PlaceholderPage";
+import AdminPaymentsPage from "../pages/AdminPaymentsPage";
 import AnalyticsPage from "../pages/AnalyticsPage";
 import MessagesAdminPage from "../pages/MessagesAdminPage";
 import BookingsAdminPage from "../pages/BookingsAdminPage";
@@ -103,7 +103,7 @@ export default function AdminLayout() {
               <Route path="bookings"              element={<BookingsAdminPage />} />
               <Route path="clients"               element={<ClientsPage />} />
               <Route path="clients/:id"          element={<ClientProfilePage />} />
-              <Route path="payments"              element={<PlaceholderPage pageId="payments" />} />
+              <Route path="payments"              element={<AdminPaymentsPage />} />
               <Route path="messages"              element={<MessagesAdminPage />} />
 
               {/* Insights */}
