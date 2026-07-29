@@ -64,3 +64,6 @@ timeoutMs = 60000
 ADMIN_NOTIFICATION_EMAIL = "shelancircle@gmail.com"
 FROM_EMAIL = "Shelan Nutrition <noreply@shelancircle.com>"
 WEBSITE_URL = "https://shelancircle.com"
+VITE_STRIPE_PUBLISHABLE_KEY = "pk_live_51PWFwKG0aWxT6nu0H2ZsuTGbW0WHU35Sasf1XivC2zJJL3ab95WMoJdmAmuF1AKaiD2lfKD9HM27tfFd1vZKlwGk00I5wSztDA"
+VITE_SUPABASE_ANON_KEY = "sb_publishable_IR9AomCJxNGDaHdfdaulxQ_QoW7WyIh"
+VITE_SUPABASE_URL = "https://zioslbbneoklfmbbetfn.supabase.co"
