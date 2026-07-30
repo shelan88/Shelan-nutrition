@@ -16,6 +16,7 @@ import healthHandler             from "./health.js";
 import sendBookingEmailsHandler  from "./send-booking-emails.js";
 import sitemapHandler            from "./sitemap.js";
 import analyticsHandler          from "./analytics.js";
+import debugAnalyticsHandler     from "./debug-analytics.js";
 import createPaymentIntentHandler from "./create-payment-intent.js";
 import stripeWebhookHandler      from "./stripe-webhook.js";
 
@@ -38,6 +39,7 @@ app.post("/api/send-booking-emails",  sendBookingEmailsHandler);
 app.post("/api/create-payment-intent", createPaymentIntentHandler);
 app.get("/api/health",                healthHandler);
 app.get("/api/analytics",             analyticsHandler);
+app.get("/api/debug-analytics",       debugAnalyticsHandler);
 app.get("/sitemap.xml",               sitemapHandler);
 
 const PORT = process.env.API_PORT ?? 3001;
