@@ -439,13 +439,15 @@ function TopPagesTable({ data }: { data: TopPage[] }) {
 
 // ─── 10. Main hook ─────────────────────────────────────────────────────────────
 function useAnalytics(days: number) {
-  const [state, setState] = useState<LoadState>("idle");
-  const [data,  setData]  = useState<AnalyticsData | null>(null);
-  const [error, setError] = useState<string>("");
+  const [state,  setState]  = useState<LoadState>("idle");
+  const [data,   setData]   = useState<AnalyticsData | null>(null);
+  const [error,  setError]  = useState<string>("");
+  const [detail, setDetail] = useState<string>("");
 
   const load = useCallback(async () => {
     setState("loading");
     setError("");
+    setDetail("");
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -458,6 +460,7 @@ function useAnalytics(days: number) {
       const json = await res.json();
 
       if (!res.ok) {
+        setDetail(json.detail ?? "");
         if (json.error === "not_configured") {
           setState("not_configured");
           setError(json.message ?? "Credentials not configured.");
@@ -478,7 +481,7 @@ function useAnalytics(days: number) {
 
   useEffect(() => { load(); }, [load]);
 
-  return { state, data, error, reload: load };
+  return { state, data, error, detail, reload: load };
 }
 
 // ─── 11. Main page ─────────────────────────────────────────────────────────────
@@ -493,7 +496,7 @@ export default function AnalyticsPage() {
   const isAr = lang === "ar";
 
   const [days, setDays] = useState(30);
-  const { state, data, error, reload } = useAnalytics(days);
+  const { state, data, error, detail, reload } = useAnalytics(days);
 
   const isLoading = state === "loading" || state === "idle";
 
@@ -541,9 +544,15 @@ export default function AnalyticsPage() {
           <h3 className="text-[15px] font-bold text-[var(--admin-text)] mb-2">
             {isAr ? "فشل تحميل البيانات" : "Failed to Load Analytics"}
           </h3>
-          <p className="text-[13px] text-[var(--admin-text-muted)] max-w-md leading-relaxed mb-6">
+          <p className="text-[13px] text-[var(--admin-text-muted)] max-w-md leading-relaxed mb-2">
             {error}
           </p>
+          {detail && (
+            <p className="text-[11.5px] font-mono text-[var(--admin-text-faint)] bg-[var(--admin-surface)] border border-[var(--admin-border)] rounded-lg px-4 py-2 max-w-md text-start mb-6 break-all">
+              {detail}
+            </p>
+          )}
+          {!detail && <div className="mb-6" />}
           <button
             onClick={reload}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--admin-surface)] border border-[var(--admin-border)] text-[13px] font-medium text-[var(--admin-text)] hover:border-[var(--admin-border-strong)] transition-colors"

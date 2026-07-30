@@ -92,9 +92,11 @@ async function runReport(token, property, body) {
 
   const data = await res.json();
   if (!res.ok) {
-    const msg     = data.error?.message ?? JSON.stringify(data);
-    const isAuth  = res.status === 403 || res.status === 401 || res.status === 404;
-    throw Object.assign(new Error(msg), { isAuthError: isAuth });
+    const msg    = data.error?.message ?? JSON.stringify(data);
+    // 403/401 = genuine permission error; 404 = wrong property ID (config error,
+    // not a permission problem — don't surface it as "Permission denied").
+    const isAuth = res.status === 403 || res.status === 401;
+    throw Object.assign(new Error(msg), { isAuthError: isAuth, httpStatus: res.status });
   }
   return data;
 }
@@ -261,12 +263,23 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error("[analytics] GA4 API error:", err?.message ?? err);
 
-    const isAuth = err?.isAuthError === true;
+    const isAuth   = err?.isAuthError === true;
+    const httpCode = err?.httpStatus;
+    let message;
+    if (isAuth) {
+      message =
+        "Permission denied — the service account does not have Viewer access " +
+        "to this GA4 property, or the Analytics Data API is not enabled in Google Cloud.";
+    } else if (httpCode === 404) {
+      message =
+        "GA4 property not found — check that GA4_PROPERTY_ID is the numeric " +
+        "Property ID (e.g. 547340341), not the Measurement ID (G-XXXXXXXX).";
+    } else {
+      message = "Failed to fetch analytics data. Check server logs for details.";
+    }
     return res.status(isAuth ? 403 : 500).json({
       error:   isAuth ? "auth_error" : "api_error",
-      message: isAuth
-        ? "Permission denied — ensure the service account has Viewer access to the GA4 property and the Analytics Data API is enabled in Google Cloud."
-        : "Failed to fetch analytics data. Check server logs for details.",
+      message,
       detail:  err?.message ?? String(err),
     });
   }
