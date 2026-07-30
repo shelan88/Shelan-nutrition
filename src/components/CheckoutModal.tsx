@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Lock, ShieldCheck, X, CheckCircle2, ChevronLeft, ChevronRight,
+  Lock, ShieldCheck, X, CheckCircle2, ChevronLeft, ChevronRight, AlertCircle,
 } from "lucide-react";
 import {
   Elements,
@@ -20,6 +20,7 @@ import { getTemplateForService, getFirstAssignedActiveTemplate } from "@/admin/r
 import { createResponse } from "@/admin/repositories/assessment-responses.repository";
 import { recordPayment } from "@/admin/repositories/payments.repository";
 import { stripePromise, parsePriceCents } from "@/lib/stripe";
+import PhoneInput from "@/components/PhoneInput";
 
 // ─── Card element styles ──────────────────────────────────────────────────────
 
@@ -192,6 +193,7 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
   const [date,          setDate]          = useState("");
   const [time,          setTime]          = useState("");
   const [name,          setName]          = useState("");
+  const [phone,         setPhone]         = useState("");
   const [status,        setStatus]        = useState<"idle" | "processing" | "success">("idle");
   const [error,         setError]         = useState<string | null>(null);
   // Card element completeness — tracked via CardElement onChange
@@ -244,12 +246,15 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
       };
 
       // ── 2. Confirm the card payment with Stripe ───────────────────────────
+      const clientName  = name.trim() || user?.email || "Customer";
+      const clientEmail = user?.email ?? "";
+
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
         clientSecret,
         {
           payment_method: {
             card:             cardElement,
-            billing_details:  { name: name.trim() || user?.email || "Customer" },
+            billing_details:  { name: clientName, email: clientEmail },
           },
         },
       );
@@ -280,8 +285,8 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
 
       // ── 5. Create appointment ─────────────────────────────────────────────
       const appt = await createAppointment({
-        client_name:  name.trim() || user?.email || "Customer",
-        client_email: user?.email ?? null,
+        client_name:  clientName,
+        client_email: clientEmail || null,
         user_id:      user?.id    ?? null,
         date,
         time,
@@ -307,13 +312,40 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
         amount:                   amountCents,
         currency:                 "usd",
         status:                   "succeeded",
-        client_name:              name.trim() || user?.email || null,
-        client_email:             user?.email ?? null,
+        client_name:              clientName,
+        client_email:             clientEmail || null,
         service_name:             plan.name,
         appointment_id:           appt.id,
       });
 
-      // ── 7. Redirect to assessment or show success ─────────────────────────
+      // ── 7. Send confirmation + admin notification emails ──────────────────
+      try {
+        const emailResp = await fetch("/api/send-booking-emails", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({
+            appointmentId: appt.id,
+            clientName,
+            clientEmail,
+            phone:   phone.trim() || null,
+            service: plan.name,
+            date,
+            time,
+            notes:   null,
+            lang,
+          }),
+        });
+        if (!emailResp.ok) {
+          const body = await emailResp.json().catch(() => ({}));
+          console.error("[CheckoutModal] email API error:", body);
+        }
+      } catch (emailErr) {
+        // Email failure must not abort the booking — payment and appointment
+        // are already saved. Log and continue to success state.
+        console.error("[CheckoutModal] email network error:", emailErr);
+      }
+
+      // ── 8. Redirect to assessment or show success ─────────────────────────
       if (hasTemplate) {
         const response = await createResponse(
           template!.id,
@@ -334,7 +366,7 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setStatus("idle");
     }
-  }, [status, stripe, elements, plan, date, time, name, user, navigate, onClose, cardComplete]);
+  }, [status, stripe, elements, plan, date, time, name, phone, user, navigate, onClose, cardComplete, lang]);
 
   const stepLabel = step === 0
     ? "Step 1 of 2 — Pick a Date & Time"
@@ -449,6 +481,20 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
                   />
                 </div>
 
+                {/* Phone number */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Phone Number
+                  </label>
+                  <PhoneInput
+                    value={phone}
+                    onChange={(e164) => setPhone(e164)}
+                    lang={lang as "en" | "ar"}
+                    placeholder="e.g. +1 555 000 0000"
+                  />
+                  <p className="mt-1 text-[10px] text-gray-400">Used to send a session confirmation via WhatsApp.</p>
+                </div>
+
                 {/* Stripe Card Element */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">
@@ -470,7 +516,7 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
                   {/* Inline Stripe card-field error */}
                   {cardError && (
                     <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-                      <span className="shrink-0">⚠</span>
+                      <AlertCircle size={11} className="shrink-0" />
                       {cardError}
                     </p>
                   )}
@@ -493,7 +539,10 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
                 </button>
 
                 {error && (
-                  <p className="text-xs text-red-500 text-center -mt-1">{error}</p>
+                  <p className="text-xs text-red-500 text-center -mt-1 flex items-center justify-center gap-1">
+                    <AlertCircle size={11} className="shrink-0" />
+                    {error}
+                  </p>
                 )}
 
                 <p className="flex items-center justify-center gap-1.5 text-xs text-gray-500 pt-1">
@@ -511,7 +560,6 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
 }
 
 // ─── Public export — wrapped in <Elements> ────────────────────────────────────
-
 export default function CheckoutModal({ plan, onClose }: CheckoutModalProps) {
   return (
     <Elements stripe={stripePromise}>
