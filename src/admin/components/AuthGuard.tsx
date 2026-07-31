@@ -55,40 +55,37 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const [state, setState] = useState<GuardState>("loading");
 
   useEffect(() => {
+    // RECOVERY-TRACE
+    console.log(`[RECOVERY-TRACE] AuthGuard MOUNTED | pathname=${window.location.pathname}`);
     let cancelled = false;
 
     supabase.auth.getSession().then(async ({ data }) => {
       if (cancelled) return;
+      console.log(`[RECOVERY-TRACE] AuthGuard getSession | userId=${data.session?.user?.id ?? "null"} | pathname=${window.location.pathname}`);
       const result = await resolveGuardState(data.session);
+      console.log(`[RECOVERY-TRACE] AuthGuard resolveGuardState(getSession) → ${result} | pathname=${window.location.pathname}`);
       if (!cancelled) setState(result);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (cancelled) return;
-      // DO NOT call setState("loading") here — it tears down the entire admin
-      // layout (including open file inputs) before onChange can fire on Android.
-      //
-      // TOKEN_REFRESHED fires whenever the Android browser returns from a
-      // background activity (e.g. the native file picker). We must NOT re-query
-      // admin_profiles for this event: the network may be momentarily unavailable
-      // during the app-switch, causing the query to fail. resolveGuardState treats
-      // any query error as "unauthorized" and calls signOut() — which navigates
-      // the user to /admin/login, losing the upload entirely.
-      //
-      // Safe rule: only re-evaluate guard state for events that genuinely change
-      // who the user is. TOKEN_REFRESHED only rotates the session token; the user
-      // identity and authorization are unchanged.
+      console.log(`[RECOVERY-TRACE] AuthGuard onAuthStateChange | event=${event} | userId=${session?.user?.id ?? "null"} | pathname=${window.location.pathname}`);
       if (event === "TOKEN_REFRESHED") return;
 
       const result = await resolveGuardState(session);
+      console.log(`[RECOVERY-TRACE] AuthGuard resolveGuardState(${event}) → ${result} | pathname=${window.location.pathname}`);
       if (!cancelled) setState(result);
     });
 
     return () => {
+      console.log(`[RECOVERY-TRACE] AuthGuard UNMOUNTED | pathname=${window.location.pathname}`);
       cancelled = true;
       subscription.unsubscribe();
     };
   }, []);
+
+  // RECOVERY-TRACE
+  console.log(`[RECOVERY-TRACE] AuthGuard render | state=${state} | pathname=${window.location.pathname}`);
 
   if (state === "loading") {
     return (
@@ -99,8 +96,10 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   }
 
   if (state === "unauthorized") {
+    console.log(`[RECOVERY-TRACE] AuthGuard → Navigate to /admin/login | pathname=${window.location.pathname}`);
     return <Navigate to="/admin/login" replace />;
   }
 
+  console.log(`[RECOVERY-TRACE] AuthGuard → rendering children | pathname=${window.location.pathname}`);
   return <>{children}</>;
 }

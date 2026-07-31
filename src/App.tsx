@@ -29,6 +29,7 @@ import { debugLog } from "@/shared/debug/logger";
 import { trackPageView } from "@/lib/analytics";
 import { LanguageProvider } from "@/context/LanguageContext";
 import ScrollToTop from "@/components/ui/ScrollToTop";
+import { supabase } from "@/lib/supabase";
 
 // ─── Public site chrome ────────────────────────────────────────────────────────
 import Navbar from "@/components/Navbar";
@@ -152,12 +153,37 @@ function RouteLogger() {
   return null;
 }
 
+/**
+ * RECOVERY-TRACE: global Supabase auth event logger.
+ * Logs every auth event with the current pathname.
+ * Remove after the recovery redirect bug is identified.
+ */
+function GlobalAuthLogger() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    console.log(`[RECOVERY-TRACE] GlobalAuthLogger mounted | pathname=${pathname}`);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log(
+        `[RECOVERY-TRACE] GlobalAuthLogger | event=${event}` +
+        ` | userId=${session?.user?.id ?? "null"}` +
+        ` | pathname=${window.location.pathname}` +
+        ` | hash=${window.location.hash.slice(0, 60) || "(none)"}` +
+        ` | search=${window.location.search || "(none)"}`
+      );
+    });
+    return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <LanguageProvider>
         <ScrollToTop />
         <RouteLogger />
+        <GlobalAuthLogger />
         <Routes>
           {/* Admin — completely isolated, no public chrome */}
           <Route path="/admin/login" element={<AdminLoginPage />} />

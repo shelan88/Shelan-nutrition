@@ -65,6 +65,7 @@ export default function PortalLayout({ children }: PortalLayoutProps) {
 
   // ── Admin trying to access client portal — send them home ─────────────────
   if (isAdmin) {
+    console.log(`[RECOVERY-TRACE] PortalLayout → Navigate to /admin (isAdmin=true) | pathname=${window.location.pathname}`);
     return <Navigate to="/admin" replace />;
   }
 
