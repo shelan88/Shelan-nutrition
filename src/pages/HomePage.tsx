@@ -1,9 +1,9 @@
 /**
  * HomePage — Assembles all homepage sections.
  * Page order:
- *   Hero → About → TrustStrip → Services → Programs → Stats →
+ *   Hero → About → TrustStrip → Services → Booking (Consultations) → Programs → Stats →
  *   InfoHub → Journey → SuccessStories → Testimonials →
- *   SymptomsQuiz → FAQ → LeadMagnet → Booking → CTA
+ *   SymptomsQuiz → FAQ → LeadMagnet → CTA
  */
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
@@ -104,35 +104,35 @@ export default function HomePage() {
       {/* 4. Services — off-white #F9FAFB */}
       <Services />
 
-      {/* 5. Programs — white */}
+      {/* 5. Booking (Consultations) — dark brand gradient; high-value action above the fold */}
+      <Booking />
+
+      {/* 6. Programs — white */}
       <Programs />
 
-      {/* 6. Stats — dark brand gradient */}
+      {/* 7. Stats — dark brand gradient */}
       <Stats />
 
-      {/* 7. InfoHub — off-white #F9FAFB */}
+      {/* 8. InfoHub — off-white #F9FAFB */}
       <InfoHub />
 
-      {/* 8. Journey — white */}
+      {/* 9. Journey — white */}
       <Journey />
 
-      {/* 9. SuccessStories — off-white #F9FAFB */}
+      {/* 10. SuccessStories — off-white #F9FAFB */}
       <SuccessStories />
 
-      {/* 10. Testimonials — existing light-pink tint */}
+      {/* 11. Testimonials — existing light-pink tint */}
       <Testimonials />
 
-      {/* 11. SymptomsQuiz — interactive, #F3F4F6 */}
+      {/* 12. SymptomsQuiz — interactive, #F3F4F6 */}
       <SymptomsQuiz />
 
-      {/* 12. FAQ — off-white #F9FAFB */}
+      {/* 13. FAQ — off-white #F9FAFB */}
       <FAQ />
 
-      {/* 13. LeadMagnet — dark, PDF email capture */}
+      {/* 14. LeadMagnet — dark, PDF email capture */}
       <LeadMagnet />
-
-      {/* 14. Booking — dark brand gradient */}
-      <Booking />
 
       {/* 15. CTA — dark brand gradient */}
       <CTA />

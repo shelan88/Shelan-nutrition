@@ -38,7 +38,7 @@ export default function Hero() {
           </p>
           <div className="flex flex-wrap gap-4">
             <MagneticButton
-              onClick={() => scrollTo("booking")}
+              onClick={() => scrollTo("consultations")}
               className="px-7 py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white font-semibold hover:from-primary-pink hover:to-lavender-purple transition-colors shadow-lg shadow-deep-purple/30"
             >
               {t.ctaPrimary}
