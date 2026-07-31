@@ -9,9 +9,10 @@
  *   • AdminProfilePage     — personal account settings (password, language, theme)
  */
 import { useState, useEffect, useCallback } from "react";
-import { Clock, Calendar, Bell, Save, Loader2, CheckCircle2 } from "lucide-react";
+import { Clock, Calendar, Bell, Save, Loader2, CheckCircle2, Globe } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { getSetting, setSetting } from "@/admin/repositories/settings.repository";
+import { COMMON_TIMEZONES } from "@/lib/timezone";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface WorkingDay {
@@ -94,6 +95,7 @@ export default function AdminSettingsPage() {
   const [workingHours,   setWorkingHours]   = useState<WorkingHours>(DEFAULT_WORKING_HOURS);
   const [apptConfig,     setApptConfig]     = useState<AppointmentConfig>(DEFAULT_APPOINTMENT);
   const [notifications,  setNotifications]  = useState<NotificationConfig>(DEFAULT_NOTIFICATIONS);
+  const [timezone,       setTimezone]       = useState("");
 
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
@@ -102,14 +104,18 @@ export default function AdminSettingsPage() {
   // ── Load settings ──────────────────────────────────────────────────────────
   const loadSettings = useCallback(async () => {
     setLoading(true);
-    const [wh, ac, nc] = await Promise.all([
+    const [wh, ac, nc, tzCfg] = await Promise.all([
       getSetting("working_hours"),
       getSetting("appointment_config"),
       getSetting("notification_config"),
+      getSetting("timezone_config"),
     ]);
     if (wh)  setWorkingHours(wh as unknown as WorkingHours);
     if (ac)  setApptConfig(ac as unknown as AppointmentConfig);
     if (nc)  setNotifications(nc as unknown as NotificationConfig);
+    if (tzCfg && typeof tzCfg === "object" && "timezone" in tzCfg) {
+      setTimezone(String((tzCfg as { timezone: string }).timezone) || "");
+    }
     setLoading(false);
   }, []);
 
@@ -122,6 +128,7 @@ export default function AdminSettingsPage() {
       setSetting("working_hours",      workingHours  as unknown as import("@/types/database.types").Json),
       setSetting("appointment_config", apptConfig    as unknown as import("@/types/database.types").Json),
       setSetting("notification_config",notifications as unknown as import("@/types/database.types").Json),
+      ...(timezone ? [setSetting("timezone_config", { timezone } as unknown as import("@/types/database.types").Json)] : []),
     ]);
     setSaving(false);
     setSaved(true);
@@ -174,6 +181,32 @@ export default function AdminSettingsPage() {
             : (isAr ? "حفظ التغييرات" : "Save Changes")}
         </button>
       </div>
+
+      {/* ── Time Zone ────────────────────────────────────────────────────────── */}
+      <Section icon={Globe} title={isAr ? "المنطقة الزمنية" : "Time Zone"}>
+        <div className="space-y-3">
+          <p className="text-[12px] text-[var(--admin-text-faint)] leading-relaxed">
+            {isAr
+              ? "حدد المنطقة الزمنية الخاصة بعيادتك. ستُحوَّل أوقات المواعيد تلقائياً إلى توقيت الزوار المحلي على صفحة الحجز."
+              : "Select your clinic's local timezone. Booking slots are managed in this timezone and automatically converted to each visitor's local time on the booking page."}
+          </p>
+          <select
+            value={timezone}
+            onChange={(e) => setTimezone(e.target.value)}
+            className="form-input"
+          >
+            <option value="">{isAr ? "— اختر المنطقة الزمنية —" : "— Select a timezone —"}</option>
+            {COMMON_TIMEZONES.map((tz) => (
+              <option key={tz.value} value={tz.value}>{tz.label}</option>
+            ))}
+          </select>
+          {timezone && (
+            <p className="text-[11px] text-emerald-600 font-medium">
+              {isAr ? "✓ المنطقة الزمنية الحالية: " : "✓ Active timezone: "}{timezone}
+            </p>
+          )}
+        </div>
+      </Section>
 
       {/* ── Working Hours ────────────────────────────────────────────────────── */}
       <Section icon={Clock} title={isAr ? "ساعات العمل" : "Working Hours"}>

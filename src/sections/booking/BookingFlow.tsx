@@ -26,6 +26,7 @@ import {
 import type { CMSBookingData, CMSBookingService } from "@/types/cms.types";
 import { resolveAvailability, getDisabledDays, getEnabledTimeSlots } from "@/lib/availability";
 import type { AvailabilitySettings } from "@/lib/availability";
+import { useAdminTimezone, slotToLocalDisplay, getLocalTimezone } from "@/lib/timezone";
 import PhoneInput from "@/components/PhoneInput";
 import {
   Elements,
@@ -183,6 +184,8 @@ function PickTime({
   onTimeChange,
   strings,
   disabledDays,
+  adminTz,
+  lang,
 }: {
   timeSlots: CMSBookingData["timeSlots"];
   selectedDate: string;
@@ -191,6 +194,8 @@ function PickTime({
   onTimeChange: (t: string) => void;
   strings: { calendarLabel: string; selectTimeLabel: string; unavailableLabel: string; noSlotsMessage: string };
   disabledDays?: Set<number>;
+  adminTz?: string | null;
+  lang?: string;
 }) {
   const today = new Date();
   const [viewYear,    setViewYear]    = useState(today.getFullYear());
@@ -284,31 +289,45 @@ function PickTime({
         {!selectedDate ? (
           <p className="text-xs text-deep-purple/40 italic">{strings.noSlotsMessage}</p>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-1 gap-2">
-            {timeSlots.map((slot) => {
-              const alreadyBooked  = bookedTimes.includes(slot.time);
-              const effectiveSlot  = { ...slot, available: slot.available && !alreadyBooked };
-              const sel            = selectedTime === effectiveSlot.time;
-              return (
-                <button
-                  key={effectiveSlot.time}
-                  type="button"
-                  disabled={!effectiveSlot.available}
-                  onClick={() => onTimeChange(effectiveSlot.time)}
-                  title={alreadyBooked ? "Already booked" : undefined}
-                  className={`px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-center ${
-                    sel
-                      ? "bg-gradient-to-br from-primary-pink to-lavender-purple text-white shadow-md shadow-deep-purple/18"
-                      : !effectiveSlot.available
-                      ? "bg-light-pink/20 text-deep-purple/25 cursor-not-allowed line-through"
-                      : "bg-white border border-soft-purple/15 text-heading hover:border-primary-pink/30 hover:bg-light-pink/20"
-                  }`}
-                >
-                  {effectiveSlot.time}
-                </button>
-              );
-            })}
-          </div>
+          <>
+            {/* Timezone note — shown when admin TZ is set and date is selected */}
+            {adminTz && (
+              <p className="text-[10px] text-deep-purple/45 mb-3 leading-relaxed">
+                {lang === "ar"
+                  ? "الأوقات معروضة بتوقيتك المحلي"
+                  : "Appointment times are shown in your local timezone"}
+              </p>
+            )}
+            <div className="grid grid-cols-2 md:grid-cols-1 gap-2">
+              {timeSlots.map((slot) => {
+                const alreadyBooked  = bookedTimes.includes(slot.time);
+                const effectiveSlot  = { ...slot, available: slot.available && !alreadyBooked };
+                const sel            = selectedTime === effectiveSlot.time;
+                // Display in visitor's local timezone; stored value stays in admin TZ
+                const displayTime    = adminTz
+                  ? slotToLocalDisplay(selectedDate, effectiveSlot.time, adminTz)
+                  : effectiveSlot.time;
+                return (
+                  <button
+                    key={effectiveSlot.time}
+                    type="button"
+                    disabled={!effectiveSlot.available}
+                    onClick={() => onTimeChange(effectiveSlot.time)}
+                    title={alreadyBooked ? "Already booked" : undefined}
+                    className={`px-3 py-2.5 rounded-xl text-xs font-semibold transition-all text-center ${
+                      sel
+                        ? "bg-gradient-to-br from-primary-pink to-lavender-purple text-white shadow-md shadow-deep-purple/18"
+                        : !effectiveSlot.available
+                        ? "bg-light-pink/20 text-deep-purple/25 cursor-not-allowed line-through"
+                        : "bg-white border border-soft-purple/15 text-heading hover:border-primary-pink/30 hover:bg-light-pink/20"
+                    }`}
+                  >
+                    {displayTime}
+                  </button>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -443,6 +462,7 @@ function BookingSummary({
   cardComplete,
   cardError,
   onCardChange,
+  adminTz,
 }: {
   service: CMSBookingService | undefined;
   date: string;
@@ -457,11 +477,14 @@ function BookingSummary({
   cardComplete: boolean;
   cardError: string | null;
   onCardChange: (complete: boolean, error: string | null) => void;
+  adminTz?: string | null;
 }) {
   const locale        = lang === "ar" ? "ar-SA" : "en-US";
   const formattedDate = date
     ? new Date(`${date}T12:00:00`).toLocaleDateString(locale, { weekday: "long", month: "long", day: "numeric", year: "numeric" })
     : "—";
+  // Display the selected time in the visitor's local timezone
+  const displayTime   = adminTz && date && time ? slotToLocalDisplay(date, time, adminTz) : time;
 
   if (confirmed) {
     return (
@@ -494,7 +517,7 @@ function BookingSummary({
           {[
             { label: strings.serviceLabel, value: service?.name ?? "—" },
             { label: strings.dateLabel,    value: formattedDate },
-            { label: strings.timeLabel,    value: time || "—" },
+            { label: strings.timeLabel,    value: displayTime || "—" },
             { label: strings.totalLabel,   value: service?.price ?? "—" },
           ].map(({ label, value }) => (
             <li key={label} className="flex items-center justify-between border-b border-soft-purple/10 pb-3 last:border-0 last:pb-0">
@@ -612,6 +635,7 @@ interface Props {
 }
 
 function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProgramId, canonicalServices, serviceAvailabilityMap, serviceAssessmentMap }: Props) {
+  const { adminTz } = useAdminTimezone();
   const stripe   = useStripe();
   const elements = useElements();
 
@@ -978,6 +1002,8 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
                 onDateChange={(d) => { setDate(d); setTime(""); }}
                 onTimeChange={setTime}
                 disabledDays={disabledDays}
+                adminTz={adminTz}
+                lang={lang}
                 strings={{
                   calendarLabel:    str.calendarLabel,
                   selectTimeLabel:  str.selectTimeLabel,
@@ -1013,6 +1039,7 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
                   setCardComplete(complete);
                   setCardFieldError(err);
                 }}
+                adminTz={adminTz}
               />
             )}
           </motion.div>
