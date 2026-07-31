@@ -26,7 +26,7 @@ import {
 import type { CMSBookingData, CMSBookingService } from "@/types/cms.types";
 import { resolveAvailability, getDisabledDays, getEnabledTimeSlots } from "@/lib/availability";
 import type { AvailabilitySettings } from "@/lib/availability";
-import { useAdminTimezone, slotToLocalDisplay, getLocalTimezone } from "@/lib/timezone";
+import { useAdminTimezone, slotToLocalDisplay } from "@/lib/timezone";
 import PhoneInput from "@/components/PhoneInput";
 import {
   Elements,
