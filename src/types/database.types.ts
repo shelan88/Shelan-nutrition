@@ -329,6 +329,7 @@ export interface ProgramRow {
   sort_order: number | null;
   image_url: string | null;
   availability: AvailabilitySettings | null;
+  assessment_enabled: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -359,9 +360,10 @@ export interface ConsultationRow {
   discount_percent: number | null;
   active:           boolean;
   sort_order:       number | null;
-  availability:     AvailabilitySettings | null;
-  created_at:       string;
-  updated_at:       string;
+  availability:       AvailabilitySettings | null;
+  assessment_enabled: boolean | null;
+  created_at:         string;
+  updated_at:         string;
 }
 
 export interface FAQRow {

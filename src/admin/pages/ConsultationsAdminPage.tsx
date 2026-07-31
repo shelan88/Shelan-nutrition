@@ -106,6 +106,7 @@ function initForm(): Omit<Row, "id" | "created_at" | "updated_at"> {
     discount_enabled: false, discount_percent: null,
     active: false, sort_order: 0,
     availability: null,
+    assessment_enabled: false,
   };
 }
 
@@ -164,6 +165,7 @@ export default function ConsultationsAdminPage() {
       discount_percent: row.discount_percent ?? null,
       active: row.active ?? false, sort_order: row.sort_order ?? 0,
       availability: row.availability ?? null,
+      assessment_enabled: row.assessment_enabled ?? false,
     });
     setFeatEnText((row.features_en ?? []).join("\n"));
     setFeatArText((row.features_ar ?? []).join("\n"));
@@ -565,6 +567,27 @@ export default function ConsultationsAdminPage() {
                     onChange={setAvailState}
                     lang={lang}
                   />
+                </div>
+
+                {/* ── Assessment ────────────────────────────────────────────── */}
+                <div className="border-t border-[var(--admin-border)] pt-6">
+                  <p className="text-[13px] font-bold text-[var(--admin-text)] mb-1">{L("Assessment","الاستبيان")}</p>
+                  <p className="text-[11px] text-[var(--admin-text-faint)] mb-4">
+                    {L("When enabled, customers are redirected to the health assessment form after payment before their booking is confirmed.",
+                       "عند التفعيل، يُعاد توجيه العملاء إلى استبيان الصحة بعد الدفع قبل تأكيد الحجز.")}
+                  </p>
+                  <label className="flex items-center gap-3 cursor-pointer select-none w-fit">
+                    <input
+                      id="consult-assessment-enabled"
+                      type="checkbox"
+                      checked={form.assessment_enabled ?? false}
+                      onChange={(e) => set("assessment_enabled", e.target.checked)}
+                      className="w-4 h-4 accent-pink-500 rounded cursor-pointer"
+                    />
+                    <span className="text-[13px] text-[var(--admin-text)]">
+                      {L("Enable assessment after payment","تفعيل الاستبيان بعد الدفع")}
+                    </span>
+                  </label>
                 </div>
 
               </div>

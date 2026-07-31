@@ -94,6 +94,16 @@ export default function BookingPage() {
     return map;
   }, [dbConsultations]);
 
+  // Per-service assessment toggle keyed by consultation UUID
+  const serviceAssessmentMap: Record<string, boolean> = useMemo(() => {
+    if (!dbConsultations) return {};
+    const map: Record<string, boolean> = {};
+    for (const row of dbConsultations) {
+      map[row.id] = row.assessment_enabled ?? false;
+    }
+    return map;
+  }, [dbConsultations]);
+
   // Build the effective booking data: prefer DB consultations, fall back to static
   const data = useMemo(() => {
     if (dbServices.length > 0) {
@@ -159,6 +169,7 @@ export default function BookingPage() {
               preselectedProgramId={preselectedProgramId}
               canonicalServices={canonicalServices}
               serviceAvailabilityMap={serviceAvailabilityMap}
+              serviceAssessmentMap={serviceAssessmentMap}
             />
           )}
         </div>

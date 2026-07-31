@@ -608,9 +608,10 @@ interface Props {
   canonicalServices?: CMSBookingService[];
   /** Per-service availability keyed by service/consultation DB id. */
   serviceAvailabilityMap?: Record<string, AvailabilitySettings | null>;
+  serviceAssessmentMap?: Record<string, boolean>;
 }
 
-function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProgramId, canonicalServices, serviceAvailabilityMap }: Props) {
+function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProgramId, canonicalServices, serviceAvailabilityMap, serviceAssessmentMap }: Props) {
   const stripe   = useStripe();
   const elements = useElements();
 
@@ -776,7 +777,12 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
 
       const lookupId    = programMode ? (program?.id ?? "") : serviceId;
       const template    = lookupId ? await getTemplateForService(lookupId) : null;
-      const hasTemplate = !!(template?.active);
+
+      // Check per-item assessment toggle
+      const assessmentEnabled = programMode
+        ? !!(program?.assessment_enabled)
+        : !!(serviceAssessmentMap?.[serviceId]);
+      const hasTemplate = !!(template?.active) && assessmentEnabled;
 
       // Canonical service name — always store English for admin consistency
       const serviceType = (
