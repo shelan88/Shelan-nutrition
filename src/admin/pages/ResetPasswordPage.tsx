@@ -132,25 +132,47 @@ function ResetForm({ lang }: { lang: "en" | "ar" }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Listen for the Supabase PASSWORD_RECOVERY auth event.
-  // Supabase v2 automatically parses the access_token from the URL hash.
+  // Listen for the Supabase auth events that indicate a recovery session.
+  //
+  // WHY THIS WORKS:
+  // Supabase v2 processes the recovery token from the URL hash during client
+  // initialization — before any React component mounts. By the time this
+  // useEffect runs, PASSWORD_RECOVERY has already fired globally and will NOT
+  // be replayed to new subscribers.
+  //
+  // However, Supabase v2 GUARANTEES that every new onAuthStateChange subscriber
+  // immediately receives an INITIAL_SESSION event reflecting the current state.
+  // If PASSWORD_RECOVERY already fired, there is an active session — INITIAL_SESSION
+  // carries it. If the link is expired/invalid, INITIAL_SESSION carries null.
+  //
+  // So: INITIAL_SESSION + session     → show the form (race-condition-safe)
+  //     INITIAL_SESSION + null session → expired/invalid link
+  //     PASSWORD_RECOVERY              → show the form (arrives in time, belt-and-suspenders)
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    let cancelled = false;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return;
+
       if (event === "PASSWORD_RECOVERY") {
+        // Happy path: event arrived after our subscription registered.
         setStatus("ready");
+      } else if (event === "INITIAL_SESSION") {
+        // This fires immediately when the subscriber is registered.
+        // A non-null session means Supabase already processed the recovery URL.
+        if (session) {
+          setStatus("ready");
+        } else {
+          // No session at all — link is expired, already used, or this is a
+          // direct navigation without a recovery token.
+          setStatus("invalid");
+        }
       }
     });
 
-    // Fallback: if the user already has an active recovery session (page reload),
-    // getSession() will return it — but we still need the event. Set a timeout
-    // so that if no event fires within 3 s, we treat the link as invalid.
-    const timer = setTimeout(() => {
-      setStatus((prev) => (prev === "waiting" ? "invalid" : prev));
-    }, 3000);
-
     return () => {
+      cancelled = true;
       subscription.unsubscribe();
-      clearTimeout(timer);
     };
   }, []);
 
