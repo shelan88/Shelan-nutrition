@@ -122,8 +122,6 @@ function ResetForm({ lang }: { lang: "en" | "ar" }) {
   const isAr = lang === "ar";
   const navigate = useNavigate();
 
-  console.log(`[RECOVERY-TRACE] ResetForm render | pathname=${window.location.pathname} | hash=${window.location.hash.slice(0,60)||"(none)"} | search=${window.location.search||"(none)"}`);
-
   // "ready" means the PASSWORD_RECOVERY event has fired and we can update.
   // "invalid" means no recovery event arrived (direct nav / expired link).
   const [status, setStatus] = useState<"waiting" | "ready" | "invalid" | "done">("waiting");
@@ -151,31 +149,23 @@ function ResetForm({ lang }: { lang: "en" | "ar" }) {
   //     INITIAL_SESSION + null session → expired/invalid link
   //     PASSWORD_RECOVERY              → show the form (arrives in time, belt-and-suspenders)
   useEffect(() => {
-    console.log(`[RECOVERY-TRACE] ResetForm useEffect mounted | pathname=${window.location.pathname} | hash=${window.location.hash.slice(0,80)||"(none)"} | search=${window.location.search||"(none)"}`);
     let cancelled = false;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
-      console.log(`[RECOVERY-TRACE] ResetForm onAuthStateChange | event=${event} | userId=${session?.user?.id ?? "null"} | currentStatus=${status}`);
 
       if (event === "PASSWORD_RECOVERY") {
-        console.log("[RECOVERY-TRACE] ResetForm → PASSWORD_RECOVERY received → setStatus(ready)");
         setStatus("ready");
       } else if (event === "INITIAL_SESSION") {
         if (session) {
-          console.log("[RECOVERY-TRACE] ResetForm → INITIAL_SESSION with session → setStatus(ready)");
           setStatus("ready");
         } else {
-          console.log("[RECOVERY-TRACE] ResetForm → INITIAL_SESSION with null session → setStatus(invalid)");
           setStatus("invalid");
         }
-      } else {
-        console.log(`[RECOVERY-TRACE] ResetForm → unhandled event=${event}, ignoring`);
       }
     });
 
     return () => {
-      console.log("[RECOVERY-TRACE] ResetForm useEffect cleanup (unmounting)");
       cancelled = true;
       subscription.unsubscribe();
     };

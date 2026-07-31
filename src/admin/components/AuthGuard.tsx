@@ -17,10 +17,27 @@ import { supabase } from "@/lib/supabase";
 type GuardState =
   | "loading"       // still resolving
   | "authorized"    // authenticated + has admin_profiles row
-  | "unauthorized"; // no session OR no admin_profiles row
+  | "unauthorized"  // no session OR no admin_profiles row
+  | "recovery";     // PASSWORD_RECOVERY session — must go to reset-password page
 
 interface AuthGuardProps {
   children: React.ReactNode;
+}
+
+/**
+ * Returns true when the session was established via a password-recovery link.
+ * Supabase stores the AMR (Authentication Methods References) in the JWT payload;
+ * recovery sessions carry { method: "recovery" } in that array.
+ * We decode the access token locally — no network call needed.
+ */
+function isRecoverySession(session: Session): boolean {
+  try {
+    const payload = JSON.parse(atob(session.access_token.split(".")[1]));
+    const amr: Array<{ method: string }> = payload.amr ?? [];
+    return amr.some((a) => a.method === "recovery");
+  } catch {
+    return false;
+  }
 }
 
 async function resolveGuardState(session: Session | null): Promise<GuardState> {
@@ -55,37 +72,41 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const [state, setState] = useState<GuardState>("loading");
 
   useEffect(() => {
-    // RECOVERY-TRACE
-    console.log(`[RECOVERY-TRACE] AuthGuard MOUNTED | pathname=${window.location.pathname}`);
     let cancelled = false;
 
     supabase.auth.getSession().then(async ({ data }) => {
       if (cancelled) return;
-      console.log(`[RECOVERY-TRACE] AuthGuard getSession | userId=${data.session?.user?.id ?? "null"} | pathname=${window.location.pathname}`);
+      // Recovery sessions must go to /admin/reset-password, not the dashboard.
+      // Supabase (implicit flow) processes the recovery hash synchronously during
+      // client init, so getSession() already holds the recovery session by the
+      // time this callback runs — before PASSWORD_RECOVERY even fires.
+      if (data.session && isRecoverySession(data.session)) {
+        if (!cancelled) setState("recovery");
+        return;
+      }
       const result = await resolveGuardState(data.session);
-      console.log(`[RECOVERY-TRACE] AuthGuard resolveGuardState(getSession) → ${result} | pathname=${window.location.pathname}`);
       if (!cancelled) setState(result);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (cancelled) return;
-      console.log(`[RECOVERY-TRACE] AuthGuard onAuthStateChange | event=${event} | userId=${session?.user?.id ?? "null"} | pathname=${window.location.pathname}`);
       if (event === "TOKEN_REFRESHED") return;
+      // Belt-and-suspenders: also catch the explicit PASSWORD_RECOVERY event
+      // in case the recovery session was not yet stored when getSession() ran.
+      if (event === "PASSWORD_RECOVERY") {
+        if (!cancelled) setState("recovery");
+        return;
+      }
 
       const result = await resolveGuardState(session);
-      console.log(`[RECOVERY-TRACE] AuthGuard resolveGuardState(${event}) → ${result} | pathname=${window.location.pathname}`);
       if (!cancelled) setState(result);
     });
 
     return () => {
-      console.log(`[RECOVERY-TRACE] AuthGuard UNMOUNTED | pathname=${window.location.pathname}`);
       cancelled = true;
       subscription.unsubscribe();
     };
   }, []);
-
-  // RECOVERY-TRACE
-  console.log(`[RECOVERY-TRACE] AuthGuard render | state=${state} | pathname=${window.location.pathname}`);
 
   if (state === "loading") {
     return (
@@ -95,11 +116,15 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     );
   }
 
+  if (state === "recovery") {
+    // A recovery session landed on a guarded route (e.g. /admin).
+    // Send the user to the dedicated reset-password page.
+    return <Navigate to="/admin/reset-password" replace />;
+  }
+
   if (state === "unauthorized") {
-    console.log(`[RECOVERY-TRACE] AuthGuard → Navigate to /admin/login | pathname=${window.location.pathname}`);
     return <Navigate to="/admin/login" replace />;
   }
 
-  console.log(`[RECOVERY-TRACE] AuthGuard → rendering children | pathname=${window.location.pathname}`);
   return <>{children}</>;
 }
