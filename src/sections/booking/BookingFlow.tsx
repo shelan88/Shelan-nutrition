@@ -24,6 +24,8 @@ import {
   CheckCircle2, Lock, Tag, Clock, AlertCircle,
 } from "lucide-react";
 import type { CMSBookingData, CMSBookingService } from "@/types/cms.types";
+import { resolveAvailability, getDisabledDays, getEnabledTimeSlots } from "@/lib/availability";
+import type { AvailabilitySettings } from "@/lib/availability";
 import PhoneInput from "@/components/PhoneInput";
 import {
   Elements,
@@ -180,6 +182,7 @@ function PickTime({
   onDateChange,
   onTimeChange,
   strings,
+  disabledDays,
 }: {
   timeSlots: CMSBookingData["timeSlots"];
   selectedDate: string;
@@ -187,6 +190,7 @@ function PickTime({
   onDateChange: (d: string) => void;
   onTimeChange: (t: string) => void;
   strings: { calendarLabel: string; selectTimeLabel: string; unavailableLabel: string; noSlotsMessage: string };
+  disabledDays?: Set<number>;
 }) {
   const today = new Date();
   const [viewYear,    setViewYear]    = useState(today.getFullYear());
@@ -209,9 +213,12 @@ function PickTime({
   const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
   const monthName   = new Date(viewYear, viewMonth).toLocaleString("en-US", { month: "long", year: "numeric" });
 
-  const isPast   = (day: number) => new Date(viewYear, viewMonth, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const isSunday = (day: number) => new Date(viewYear, viewMonth, day).getDay() === 0;
-  const dateStr  = (day: number) =>
+  const isPast        = (day: number) => new Date(viewYear, viewMonth, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const isDisabledDay = (day: number) => {
+    const dow = new Date(viewYear, viewMonth, day).getDay();
+    return disabledDays ? disabledDays.has(dow) : dow === 0; // default: only Sunday
+  };
+  const dateStr = (day: number) =>
     `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
   const prevMonth = () => {
@@ -247,7 +254,7 @@ function PickTime({
             {Array.from({ length: firstDay }).map((_, i) => <span key={`empty-${i}`} />)}
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
               const ds       = dateStr(day);
-              const disabled = isPast(day) || isSunday(day);
+              const disabled = isPast(day) || isDisabledDay(day);
               const sel      = selectedDate === ds;
               return (
                 <button
@@ -599,9 +606,11 @@ interface Props {
   preselectedServiceId?: string;
   preselectedProgramId?: string;
   canonicalServices?: CMSBookingService[];
+  /** Per-service availability keyed by service/consultation DB id. */
+  serviceAvailabilityMap?: Record<string, AvailabilitySettings | null>;
 }
 
-function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProgramId, canonicalServices }: Props) {
+function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProgramId, canonicalServices, serviceAvailabilityMap }: Props) {
   const stripe   = useStripe();
   const elements = useElements();
 
@@ -670,6 +679,28 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
     if (programMode) return programAsService;
     return data.services.find((s) => s.id === serviceId);
   }, [programMode, programAsService, data.services, serviceId]);
+
+  // ── Availability ────────────────────────────────────────────────────────────
+  const currentAvailability = useMemo(() => {
+    if (programMode && program) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return resolveAvailability((program as any).availability ?? null);
+    }
+    if (serviceId && serviceAvailabilityMap && serviceId in serviceAvailabilityMap) {
+      return resolveAvailability(serviceAvailabilityMap[serviceId]);
+    }
+    return null; // no availability data → fall back to static
+  }, [programMode, program, serviceId, serviceAvailabilityMap]);
+
+  const effectiveTimeSlots = useMemo(
+    () => (currentAvailability ? getEnabledTimeSlots(currentAvailability) : data.timeSlots),
+    [currentAvailability, data.timeSlots],
+  );
+
+  const disabledDays = useMemo(
+    () => (currentAvailability ? getDisabledDays(currentAvailability) : undefined),
+    [currentAvailability],
+  );
 
   // ── Validation ─────────────────────────────────────────────────────────────
   const personalInfoErrors = useMemo(
@@ -935,11 +966,12 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
             )}
             {step === 1 && (
               <PickTime
-                timeSlots={data.timeSlots}
+                timeSlots={effectiveTimeSlots}
                 selectedDate={date}
                 selectedTime={time}
                 onDateChange={(d) => { setDate(d); setTime(""); }}
                 onTimeChange={setTime}
+                disabledDays={disabledDays}
                 strings={{
                   calendarLabel:    str.calendarLabel,
                   selectTimeLabel:  str.selectTimeLabel,

@@ -20,6 +20,14 @@ support with a language toggle in the navbar.
 - Colors: White (dominant), Lavender, Dusty Rose accents — defined as `lavender-*` / `rose-*` scales in `src/index.css`.
 - Fonts: Montserrat (headings) / Inter (body) for English; Cairo / Tajawal for Arabic, switched automatically via `[dir="rtl"]` selectors.
 
+## Availability Management (added July 2026)
+Both Programs and Consultations now have per-item booking availability settings.
+- Admin UI: "Booking Availability" section at the bottom of each program/consultation edit form (day toggles + time-slot toggles)
+- Booking page: loads live consultations from DB (real UUIDs) so availability is applied per-service
+- Fallback: if DB column not yet present or availability is null, defaults to Mon–Sat, all 15 slots
+- **Pending migration**: run `scripts/migrations/add-availability.sql` once in the Supabase SQL Editor to enable persisting availability settings
+- Key files: `src/lib/availability.ts`, `src/admin/components/AvailabilityEditor.tsx`, `src/pages/BookingPage.tsx`, `src/sections/booking/BookingFlow.tsx`
+
 ## Backend — Supabase
 - Project: `zioslbbneoklfmbbetfn` (zioslbbneoklfmbbetfn.supabase.co)
 - Secrets set: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_PASSWORD`

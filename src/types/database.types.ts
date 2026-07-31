@@ -291,6 +291,14 @@ export interface AdminProfileRow {
   updated_at: string;
 }
 
+// ── Availability (per-program / per-consultation booking schedule) ────────────
+export interface AvailabilitySettings {
+  /** "0"–"6" → enabled (0 = Sunday, 6 = Saturday) */
+  days: Record<string, boolean>;
+  /** "9:00 AM" → enabled */
+  slots: Record<string, boolean>;
+}
+
 // ── New tables (added by CMS migration) ───────────────────────────────────────
 
 export interface ProgramRow {
@@ -320,6 +328,7 @@ export interface ProgramRow {
   active: boolean;
   sort_order: number | null;
   image_url: string | null;
+  availability: AvailabilitySettings | null;
   created_at: string;
   updated_at: string;
 }
@@ -350,6 +359,7 @@ export interface ConsultationRow {
   discount_percent: number | null;
   active:           boolean;
   sort_order:       number | null;
+  availability:     AvailabilitySettings | null;
   created_at:       string;
   updated_at:       string;
 }

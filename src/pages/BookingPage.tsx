@@ -7,7 +7,7 @@
  * BookingFlow renders with the service still pre-selected (URL param
  * is preserved through the auth round-trip).
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/context/LanguageContext";
@@ -19,6 +19,35 @@ import BookingFlow from "@/sections/booking/BookingFlow";
 import AuthRequiredDialog from "@/components/AuthRequiredDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { findClientByEmail } from "@/admin/repositories/clients.repository";
+import { getActiveConsultations } from "@/admin/repositories/consultations.repository";
+import type { ConsultationRow } from "@/types/database.types";
+import type { CMSBookingService } from "@/types/cms.types";
+import type { AvailabilitySettings } from "@/lib/availability";
+
+/** Map a DB ConsultationRow → CMSBookingService for the given lang. */
+function rowToService(row: ConsultationRow, lang: "en" | "ar"): CMSBookingService {
+  const currency = row.currency ?? "$";
+  let priceStr = "";
+  if (row.price != null) {
+    const hasDiscount = row.discount_enabled && row.discount_percent != null && row.discount_percent > 0;
+    if (hasDiscount) {
+      const final = Math.round(row.price * (1 - row.discount_percent! / 100) * 100) / 100;
+      priceStr = `${currency}${final}`;
+    } else {
+      priceStr = `${currency}${row.price}`;
+    }
+  }
+  const name = (lang === "ar" ? row.title_ar : row.title_en) || row.title_en;
+  return {
+    id:          row.id,
+    name,
+    duration:    (lang === "ar" ? row.duration_ar : row.duration_en) || "",
+    price:       priceStr,
+    priceNote:   (lang === "ar" ? row.period_ar  : row.period_en)   || "",
+    description: (lang === "ar" ? row.description_ar : row.description_en) || "",
+    iconName:    row.icon || "Calendar",
+  };
+}
 
 export default function BookingPage() {
   const { lang }                    = useLanguage();
@@ -31,8 +60,49 @@ export default function BookingPage() {
   const [dialogDismissed, setDialogDismissed] = useState(false);
   const [checkingClient, setCheckingClient]   = useState(false);
 
-  const data = bookingData[lang];
+  // Load consultations from DB to use their real IDs and availability settings
+  const [dbConsultations, setDbConsultations] = useState<ConsultationRow[] | null>(null);
+
+  useEffect(() => {
+    getActiveConsultations()
+      .then(setDbConsultations)
+      .catch(() => setDbConsultations([]));
+  }, []);
+
+  const staticData = bookingData[lang];
   const str  = bookingStrings[lang];
+
+  // Map DB consultations → CMSBookingService for the current language
+  const dbServices: CMSBookingService[] = useMemo(() => {
+    if (!dbConsultations || dbConsultations.length === 0) return [];
+    return dbConsultations.map((row) => rowToService(row, lang as "en" | "ar"));
+  }, [dbConsultations, lang]);
+
+  // English-only services for appointment type storage (always English)
+  const dbServicesEn: CMSBookingService[] = useMemo(() => {
+    if (!dbConsultations || dbConsultations.length === 0) return [];
+    return dbConsultations.map((row) => rowToService(row, "en"));
+  }, [dbConsultations]);
+
+  // Per-service availability map keyed by consultation UUID
+  const serviceAvailabilityMap: Record<string, AvailabilitySettings | null> = useMemo(() => {
+    if (!dbConsultations) return {};
+    const map: Record<string, AvailabilitySettings | null> = {};
+    for (const row of dbConsultations) {
+      map[row.id] = row.availability ?? null;
+    }
+    return map;
+  }, [dbConsultations]);
+
+  // Build the effective booking data: prefer DB consultations, fall back to static
+  const data = useMemo(() => {
+    if (dbServices.length > 0) {
+      return { ...staticData, services: dbServices };
+    }
+    return staticData;
+  }, [staticData, dbServices]);
+
+  const canonicalServices = dbServicesEn.length > 0 ? dbServicesEn : bookingData.en.services;
 
   const breadcrumbs = [
     { label: lang === "ar" ? "الرئيسية" : "Home",     href: "/" },
@@ -73,9 +143,9 @@ export default function BookingPage() {
   return (
     <>
       <PageHero
-        kicker={data.hero.kicker}
-        headline={data.hero.headline}
-        subheadline={data.hero.subheadline}
+        kicker={staticData.hero.kicker}
+        headline={staticData.hero.headline}
+        subheadline={staticData.hero.subheadline}
         breadcrumbs={breadcrumbs}
       />
 
@@ -87,7 +157,8 @@ export default function BookingPage() {
               strings={str as unknown as Record<string, string | string[]>}
               preselectedServiceId={preselectedServiceId}
               preselectedProgramId={preselectedProgramId}
-              canonicalServices={bookingData.en.services}
+              canonicalServices={canonicalServices}
+              serviceAvailabilityMap={serviceAvailabilityMap}
             />
           )}
         </div>

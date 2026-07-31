@@ -10,6 +10,9 @@ import {
 import type { ProgramRow } from "@/types/database.types";
 import FileUploadField from "../components/FileUploadField";
 import CurrencySelect from "../components/CurrencySelect";
+import AvailabilityEditor from "../components/AvailabilityEditor";
+import { defaultAvailability, resolveAvailability } from "@/lib/availability";
+import type { AvailabilitySettings } from "@/lib/availability";
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 14 },
@@ -57,6 +60,7 @@ function initForm(): Omit<Row, "id" | "created_at" | "updated_at"> {
     badge_en: "", badge_ar: "",
     discount_enabled: false, discount_percent: null,
     active: false, sort_order: 0, image_url: "",
+    availability: null,
   };
 }
 
@@ -71,6 +75,7 @@ export default function ProgramsAdminPage() {
   const [form,        setForm]        = useState(initForm());
   const [featEnText,  setFeatEnText]  = useState("");
   const [featArText,  setFeatArText]  = useState("");
+  const [availState,  setAvailState]  = useState<AvailabilitySettings>(defaultAvailability());
   const [saving,      setSaving]      = useState(false);
   const [saveError,   setSaveError]   = useState<string | null>(null);
   const [deletingId,  setDeletingId]  = useState<string | null>(null);
@@ -87,6 +92,7 @@ export default function ProgramsAdminPage() {
   function openNew() {
     setEditing(null); setForm(initForm());
     setFeatEnText(""); setFeatArText("");
+    setAvailState(defaultAvailability());
     setSaveError(null); setView("edit");
   }
 
@@ -110,9 +116,11 @@ export default function ProgramsAdminPage() {
       discount_percent: row.discount_percent ?? null,
       active: row.active ?? false, sort_order: row.sort_order ?? 0,
       image_url: row.image_url ?? "",
+      availability: row.availability ?? null,
     });
     setFeatEnText((row.features_en ?? []).join("\n"));
     setFeatArText((row.features_ar ?? []).join("\n"));
+    setAvailState(resolveAvailability(row.availability));
     setSaveError(null); setView("edit");
   }
 
@@ -125,6 +133,7 @@ export default function ProgramsAdminPage() {
       features_en: featEnText.split("\n").filter(Boolean),
       features_ar: featArText.split("\n").filter(Boolean),
       discount_percent: form.discount_enabled ? form.discount_percent : null,
+      availability: availState,
     };
     let ok: boolean;
     if (editing) {
@@ -492,6 +501,20 @@ export default function ProgramsAdminPage() {
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Availability */}
+                <div className="border-t border-[var(--admin-border)] pt-6">
+                  <p className="text-[13px] font-bold text-[var(--admin-text)] mb-1">{L("Booking Availability","إتاحة الحجز")}</p>
+                  <p className="text-[11px] text-[var(--admin-text-faint)] mb-4">
+                    {L("Control which days of the week and which time slots are bookable for this program.",
+                       "تحكم في أيام الأسبوع والأوقات المتاحة للحجز لهذا البرنامج.")}
+                  </p>
+                  <AvailabilityEditor
+                    value={availState}
+                    onChange={setAvailState}
+                    lang={lang}
+                  />
                 </div>
 
               </div>
