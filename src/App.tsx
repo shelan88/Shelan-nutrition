@@ -62,6 +62,7 @@ import SettingsPage from "@/portal/pages/SettingsPage";
 
 // ─── Admin portal ──────────────────────────────────────────────────────────────
 import AdminLoginPage from "@/admin/pages/LoginPage";
+import AdminResetPasswordPage from "@/admin/pages/ResetPasswordPage";
 import AdminLayout from "@/admin/components/AdminLayout";
 import AuthGuard from "@/admin/components/AuthGuard";
 import DebugPanel from "@/shared/debug/DebugPanel";
@@ -160,6 +161,7 @@ export default function App() {
         <Routes>
           {/* Admin — completely isolated, no public chrome */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route path="/admin/reset-password" element={<AdminResetPasswordPage />} />
           <Route path="/admin/*" element={<AuthGuard><AdminLayout /></AuthGuard>} />
 
           {/* Public — wrapped in Navbar + Footer + chrome */}

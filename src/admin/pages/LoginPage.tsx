@@ -134,6 +134,14 @@ function LoginForm({ lang }: { lang: "en" | "ar" }) {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ── Forgot-password state ───────────────────────────────────────────────────
+  const [resetMode, setResetMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+
   const navigate = useNavigate();
 
   const isAr = lang === "ar";
@@ -182,6 +190,22 @@ function LoginForm({ lang }: { lang: "en" | "ar" }) {
     navigate("/admin", { replace: true });
   };
 
+  // ── Forgot password handler ─────────────────────────────────────────────────
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    setResetError(null);
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
+      redirectTo: "https://shelancircle.com/admin/reset-password",
+    });
+    setResetLoading(false);
+    if (error) {
+      setResetError(error.message);
+    } else {
+      setResetSent(true);
+    }
+  };
+
   return (
     <div className="flex flex-col justify-center w-full max-w-[420px] mx-auto px-8 py-12">
       {/* Mobile logo — visible only on small screens */}
@@ -197,7 +221,89 @@ function LoginForm({ lang }: { lang: "en" | "ar" }) {
         </div>
       </div>
 
-      {/* Heading */}
+      {/* ── Forgot-password panel ─────────────────────────────────────────────── */}
+      {resetMode && (
+        <motion.div
+          key="reset"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <h1 className="text-[26px] font-semibold text-[#1c1033] leading-tight mb-1 !font-sans">
+            {isAr ? "إعادة تعيين كلمة المرور" : "Reset your password"}
+          </h1>
+          <p className="text-[14px] text-[#7b6997] mb-8">
+            {isAr
+              ? "أدخلي بريدك الإلكتروني وسنرسل لكِ رابط إعادة التعيين."
+              : "Enter your email and we'll send you a reset link."}
+          </p>
+
+          {resetSent ? (
+            <div className="px-4 py-4 rounded-xl bg-emerald-50 border border-emerald-200 text-[13px] text-emerald-700 text-center space-y-1">
+              <p className="font-semibold">{isAr ? "تم إرسال الرابط ✓" : "Link sent ✓"}</p>
+              <p>
+                {isAr
+                  ? "تحقّقي من بريدك الإلكتروني واتّبعي الرابط لتعيين كلمة مرور جديدة."
+                  : "Check your inbox and follow the link to set a new password."}
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleReset} className="space-y-5" noValidate>
+              <div>
+                <label className={labelCls}>
+                  {isAr ? "البريد الإلكتروني" : "Email address"}
+                </label>
+                <input
+                  type="email"
+                  autoComplete="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="admin@shelan.com"
+                  required
+                  className={inputCls}
+                />
+              </div>
+
+              {resetError && (
+                <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-[13px] text-red-600 text-center">
+                  {resetError}
+                </div>
+              )}
+
+              <motion.button
+                type="submit"
+                disabled={resetLoading || !resetEmail}
+                whileHover={!resetLoading && resetEmail ? { scale: 1.01, y: -1 } : {}}
+                whileTap={!resetLoading && resetEmail ? { scale: 0.99 } : {}}
+                className="w-full py-3.5 rounded-xl font-semibold text-[14px] text-white bg-gradient-to-r from-primary-pink to-lavender-purple shadow-md shadow-deep-purple/20 hover:shadow-lg hover:shadow-deep-purple/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all duration-200"
+              >
+                {resetLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    {isAr ? "جارٍ الإرسال…" : "Sending…"}
+                  </span>
+                ) : (
+                  isAr ? "إرسال رابط إعادة التعيين" : "Send reset link"
+                )}
+              </motion.button>
+            </form>
+          )}
+
+          <div className="mt-6 text-center">
+            <button
+              type="button"
+              onClick={() => setResetMode(false)}
+              className="flex items-center gap-1.5 text-[12px] text-[#b3a6c9] hover:text-[#7b6997] transition-colors mx-auto"
+            >
+              <ArrowLeft size={12} className="rtl:rotate-180" />
+              {isAr ? "العودة إلى تسجيل الدخول" : "Back to sign in"}
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── Normal login heading + form ───────────────────────────────────────── */}
+      {!resetMode && <>
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -245,6 +351,7 @@ function LoginForm({ lang }: { lang: "en" | "ar" }) {
             <button
               type="button"
               tabIndex={-1}
+              onClick={() => { setResetMode(true); setResetEmail(email); setResetError(null); setResetSent(false); }}
               className="text-[11px] text-primary-pink hover:text-soft-purple transition-colors font-medium"
             >
               {isAr ? "نسيتِ كلمة المرور؟" : "Forgot password?"}
@@ -337,6 +444,7 @@ function LoginForm({ lang }: { lang: "en" | "ar" }) {
           )}
         </motion.button>
       </motion.form>
+      </>}
 
       {/* Footer links */}
       <div className="mt-8 pt-6 border-t border-[rgba(138,92,215,0.1)] flex flex-col items-center gap-3">
