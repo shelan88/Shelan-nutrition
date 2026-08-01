@@ -21,6 +21,7 @@ import { createResponse } from "@/admin/repositories/assessment-responses.reposi
 import { recordPayment } from "@/admin/repositories/payments.repository";
 import { stripePromise, parsePriceCents } from "@/lib/stripe";
 import PhoneInput from "@/components/PhoneInput";
+import { useAdminTimezone, slotToLocalDisplay, getLocalTimezone, getTzAbbr } from "@/lib/timezone";
 
 // ─── Card element styles ──────────────────────────────────────────────────────
 
@@ -58,11 +59,13 @@ function DateTimePicker({
   selectedTime,
   onDateChange,
   onTimeChange,
+  adminTz,
 }: {
   selectedDate: string;
   selectedTime: string;
   onDateChange: (d: string) => void;
   onTimeChange: (t: string) => void;
+  adminTz?: string | null;
 }) {
   const today = new Date();
   const [viewYear,  setViewYear]  = useState(today.getFullYear());
@@ -141,10 +144,18 @@ function DateTimePicker({
         <p className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">
           {selectedDate ? "Available Times" : "Select a date to see times"}
         </p>
+        {adminTz && selectedDate && (
+          <p className="text-[10px] text-gray-400 mb-2">
+            Times shown in your local timezone ({getTzAbbr(getLocalTimezone())})
+          </p>
+        )}
         {selectedDate && (
           <div className="grid grid-cols-4 gap-1.5">
             {TIME_SLOTS.map((slot) => {
-              const sel = selectedTime === slot.time;
+              const sel         = selectedTime === slot.time;
+              const displayTime = (adminTz && selectedDate)
+                ? slotToLocalDisplay(selectedDate, slot.time, adminTz)
+                : slot.time;
               return (
                 <button key={slot.time} type="button" disabled={!slot.available}
                   onClick={() => onTimeChange(slot.time)}
@@ -154,7 +165,7 @@ function DateTimePicker({
                     : "bg-white border border-gray-200 text-gray-700 hover:border-pink-300 hover:bg-pink-50"
                   }`}
                 >
-                  {slot.time}
+                  {displayTime}
                 </button>
               );
             })}
@@ -188,6 +199,7 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
   const navigate  = useNavigate();
   const stripe    = useStripe();
   const elements  = useElements();
+  const { adminTz } = useAdminTimezone();
 
   const [step,          setStep]          = useState<0 | 1>(0);
   const [date,          setDate]          = useState("");
@@ -329,12 +341,15 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
             appointmentId: appt.id,
             clientName,
             clientEmail,
-            phone:   phone.trim() || null,
-            service: plan.name,
+            phone:        phone.trim() || null,
+            service:      plan.name,
             date,
             time,
-            notes:   null,
+            notes:        null,
             lang,
+            adminTz:      adminTz ?? null,
+            visitorTz:    getLocalTimezone(),
+            visitorTime:  adminTz ? slotToLocalDisplay(date, time, adminTz) : time,
           }),
         });
         if (!emailResp.ok) {
@@ -368,7 +383,7 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setStatus("idle");
     }
-  }, [status, stripe, elements, plan, date, time, name, email, phone, user, navigate, onClose, cardComplete, lang]);
+  }, [status, stripe, elements, plan, date, time, name, email, phone, user, navigate, onClose, cardComplete, lang, adminTz]);
 
   const stepLabel = step === 0
     ? "Step 1 of 2 — Pick a Date & Time"
@@ -437,6 +452,7 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
                 <DateTimePicker
                   selectedDate={date} selectedTime={time}
                   onDateChange={setDate} onTimeChange={setTime}
+                  adminTz={adminTz}
                 />
 
                 <button type="button" disabled={!canProceed} onClick={() => setStep(1)}

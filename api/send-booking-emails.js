@@ -82,6 +82,22 @@ function formatDate(dateStr, lang) {
   }
 }
 
+// ── Timezone abbreviation helper (Node 18+ Intl, no external deps) ──────────
+
+function tzAbbrNode(tz, atDate = new Date()) {
+  if (!tz) return "";
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      timeZoneName: "short",
+      hour: "numeric",
+    }).formatToParts(atDate);
+    return parts.find((p) => p.type === "timeZoneName")?.value ?? "";
+  } catch {
+    return "";
+  }
+}
+
 // ── Shared: brand-header HTML block ──────────────────────────────────────────
 // Renders the SHELAN logo header. gradientStart/End control direction so
 // client and admin emails are visually distinct.
@@ -150,11 +166,26 @@ function brandHeader({ gradientStart, gradientEnd, eyebrow, title, isAr }) {
 
 // ── Email HTML: client confirmation ──────────────────────────────────────────
 
-function clientEmailHtml({ clientName, service, date, time, lang }) {
+function clientEmailHtml({ clientName, service, date, time, lang, adminTz, visitorTz, visitorTime }) {
   const isAr          = lang === "ar";
   const dir           = isAr ? "rtl" : "ltr";
   const textAlign     = isAr ? "right" : "left";
   const formattedDate = formatDate(date, lang);
+
+  // Resolve display time and timezone labels
+  const refDate       = date ? new Date(`${date}T12:00:00Z`) : new Date();
+  const visitorAbbr   = visitorTz  ? tzAbbrNode(visitorTz,  refDate) : "";
+  const adminAbbr     = adminTz    ? tzAbbrNode(adminTz,    refDate) : "";
+  // Prefer visitor's local time; fall back to stored admin-TZ time
+  const primaryTime   = (visitorTime && visitorTime !== time) ? visitorTime : time;
+  const primaryAbbr   = visitorAbbr || adminAbbr;
+  // Show clinic reference time only when visitor is in a different TZ
+  const showClinicRef = visitorTime && visitorTime !== time && adminAbbr && time;
+  const clinicRef     = showClinicRef
+    ? (isAr
+        ? `${time}${adminAbbr ? ` (${adminAbbr})` : ""} — بتوقيت العيادة`
+        : `${time}${adminAbbr ? ` (${adminAbbr})` : ""} — clinic time`)
+    : null;
   const websiteUrl    = process.env.WEBSITE_URL || DEFAULT_WEBSITE_URL;
   const supportEmail  = process.env.SUPPORT_EMAIL
                      || process.env.ADMIN_NOTIFICATION_EMAIL
@@ -290,7 +321,10 @@ function clientEmailHtml({ clientName, service, date, time, lang }) {
                                  margin-bottom:5px;">${lblTime}</span>
                     <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
                                  font-size:15px;font-weight:700;color:#1c1033;"
-                          dir="ltr">${time}</span>
+                          dir="ltr">${primaryTime}${primaryAbbr ? ` <span style="font-size:12px;color:#9b87b8;font-weight:600;">(${primaryAbbr})</span>` : ""}</span>
+                    ${clinicRef ? `<span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:11px;color:#b3a6c9;margin-top:3px;"
+                          dir="ltr">${clinicRef}</span>` : ""}
                   </td>
                 </tr>
 
@@ -355,8 +389,12 @@ function clientEmailHtml({ clientName, service, date, time, lang }) {
 
 // ── Email HTML: admin notification ───────────────────────────────────────────
 
-function adminEmailHtml({ clientName, clientEmail, phone, service, date, time, notes }) {
+function adminEmailHtml({ clientName, clientEmail, phone, service, date, time, notes, adminTz, visitorTz, visitorTime }) {
   const formattedDate = formatDate(date, "en");
+  const refDate       = date ? new Date(`${date}T12:00:00Z`) : new Date();
+  const adminAbbr     = adminTz  ? tzAbbrNode(adminTz,  refDate) : "";
+  const visitorAbbr   = visitorTz ? tzAbbrNode(visitorTz, refDate) : "";
+  const showClientTz  = visitorTime && visitorTime !== time && visitorAbbr;
 
   // WhatsApp link — strip non-digits from E.164 phone
   const waPhone = phone ? phone.replace(/\D/g, "") : "";
@@ -538,7 +576,10 @@ function adminEmailHtml({ clientName, clientEmail, phone, service, date, time, n
                                  margin-bottom:5px;">Time</span>
                     <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
                                  font-size:15px;font-weight:700;color:#1c1033;"
-                          dir="ltr">${time}</span>
+                          dir="ltr">${time}${adminAbbr ? ` <span style="font-size:12px;color:#9b87b8;font-weight:600;">(${adminAbbr})</span>` : ""}</span>
+                    ${showClientTz ? `<span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:11px;color:#b3a6c9;margin-top:3px;"
+                          dir="ltr">Client's local time: ${visitorTime} (${visitorAbbr})</span>` : ""}
                   </td>
                 </tr>
 
@@ -610,7 +651,10 @@ export default async function handler(req, res) {
     date,
     time,
     notes,
-    lang = "en",
+    lang       = "en",
+    adminTz    = null,   // IANA clinic timezone e.g. "America/Detroit"
+    visitorTz  = null,   // IANA visitor browser timezone e.g. "Asia/Riyadh"
+    visitorTime = null,  // Pre-converted display time string in visitor's TZ
   } = req.body ?? {};
 
   // Log the exact body received so we can trace any data mismatch
@@ -648,7 +692,7 @@ export default async function handler(req, res) {
       subject: lang === "ar"
         ? "تأكيد الحجز — شيلان للتغذية"
         : "Booking Confirmed — Shelan Nutrition",
-      html:    clientEmailHtml({ clientName, service, date, time, lang }),
+      html:    clientEmailHtml({ clientName, service, date, time, lang, adminTz, visitorTz, visitorTime }),
       label:   "client-confirmation",
     });
   } catch (err) {
@@ -662,7 +706,7 @@ export default async function handler(req, res) {
       await sendEmail({
         to:      ADMIN_EMAIL,
         subject: `New Booking: ${clientName} — ${service}`,
-        html:    adminEmailHtml({ clientName, clientEmail, phone, service, date, time, notes }),
+        html:    adminEmailHtml({ clientName, clientEmail, phone, service, date, time, notes, adminTz, visitorTz, visitorTime }),
         label:   "admin-notification",
       });
     } catch (err) {

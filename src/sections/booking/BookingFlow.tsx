@@ -26,7 +26,7 @@ import {
 import type { CMSBookingData, CMSBookingService } from "@/types/cms.types";
 import { resolveAvailability, getDisabledDays, getEnabledTimeSlots } from "@/lib/availability";
 import type { AvailabilitySettings } from "@/lib/availability";
-import { useAdminTimezone, slotToLocalDisplay } from "@/lib/timezone";
+import { useAdminTimezone, slotToLocalDisplay, getLocalTimezone, getTzAbbr } from "@/lib/timezone";
 import PhoneInput from "@/components/PhoneInput";
 import {
   Elements,
@@ -294,8 +294,8 @@ function PickTime({
             {adminTz && (
               <p className="text-[10px] text-deep-purple/45 mb-3 leading-relaxed">
                 {lang === "ar"
-                  ? "الأوقات معروضة بتوقيتك المحلي"
-                  : "Appointment times are shown in your local timezone"}
+                  ? `الأوقات معروضة بتوقيتك المحلي (${getTzAbbr(getLocalTimezone())})`
+                  : `Times shown in your local timezone (${getTzAbbr(getLocalTimezone())})`}
               </p>
             )}
             <div className="grid grid-cols-2 md:grid-cols-1 gap-2">
@@ -483,8 +483,11 @@ function BookingSummary({
   const formattedDate = date
     ? new Date(`${date}T12:00:00`).toLocaleDateString(locale, { weekday: "long", month: "long", day: "numeric", year: "numeric" })
     : "—";
-  // Display the selected time in the visitor's local timezone
-  const displayTime   = adminTz && date && time ? slotToLocalDisplay(date, time, adminTz) : time;
+  // Display the selected time in the visitor's local timezone with TZ abbreviation
+  const visitorTzAbbr = getTzAbbr(getLocalTimezone());
+  const displayTime   = adminTz && date && time
+    ? `${slotToLocalDisplay(date, time, adminTz)} (${visitorTzAbbr})`
+    : time;
 
   if (confirmed) {
     return (
@@ -891,6 +894,8 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
       // ── 5. Send confirmation + admin notification emails ───────────────────
       let emailResp: Response;
       try {
+        const visitorTz   = getLocalTimezone();
+        const visitorTime = adminTz ? slotToLocalDisplay(date, time, adminTz) : time;
         emailResp = await fetch("/api/send-booking-emails", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
@@ -904,6 +909,9 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
             time,
             notes:         personalInfo.notes || null,
             lang,
+            adminTz:      adminTz ?? null,
+            visitorTz,
+            visitorTime,
           }),
         });
       } catch (networkErr) {

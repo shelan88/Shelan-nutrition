@@ -152,6 +152,39 @@ export function getLocalTimezone(): string {
 }
 
 /**
+ * Returns a short timezone abbreviation string for display.
+ * e.g. "America/Detroit" in summer → "EDT"
+ *      "Asia/Riyadh"              → "AST"
+ * Falls back to the raw IANA zone name on any error.
+ */
+export function getTzAbbr(tz: string, atDate: Date = new Date()): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      timeZoneName: "short",
+      hour: "numeric",
+    }).formatToParts(atDate);
+    return parts.find((p) => p.type === "timeZoneName")?.value ?? tz;
+  } catch {
+    return tz;
+  }
+}
+
+/**
+ * Returns today's date as a YYYY-MM-DD string in the given IANA timezone.
+ * Use instead of new Date().toISOString().slice(0,10) so "today" is anchored
+ * to the clinic's local time rather than the server/browser's UTC wall clock.
+ */
+export function todayInTz(tz: string): string {
+  try {
+    // en-CA locale produces YYYY-MM-DD format natively
+    return new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
+/**
  * React hook — loads the admin timezone once and memoises it.
  * Returns null while loading OR when no timezone has been configured.
  */

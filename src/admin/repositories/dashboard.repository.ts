@@ -8,6 +8,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import type { RiskLevel } from "@/admin/data/clients";
+import { getAdminTimezone, todayInTz } from "@/lib/timezone";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -75,10 +76,12 @@ function relativeTime(iso: string): string {
 
 // ─── Fetchers ─────────────────────────────────────────────────────────────────
 
-async function fetchStats(): Promise<DashboardStats> {
+async function fetchStats(adminTz: string | null): Promise<DashboardStats> {
   const now        = new Date();
-  const today      = now.toISOString().slice(0, 10);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+  const today      = adminTz ? todayInTz(adminTz) : now.toISOString().slice(0, 10);
+  // Derive month start from the admin-TZ "today" string so the count is accurate
+  const [ty, tm]   = today.split("-").map(Number);
+  const monthStart = `${ty}-${String(tm).padStart(2, "0")}-01`;
 
   const [clientsRes, newRes, assessmentsRes, recentRes, apptTodayRes, unreadRes] =
     await Promise.all([
@@ -130,10 +133,21 @@ async function fetchStats(): Promise<DashboardStats> {
   };
 }
 
-async function fetchTodaySchedule(): Promise<TodayAppointment[]> {
-  const today = new Date().toISOString().slice(0, 10);
-  const now   = new Date();
-  const nowMins = now.getHours() * 60 + now.getMinutes();
+async function fetchTodaySchedule(adminTz: string | null): Promise<TodayAppointment[]> {
+  const today   = adminTz ? todayInTz(adminTz) : new Date().toISOString().slice(0, 10);
+  const nowDate = new Date();
+  // Compute current time-of-day in clinic timezone so in-progress detection is correct
+  let nowMins   = nowDate.getHours() * 60 + nowDate.getMinutes();
+  if (adminTz) {
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: adminTz, hour: "2-digit", minute: "2-digit", hour12: false,
+      }).formatToParts(nowDate);
+      const h = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
+      const m = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
+      if (!isNaN(h) && !isNaN(m)) nowMins = h * 60 + m;
+    } catch { /* fall through to browser local */ }
+  }
 
   const { data, error } = await supabase
     .from("appointments")
@@ -230,7 +244,13 @@ export function useDashboardStore(): DashboardData {
     let cancelled = false;
     setLoading(true);
 
-    Promise.all([fetchStats(), fetchTodaySchedule(), fetchRecentMessages()])
+    // Load admin timezone first so "today" is anchored to the clinic's local date
+    getAdminTimezone()
+      .then((adminTz) => Promise.all([
+        fetchStats(adminTz),
+        fetchTodaySchedule(adminTz),
+        fetchRecentMessages(),
+      ]))
       .then(([s, schedule, messages]) => {
         if (cancelled) return;
         setStats(s);

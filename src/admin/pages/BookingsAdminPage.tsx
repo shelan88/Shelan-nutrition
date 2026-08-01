@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import AssessmentResponseDrawer from "@/admin/components/AssessmentResponseDrawer";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAdminTimezone, getTzAbbr } from "@/lib/timezone";
 import PageHeader from "../components/PageHeader";
 import {
   getAllAppointments,
@@ -73,6 +74,8 @@ function formatDate(dateStr: string, isAr: boolean): string {
 export default function BookingsAdminPage() {
   const { lang } = useLanguage();
   const isAr = lang === "ar";
+  const { adminTz } = useAdminTimezone();
+  const tzAbbr = adminTz ? getTzAbbr(adminTz) : "";
 
   const [appts,           setAppts]           = useState<AppointmentRow[]>([]);
   const [loading,         setLoading]         = useState(true);
@@ -134,8 +137,8 @@ export default function BookingsAdminPage() {
   }
 
   const colLabels = isAr
-    ? ["العميل", "التاريخ", "الوقت", "النوع", "الحالة", "التقييم", "الإجراءات"]
-    : ["Client", "Date", "Time", "Type", "Status", "Assessment", "Actions"];
+    ? ["العميل", "التاريخ", tzAbbr ? `الوقت (${tzAbbr})` : "الوقت", "النوع", "الحالة", "التقييم", "الإجراءات"]
+    : ["Client", "Date", tzAbbr ? `Time (${tzAbbr})` : "Time", "Type", "Status", "Assessment", "Actions"];
 
   // Assessment badge config
   const ASSESSMENT_BADGE: Record<string, { cls: string; labelEn: string; labelAr: string }> = {

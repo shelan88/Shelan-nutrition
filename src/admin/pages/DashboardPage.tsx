@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useDashboardStore } from "@/admin/repositories/dashboard.repository";
+import { useAdminTimezone, getTzAbbr } from "@/lib/timezone";
 
 // ─── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -471,6 +472,9 @@ export default function DashboardPage() {
     },
   ];
 
+  const { adminTz } = useAdminTimezone();
+  const tzAbbr = adminTz ? getTzAbbr(adminTz) : "";
+
   // ── Schedule data (live from Supabase) ──
   const schedule: (AppointmentProps & { isLast: boolean })[] = store.todaySchedule.map((appt, i, arr) => ({
     time:    appt.time,
@@ -595,7 +599,7 @@ export default function DashboardPage() {
               <h2 className="text-[14px] font-bold text-[var(--admin-text)]">
                 {isAr ? "مواعيد اليوم" : "Today's Schedule"}
               </h2>
-              <p className="text-[11.5px] text-[var(--admin-text-faint)] mt-0.5">
+              <p className="text-[11.5px] text-[var(--admin-text-faint)] mt-0.5 flex items-center gap-1.5 flex-wrap">
                 {store.loading
                   ? (isAr ? "جارٍ التحميل…" : "Loading…")
                   : schedule.length > 0
@@ -603,6 +607,11 @@ export default function DashboardPage() {
                       ? `${schedule.length} مواعيد مجدولة`
                       : `${schedule.length} appointment${schedule.length !== 1 ? "s" : ""} scheduled`)
                     : (isAr ? "لا مواعيد اليوم" : "No appointments today")}
+                {!store.loading && tzAbbr && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-[var(--admin-hover-bg)] text-[var(--admin-text-faint)] border border-[var(--admin-border)]">
+                    {tzAbbr}
+                  </span>
+                )}
               </p>
             </div>
             <Link
