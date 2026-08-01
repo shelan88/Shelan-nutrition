@@ -77,3 +77,12 @@ export async function updateAppointmentStatus(
   if (error) { console.error("[appointments] updateAppointmentStatus:", error.message); return false; }
   return true;
 }
+
+export async function deleteAppointment(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("appointments")
+    .delete()
+    .eq("id", id);
+  if (error) { console.error("[appointments] deleteAppointment:", error.message); return false; }
+  return true;
+}

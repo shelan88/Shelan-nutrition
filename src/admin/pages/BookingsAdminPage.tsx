@@ -9,7 +9,7 @@ import { motion } from "framer-motion";
 import {
   Calendar, CheckCircle2, Clock, XCircle,
   Search, X, RefreshCw, ChevronDown,
-  CalendarCheck, TrendingUp, Eye,
+  CalendarCheck, TrendingUp, Eye, Trash2,
 } from "lucide-react";
 import AssessmentResponseDrawer from "@/admin/components/AssessmentResponseDrawer";
 import { useLanguage } from "@/context/LanguageContext";
@@ -17,6 +17,7 @@ import PageHeader from "../components/PageHeader";
 import {
   getAllAppointments,
   updateAppointmentStatus,
+  deleteAppointment,
 } from "@/admin/repositories/appointments.repository";
 import type { AppointmentRow } from "@/types/database.types";
 
@@ -79,6 +80,8 @@ export default function BookingsAdminPage() {
   const [filter,          setFilter]          = useState<Status | "">("");
   const [updatingId,      setUpdatingId]      = useState<string | null>(null);
   const [viewingAssessment, setViewingAssessment] = useState<AppointmentRow | null>(null);
+  const [deleteTarget,    setDeleteTarget]    = useState<{ id: string; name: string } | null>(null);
+  const [deleting,        setDeleting]        = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -119,6 +122,17 @@ export default function BookingsAdminPage() {
     setUpdatingId(null);
   }
 
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const ok = await deleteAppointment(deleteTarget.id);
+    if (ok) {
+      setAppts((prev) => prev.filter((a) => a.id !== deleteTarget.id));
+    }
+    setDeleting(false);
+    setDeleteTarget(null);
+  }
+
   const colLabels = isAr
     ? ["العميل", "التاريخ", "الوقت", "النوع", "الحالة", "التقييم", "الإجراءات"]
     : ["Client", "Date", "Time", "Type", "Status", "Assessment", "Actions"];
@@ -132,6 +146,59 @@ export default function BookingsAdminPage() {
 
   return (
     <div>
+      {/* ── Delete confirmation modal ──────────────────────────────────────── */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => { if (!deleting) setDeleteTarget(null); }}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="relative w-full max-w-sm bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] shadow-2xl shadow-black/20 p-6"
+          >
+            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-red-50 border border-red-100 mx-auto mb-4">
+              <Trash2 size={20} className="text-red-500" strokeWidth={1.8} />
+            </div>
+            <h3 className="text-[15px] font-bold text-[var(--admin-text)] text-center mb-1">
+              {isAr ? "حذف الحجز؟" : "Delete booking?"}
+            </h3>
+            <p className="text-[13px] text-[var(--admin-text-muted)] text-center mb-6 leading-relaxed">
+              {isAr
+                ? <>سيتم حذف حجز <span className="font-semibold text-[var(--admin-text)]">{deleteTarget.name}</span> نهائياً ولا يمكن التراجع عن هذا الإجراء.</>
+                : <>The booking for <span className="font-semibold text-[var(--admin-text)]">{deleteTarget.name}</span> will be permanently deleted. This cannot be undone.</>
+              }
+            </p>
+            <div className="flex gap-2.5">
+              <button
+                onClick={() => { if (!deleting) setDeleteTarget(null); }}
+                disabled={deleting}
+                className="flex-1 py-2.5 rounded-xl text-[13px] font-semibold text-[var(--admin-text-muted)] bg-[var(--admin-hover-bg)] hover:bg-[var(--admin-border)] border border-[var(--admin-border)] transition-all duration-150 disabled:opacity-50"
+              >
+                {isAr ? "إلغاء" : "Cancel"}
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={deleting}
+                className="flex-1 py-2.5 rounded-xl text-[13px] font-semibold text-white bg-red-500 hover:bg-red-600 shadow-sm shadow-red-200 transition-all duration-150 disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    {isAr ? "جارٍ الحذف…" : "Deleting…"}
+                  </>
+                ) : (
+                  isAr ? "حذف" : "Delete"
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
       <PageHeader
         title={isAr ? "الحجوزات" : "Bookings"}
         description={
@@ -357,24 +424,36 @@ export default function BookingsAdminPage() {
 
                       {/* Actions */}
                       <td className="px-4 py-3.5">
-                        <div className="relative">
-                          <select
-                            disabled={isUpdating}
-                            value={status}
-                            onChange={(e) => changeStatus(appt.id, e.target.value as KnownStatus)}
-                            className="appearance-none h-7 ps-2 pe-6 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[11.5px] font-medium text-[var(--admin-text-muted)] focus:outline-none focus:border-primary-pink/40 cursor-pointer disabled:opacity-50 hover:border-[var(--admin-border-strong)] transition-all"
+                        <div className="flex items-center gap-2">
+                          {/* Status changer */}
+                          <div className="relative">
+                            <select
+                              disabled={isUpdating}
+                              value={status}
+                              onChange={(e) => changeStatus(appt.id, e.target.value as KnownStatus)}
+                              className="appearance-none h-7 ps-2 pe-6 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-surface)] text-[11.5px] font-medium text-[var(--admin-text-muted)] focus:outline-none focus:border-primary-pink/40 cursor-pointer disabled:opacity-50 hover:border-[var(--admin-border-strong)] transition-all"
+                            >
+                              {ALL_STATUSES.map((s) => (
+                                <option key={s} value={s}>
+                                  {isAr ? STATUS_LABEL_AR[s] : STATUS_LABEL_EN[s]}
+                                </option>
+                              ))}
+                            </select>
+                            {isUpdating ? (
+                              <RefreshCw size={10} className="pointer-events-none absolute end-1.5 top-1/2 -translate-y-1/2 text-primary-pink animate-spin" />
+                            ) : (
+                              <ChevronDown size={10} className="pointer-events-none absolute end-1.5 top-1/2 -translate-y-1/2 text-[var(--admin-text-faint)]" />
+                            )}
+                          </div>
+
+                          {/* Delete button */}
+                          <button
+                            onClick={() => setDeleteTarget({ id: appt.id, name: appt.client_name ?? (isAr ? "غير معروف" : "Unknown") })}
+                            title={isAr ? "حذف الحجز" : "Delete booking"}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-[var(--admin-text-faint)] hover:text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200 opacity-0 group-hover:opacity-100 transition-all duration-150"
                           >
-                            {ALL_STATUSES.map((s) => (
-                              <option key={s} value={s}>
-                                {isAr ? STATUS_LABEL_AR[s] : STATUS_LABEL_EN[s]}
-                              </option>
-                            ))}
-                          </select>
-                          {isUpdating ? (
-                            <RefreshCw size={10} className="pointer-events-none absolute end-1.5 top-1/2 -translate-y-1/2 text-primary-pink animate-spin" />
-                          ) : (
-                            <ChevronDown size={10} className="pointer-events-none absolute end-1.5 top-1/2 -translate-y-1/2 text-[var(--admin-text-faint)]" />
-                          )}
+                            <Trash2 size={13} strokeWidth={1.8} />
+                          </button>
                         </div>
                       </td>
                     </motion.tr>
