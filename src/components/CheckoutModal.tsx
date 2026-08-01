@@ -179,10 +179,14 @@ function DateTimePicker({
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 export interface CheckoutPlan {
-  name:      string;
-  price:     string;
-  period:    string;
-  serviceId?: string;
+  name:               string;
+  price:              string;
+  period:             string;
+  serviceId?:         string;
+  /** Mirrors the per-service assessment_enabled toggle in the admin panel.
+   *  When undefined (legacy callers), defaults to true so existing behaviour
+   *  is preserved. Set to false to suppress the post-payment questionnaire. */
+  assessmentEnabled?: boolean;
 }
 
 interface CheckoutModalProps {
@@ -295,7 +299,9 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
       const template   = plan.serviceId
         ? await getTemplateForService(plan.serviceId)
         : await getFirstAssignedActiveTemplate();
-      const hasTemplate = !!(template?.active);
+      // Gate on both the template being active AND the per-service toggle.
+      // plan.assessmentEnabled is undefined for legacy callers → treat as true.
+      const hasTemplate = !!(template?.active) && (plan.assessmentEnabled !== false);
 
       // ── 5. Create appointment ─────────────────────────────────────────────
       const appt = await createAppointment({
@@ -364,17 +370,12 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
 
       // ── 8. Redirect to assessment or show success ─────────────────────────
       if (hasTemplate) {
-        const response = await createResponse(
-          template!.id,
-          appt.id,
-          user?.id          ?? null,
-          resolvedClientId,
-        );
-        if (response) {
-          onClose();
-          navigate(`/assessment/respond/${appt.id}`);
-          return;
-        }
+        // Attempt to pre-create the response row; navigate unconditionally even
+        // if the insert fails — AssessmentResponsePage creates it as a fallback.
+        await createResponse(template!.id, appt.id, user?.id ?? null, resolvedClientId);
+        onClose();
+        navigate(`/assessment/respond/${appt.id}`);
+        return;
       }
 
       setStatus("success");

@@ -90,8 +90,27 @@ export default function Booking() {
     return services.find((s) => s.name_en.trim().toLowerCase() === normalised)?.id;
   };
 
+  // Resolve the per-service assessment_enabled toggle from the loaded DB rows.
+  // Matches on either the English or Arabic title so it works for both languages.
+  // Returns true when dbPlans is not yet loaded or no matching row is found,
+  // preserving the allow-assessment default for hardcoded fallback plans.
+  const resolveAssessmentEnabled = (planName: string): boolean => {
+    if (!dbPlans || dbPlans.length === 0) return true;
+    const normalised = planName.trim().toLowerCase();
+    const match = dbPlans.find(
+      (r) =>
+        (r.title_en ?? "").trim().toLowerCase() === normalised ||
+        (r.title_ar ?? "").trim().toLowerCase() === normalised,
+    );
+    return match ? !!(match.assessment_enabled) : true;
+  };
+
   const handlePlanClick = (rawPlan: Omit<CheckoutPlan, "serviceId">) => {
-    const plan: CheckoutPlan = { ...rawPlan, serviceId: resolveServiceId(rawPlan.name) };
+    const plan: CheckoutPlan = {
+      ...rawPlan,
+      serviceId:         resolveServiceId(rawPlan.name),
+      assessmentEnabled: resolveAssessmentEnabled(rawPlan.name),
+    };
     if (!loading && user) {
       setCheckoutPlan(plan);
     } else {

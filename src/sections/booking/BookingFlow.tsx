@@ -858,6 +858,19 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
         throw new Error(isAr ? "لم تكتمل عملية الدفع. يرجى المحاولة مجدداً." : "Payment was not completed. Please try again.");
       }
 
+      // ── 2b. Resolve client_id ──────────────────────────────────────────────
+      // Done here (after payment is confirmed but before appointment creation)
+      // so we can link the appointment and the assessment response to the client.
+      let resolvedClientId: string | null = null;
+      if (user?.id) {
+        const { data: clientRow } = await supabase
+          .from("clients")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        resolvedClientId = clientRow?.id ?? null;
+      }
+
       // ── 3. Create appointment ──────────────────────────────────────────────
       const appt = await createAppointment({
         client_name:  clientName,
@@ -868,7 +881,7 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
         type:         serviceType,
         status:       "scheduled",
         notes:        personalInfo.notes || null,
-        client_id:    null,
+        client_id:    resolvedClientId,
         ...(hasTemplate && {
           assessment_template_id: template!.id,
           assessment_status:      "awaiting_assessment",
@@ -892,7 +905,9 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
       });
 
       // ── 5. Send confirmation + admin notification emails ───────────────────
-      let emailResp: Response;
+      // Email failure must NOT abort the flow — payment + appointment are already
+      // saved. Log and continue to the assessment redirect or success screen.
+      let emailResp: Response | undefined;
       try {
         const visitorTz   = getLocalTimezone();
         const visitorTime = adminTz ? slotToLocalDisplay(date, time, adminTz) : time;
@@ -915,26 +930,14 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
           }),
         });
       } catch (networkErr) {
+        // Non-fatal — log and continue to assessment/success
         console.error("[BookingFlow] email network error:", networkErr);
-        setBookingError(
-          isAr
-            ? "تم الدفع وحجز موعدكِ، لكن تعذّر إرسال بريد التأكيد. يرجى التواصل مع العيادة مباشرة."
-            : "Payment successful and booking saved, but we couldn't send the confirmation email. Please contact the clinic directly.",
-        );
-        setConfirming(false);
-        return;
       }
 
-      if (!emailResp.ok) {
+      if (emailResp && !emailResp.ok) {
         const body = await emailResp.json().catch(() => ({}));
+        // Non-fatal — log and continue to assessment/success
         console.error("[BookingFlow] email API error:", body);
-        setBookingError(
-          isAr
-            ? "تم الدفع وحجز موعدكِ، لكن تعذّر إرسال بريد التأكيد. يرجى التواصل مع العيادة مباشرة."
-            : "Payment successful and booking saved, but we couldn't send the confirmation email. Please contact the clinic directly.",
-        );
-        setConfirming(false);
-        return;
       }
 
       // ── All succeeded ──────────────────────────────────────────────────────
@@ -943,7 +946,7 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
         module: "Booking", component: "BookingFlow", action: "confirm",
         result: "success", durationMs: Math.round(performance.now() - t0),
         recordId: appt.id,
-        data: { fieldCount, hasTemplate, emailSent: true },
+        data: { fieldCount, hasTemplate, emailSent: !!(emailResp?.ok) },
       });
 
       trackEvent("booking_submitted", {
@@ -952,7 +955,9 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
       });
 
       if (hasTemplate) {
-        await createResponse(template!.id, appt.id, user?.id ?? null, null);
+        // Attempt to pre-create the response row; navigate unconditionally even
+        // if the insert fails — AssessmentResponsePage creates it as a fallback.
+        await createResponse(template!.id, appt.id, user?.id ?? null, resolvedClientId);
         navigate(`/assessment/respond/${appt.id}`);
       } else {
         setConfirmed(true);
