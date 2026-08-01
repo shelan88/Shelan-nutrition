@@ -23,12 +23,13 @@
  * The public and admin worlds are completely separated at the routing level.
  * Admin pages never see the public Navbar/Footer, and vice-versa.
  */
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { debugLog } from "@/shared/debug/logger";
 import { trackPageView } from "@/lib/analytics";
 import { LanguageProvider } from "@/context/LanguageContext";
 import ScrollToTop from "@/components/ui/ScrollToTop";
+import { supabase } from "@/lib/supabase";
 
 // ─── Public site chrome ────────────────────────────────────────────────────────
 import Navbar from "@/components/Navbar";
@@ -59,6 +60,9 @@ import NutritionPage from "@/portal/pages/NutritionPage";
 import ProgressPage from "@/portal/pages/ProgressPage";
 import FilesPage from "@/portal/pages/FilesPage";
 import SettingsPage from "@/portal/pages/SettingsPage";
+
+// ─── Shared reset-password page (customers + admins) ──────────────────────────
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 
 // ─── Admin portal ──────────────────────────────────────────────────────────────
 import AdminLoginPage from "@/admin/pages/LoginPage";
@@ -131,6 +135,58 @@ function PublicLayout() {
   );
 }
 
+/**
+ * Catches Supabase PASSWORD_RECOVERY events on any page and redirects ALL
+ * users (customers and admins) to /reset-password before role-specific
+ * rendering happens.
+ *
+ * WHY THIS IS NEEDED:
+ * AuthModal calls resetPasswordForEmail with redirectTo pointing to
+ * /reset-password, but if that URL is not yet in the Supabase Redirect URLs
+ * allowlist, Supabase falls back to the Site URL (homepage). The user lands
+ * on / signed in, with no reset form. This interceptor catches the
+ * PASSWORD_RECOVERY event wherever it fires and routes to the reset page.
+ *
+ * It also checks INITIAL_SESSION for a recovery-flavoured JWT (AMR method
+ * "recovery") to handle the implicit-flow case where Supabase processes the
+ * recovery hash synchronously before any subscriber registers, meaning
+ * PASSWORD_RECOVERY already fired before this component mounted.
+ */
+function PasswordRecoveryInterceptor() {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    // Already on a reset page — don't loop
+    if (pathname === "/reset-password" || pathname === "/admin/reset-password") return;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        navigate("/reset-password", { replace: true });
+        return;
+      }
+      // INITIAL_SESSION fires immediately on subscribe. If the recovery token
+      // was processed synchronously (implicit flow) the session's JWT already
+      // carries amr[].method === "recovery".
+      if (event === "INITIAL_SESSION" && session) {
+        try {
+          const payload = JSON.parse(atob(session.access_token.split(".")[1]));
+          const amr: Array<{ method: string }> = payload.amr ?? [];
+          if (amr.some((a) => a.method === "recovery")) {
+            navigate("/reset-password", { replace: true });
+          }
+        } catch {
+          // malformed JWT — ignore
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate, pathname]);
+
+  return null;
+}
+
 /** Logs every client-side route change and fires GA4 page_view. */
 function RouteLogger() {
   const { pathname } = useLocation();
@@ -158,7 +214,11 @@ export default function App() {
       <LanguageProvider>
         <ScrollToTop />
         <RouteLogger />
+        <PasswordRecoveryInterceptor />
         <Routes>
+          {/* Standalone reset-password — no Navbar/Footer, works for all users */}
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+
           {/* Admin — completely isolated, no public chrome */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/admin/reset-password" element={<AdminResetPasswordPage />} />

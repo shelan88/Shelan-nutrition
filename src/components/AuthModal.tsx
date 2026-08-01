@@ -119,7 +119,9 @@ export default function AuthModal({ onClose, onSuccess, initialView = "login" }:
   const handleResetSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setResetLoading(true);
-    await supabase.auth.resetPasswordForEmail(resetEmail.trim());
+    await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
     setResetLoading(false);
     setResetSent(true);
   };
