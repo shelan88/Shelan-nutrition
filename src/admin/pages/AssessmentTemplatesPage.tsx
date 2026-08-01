@@ -54,13 +54,22 @@ import type {
   QuestionWithOptions,
 } from "@/admin/repositories/assessment-templates.repository";
 import type { QuestionType } from "@/types/database.types";
+import { getAllConsultations } from "@/admin/repositories/consultations.repository";
+import type { ConsultationRow } from "@/types/database.types";
+import { getAllPrograms } from "@/admin/repositories/programs.repository";
+import type { ProgramRow } from "@/types/database.types";
 
-// Partial service shape — only the fields we select for assignment UI
-interface ServiceSummary {
+// Slim shapes used purely by the assignment UI
+interface ConsultationSummary {
+  id: string;
+  title_en: string;
+  title_ar: string | null;
+}
+
+interface ProgramSummary {
   id: string;
   name_en: string;
   name_ar: string | null;
-  active: boolean;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -151,7 +160,8 @@ export default function AssessmentTemplatesPage() {
   const [editingTemplate, setEditingTemplate] = useState<TemplateWithDetails | null>(null);
   const [templateForm, setTemplateForm] = useState<TemplateForm>(blankTemplateForm());
   const [questions, setQuestions] = useState<QuestionWithOptions[]>([]);
-  const [services, setServices] = useState<ServiceSummary[]>([]);
+  const [consultations, setConsultations] = useState<ConsultationSummary[]>([]);
+  const [programs, setPrograms] = useState<ProgramSummary[]>([]);
   const [metaSaving, setMetaSaving] = useState(false);
   const [metaError, setMetaError] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -171,8 +181,16 @@ export default function AssessmentTemplatesPage() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    supabase.from("services").select("id, name_en, name_ar, active").eq("active", true).order("sort_order", { ascending: true })
-      .then(({ data }) => setServices(data ?? []));
+    getAllConsultations().then((rows) =>
+      setConsultations(
+        rows.map((r: ConsultationRow) => ({ id: r.id, title_en: r.title_en, title_ar: r.title_ar ?? null }))
+      )
+    );
+    getAllPrograms().then((rows) =>
+      setPrograms(
+        rows.map((r: ProgramRow) => ({ id: r.id, name_en: r.name_en, name_ar: r.name_ar ?? null }))
+      )
+    );
   }, []);
 
   // ── List actions ─────────────────────────────────────────────────────────
@@ -386,7 +404,8 @@ export default function AssessmentTemplatesPage() {
               setTemplateForm={setTemplateForm}
               questions={questions}
               setQuestions={setQuestions}
-              services={services}
+              consultations={consultations}
+              programs={programs}
               metaSaving={metaSaving}
               metaError={metaError}
               onSaveMeta={handleMetaSave}
@@ -579,7 +598,7 @@ function TemplateList({
 
 function TemplateEditor({
   isAr, editingTemplate, templateForm, setTemplateForm,
-  questions, setQuestions, services,
+  questions, setQuestions, consultations, programs,
   metaSaving, metaError, onSaveMeta, onCancel, onReloadTemplate, onPreview,
 }: {
   isAr: boolean;
@@ -588,7 +607,8 @@ function TemplateEditor({
   setTemplateForm: (f: TemplateForm) => void;
   questions: QuestionWithOptions[];
   setQuestions: (q: QuestionWithOptions[]) => void;
-  services: ServiceSummary[];
+  consultations: ConsultationSummary[];
+  programs: ProgramSummary[];
   metaSaving: boolean;
   metaError: string;
   onSaveMeta: () => void;
@@ -735,30 +755,76 @@ function TemplateEditor({
                 {isAr ? "ربط بالخدمات" : "Assign to Services"}
               </h2>
               <p className="text-[11px] text-[var(--admin-text-muted)] mt-0.5">
-                {isAr ? "عند الحجز يتلقى العميل هذا النموذج." : "Clients booking these services will receive this questionnaire."}
+                {isAr
+                  ? "عند الحجز يتلقى العميل هذا النموذج تلقائياً."
+                  : "Clients booking these consultations or programs will receive this questionnaire."}
               </p>
             </div>
-            <div className="p-5 space-y-2">
-              {services.length === 0 ? (
-                <p className="text-[12px] text-[var(--admin-text-faint)]">
-                  {isAr ? "لا توجد خدمات نشطة." : "No active services found."}
+
+            <div className="p-5 space-y-5">
+              {/* ── Consultations ── */}
+              <div>
+                <p className="text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-2">
+                  {isAr ? "الاستشارات" : "Consultations"}
                 </p>
-              ) : services.map((svc) => {
-                const checked = templateForm.assignedServiceIds.includes(svc.id);
-                return (
-                  <button
-                    key={svc.id}
-                    type="button"
-                    onClick={() => toggleService(svc.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-start transition-all ${checked ? "border-primary-pink/40 bg-primary-pink/5" : "border-[var(--admin-border)] hover:bg-[var(--admin-hover-bg)]"}`}
-                  >
-                    <span className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-colors ${checked ? "bg-primary-pink border-primary-pink" : "border-[var(--admin-border)]"}`}>
-                      {checked && <Check size={10} className="text-white" />}
-                    </span>
-                    <span className="text-[12px] text-[var(--admin-text)] font-medium">{isAr ? (svc.name_ar ?? svc.name_en) : svc.name_en}</span>
-                  </button>
-                );
-              })}
+                {consultations.length === 0 ? (
+                  <p className="text-[12px] text-[var(--admin-text-faint)]">
+                    {isAr ? "لا توجد استشارات." : "No consultations found."}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {consultations.map((c) => {
+                      const checked = templateForm.assignedServiceIds.includes(c.id);
+                      const label   = isAr ? (c.title_ar ?? c.title_en) : c.title_en;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => toggleService(c.id)}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-start transition-all ${checked ? "border-primary-pink/40 bg-primary-pink/5" : "border-[var(--admin-border)] hover:bg-[var(--admin-hover-bg)]"}`}
+                        >
+                          <span className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-colors ${checked ? "bg-primary-pink border-primary-pink" : "border-[var(--admin-border)]"}`}>
+                            {checked && <Check size={10} className="text-white" />}
+                          </span>
+                          <span className="text-[12px] text-[var(--admin-text)] font-medium">{label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* ── Programs ── */}
+              <div>
+                <p className="text-[11px] font-semibold text-[var(--admin-text-muted)] uppercase tracking-wide mb-2">
+                  {isAr ? "البرامج" : "Programs"}
+                </p>
+                {programs.length === 0 ? (
+                  <p className="text-[12px] text-[var(--admin-text-faint)]">
+                    {isAr ? "لا توجد برامج." : "No programs found."}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {programs.map((p) => {
+                      const checked = templateForm.assignedServiceIds.includes(p.id);
+                      const label   = isAr ? (p.name_ar ?? p.name_en) : p.name_en;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => toggleService(p.id)}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-start transition-all ${checked ? "border-primary-pink/40 bg-primary-pink/5" : "border-[var(--admin-border)] hover:bg-[var(--admin-hover-bg)]"}`}
+                        >
+                          <span className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-colors ${checked ? "bg-primary-pink border-primary-pink" : "border-[var(--admin-border)]"}`}>
+                            {checked && <Check size={10} className="text-white" />}
+                          </span>
+                          <span className="text-[12px] text-[var(--admin-text)] font-medium">{label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
