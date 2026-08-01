@@ -281,6 +281,23 @@ export async function getFirstAssignedActiveTemplate(): Promise<TemplateWithDeta
   return template;
 }
 
+/**
+ * Returns the first active template regardless of service assignments.
+ * Used as a last-resort fallback when assessment is enabled but the admin
+ * has not yet linked any template to the service being booked.
+ */
+export async function getFirstActiveTemplate(): Promise<TemplateWithDetails | null> {
+  const { data, error } = await supabase
+    .from("assessment_templates")
+    .select("id")
+    .eq("active", true)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  return getTemplateWithDetails(data.id);
+}
+
 export async function setServiceAssignments(templateId: string, serviceIds: string[]): Promise<void> {
   await supabase.from("service_template_assignments").delete().eq("template_id", templateId);
   for (const serviceId of serviceIds) {

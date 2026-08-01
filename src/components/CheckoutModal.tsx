@@ -16,7 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { checkoutModal } from "@/content/content";
 import { supabase } from "@/lib/supabase";
 import { createAppointment } from "@/admin/repositories/appointments.repository";
-import { getTemplateForService, getFirstAssignedActiveTemplate } from "@/admin/repositories/assessment-templates.repository";
+import { getTemplateForService, getFirstAssignedActiveTemplate, getFirstActiveTemplate } from "@/admin/repositories/assessment-templates.repository";
 import { createResponse } from "@/admin/repositories/assessment-responses.repository";
 import { recordPayment } from "@/admin/repositories/payments.repository";
 import { stripePromise, parsePriceCents } from "@/lib/stripe";
@@ -300,12 +300,48 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
       }
 
       // ── 4. Look up assessment template ────────────────────────────────────
-      const template   = plan.serviceId
+      console.log("[ASSESSMENT-DEBUG] CheckoutModal template lookup start", {
+        serviceId:         plan.serviceId,
+        consultationId:    plan.consultationId,
+        assessmentEnabled: plan.assessmentEnabled,
+      });
+
+      // Try service-specific assignment first
+      let template = plan.serviceId
         ? await getTemplateForService(plan.serviceId)
         : await getFirstAssignedActiveTemplate();
+      console.log("[ASSESSMENT-DEBUG] primary template lookup result", {
+        templateId:     template?.id ?? null,
+        templateActive: template?.active ?? null,
+      });
+
+      // If no assignment found but assessment is enabled, fall back to any active template
+      if (!template && plan.assessmentEnabled !== false) {
+        template = await getFirstActiveTemplate();
+        console.log("[ASSESSMENT-DEBUG] fallback getFirstActiveTemplate", {
+          templateId:     template?.id ?? null,
+          templateActive: template?.active ?? null,
+        });
+        if (template) {
+          console.warn(
+            "[ASSESSMENT-DEBUG] WARNING: no template assigned to service", plan.serviceId,
+            "— using fallback template:", template.name_en,
+            "— assign this template to the service in the admin panel to suppress this warning.",
+          );
+        }
+      }
+
       // Gate on both the template being active AND the per-service toggle.
       // plan.assessmentEnabled is undefined for legacy callers → treat as true.
       const hasTemplate = !!(template?.active) && (plan.assessmentEnabled !== false);
+      console.log("[ASSESSMENT-DEBUG] hasTemplate decision", {
+        hasTemplate,
+        templateActive:    template?.active ?? null,
+        assessmentEnabled: plan.assessmentEnabled,
+        blockedBy: !hasTemplate
+          ? (!template ? "NO_TEMPLATE" : !template.active ? "TEMPLATE_NOT_ACTIVE" : "ASSESSMENT_DISABLED")
+          : null,
+      });
 
       // ── 5. Create appointment ─────────────────────────────────────────────
       const appt = await createAppointment({
@@ -376,12 +412,26 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
       if (hasTemplate) {
         // Attempt to pre-create the response row; navigate unconditionally even
         // if the insert fails — AssessmentResponsePage creates it as a fallback.
-        await createResponse(template!.id, appt.id, user?.id ?? null, resolvedClientId);
+        const responseRow = await createResponse(template!.id, appt.id, user?.id ?? null, resolvedClientId);
+        const targetUrl = `/assessment/respond/${appt.id}`;
+        console.log("[ASSESSMENT-DEBUG] navigate() called", {
+          targetUrl,
+          appointmentId:  appt.id,
+          templateId:     template!.id,
+          responseCreated: !!responseRow,
+          userId:         user?.id ?? null,
+          clientId:       resolvedClientId,
+        });
         onClose();
-        navigate(`/assessment/respond/${appt.id}`);
+        navigate(targetUrl);
         return;
       }
 
+      console.log("[ASSESSMENT-DEBUG] no assessment — showing success screen", {
+        hasTemplate,
+        assessmentEnabled: plan.assessmentEnabled,
+        templateId: template?.id ?? null,
+      });
       setStatus("success");
     } catch (err) {
       console.error("[CheckoutModal] payment/booking error:", err);

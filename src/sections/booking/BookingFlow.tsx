@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { debugLog } from "@/shared/debug/logger";
 import { trackEvent } from "@/lib/analytics";
 import { createAppointment } from "@/admin/repositories/appointments.repository";
-import { getTemplateForService } from "@/admin/repositories/assessment-templates.repository";
+import { getTemplateForService, getFirstActiveTemplate } from "@/admin/repositories/assessment-templates.repository";
 import { createResponse } from "@/admin/repositories/assessment-responses.repository";
 import { getProgramById } from "@/admin/repositories/programs.repository";
 import { recordPayment } from "@/admin/repositories/payments.repository";
@@ -802,14 +802,56 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
         );
       }
 
-      const lookupId    = programMode ? (program?.id ?? "") : serviceId;
-      const template    = lookupId ? await getTemplateForService(lookupId) : null;
+      const lookupId = programMode ? (program?.id ?? "") : serviceId;
+      console.log("[ASSESSMENT-DEBUG] BookingFlow confirm — lookup start", {
+        programMode, serviceId, lookupId,
+        serviceAssessmentMap,
+      });
+
+      // Service-specific assignment lookup
+      let template = lookupId ? await getTemplateForService(lookupId) : null;
+      console.log("[ASSESSMENT-DEBUG] getTemplateForService result", {
+        lookupId,
+        templateId:     template?.id ?? null,
+        templateActive: template?.active ?? null,
+      });
 
       // Check per-item assessment toggle
       const assessmentEnabled = programMode
         ? !!(program?.assessment_enabled)
         : !!(serviceAssessmentMap?.[serviceId]);
+      console.log("[ASSESSMENT-DEBUG] assessmentEnabled", {
+        assessmentEnabled,
+        serviceMapEntry: serviceAssessmentMap?.[serviceId],
+        programAssessment: programMode ? program?.assessment_enabled : undefined,
+      });
+
+      // When assessment is enabled but no service-specific template is assigned yet,
+      // fall back to the first active template in the system so the redirect still fires.
+      if (!template && assessmentEnabled) {
+        template = await getFirstActiveTemplate();
+        console.log("[ASSESSMENT-DEBUG] fallback getFirstActiveTemplate", {
+          templateId:     template?.id ?? null,
+          templateActive: template?.active ?? null,
+        });
+        if (template) {
+          console.warn(
+            "[ASSESSMENT-DEBUG] WARNING: no template assigned to service", lookupId,
+            "— using fallback template:", template.name_en,
+            "— assign this template to the service in the admin panel to suppress this warning.",
+          );
+        }
+      }
+
       const hasTemplate = !!(template?.active) && assessmentEnabled;
+      console.log("[ASSESSMENT-DEBUG] hasTemplate decision", {
+        hasTemplate,
+        templateActive:    template?.active ?? null,
+        assessmentEnabled,
+        blockedBy: !hasTemplate
+          ? (!template ? "NO_TEMPLATE" : !template.active ? "TEMPLATE_NOT_ACTIVE" : "ASSESSMENT_DISABLED")
+          : null,
+      });
 
       // Canonical service name — always store English for admin consistency
       const serviceType = (
@@ -957,9 +999,19 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
       if (hasTemplate) {
         // Attempt to pre-create the response row; navigate unconditionally even
         // if the insert fails — AssessmentResponsePage creates it as a fallback.
-        await createResponse(template!.id, appt.id, user?.id ?? null, resolvedClientId);
-        navigate(`/assessment/respond/${appt.id}`);
+        const responseRow = await createResponse(template!.id, appt.id, user?.id ?? null, resolvedClientId);
+        const targetUrl = `/assessment/respond/${appt.id}`;
+        console.log("[ASSESSMENT-DEBUG] navigate() called", {
+          targetUrl,
+          appointmentId:  appt.id,
+          templateId:     template!.id,
+          responseCreated: !!responseRow,
+          userId:         user?.id ?? null,
+          clientId:       resolvedClientId,
+        });
+        navigate(targetUrl);
       } else {
+        console.log("[ASSESSMENT-DEBUG] no assessment — showing success screen");
         setConfirmed(true);
       }
 

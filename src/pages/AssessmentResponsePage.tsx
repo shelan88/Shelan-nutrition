@@ -61,12 +61,28 @@ export default function AssessmentResponsePage() {
     if (!appointmentId || !user || authLoading) return;
 
     async function load() {
+      console.log("[ASSESSMENT-DEBUG] AssessmentResponsePage load", {
+        appointmentId, userId: user?.id,
+      });
       const appointment = await getAppointmentById(appointmentId!);
-      if (!appointment) { setPageState("error"); return; }
+      if (!appointment) {
+        console.log("[ASSESSMENT-DEBUG] BLOCKED: appointment not found for id:", appointmentId);
+        setPageState("error"); return;
+      }
+
+      console.log("[ASSESSMENT-DEBUG] appointment loaded", {
+        apptId:         appointment.id,
+        apptUserId:     appointment.user_id,
+        currentUserId:  user!.id,
+        userIdMatch:    appointment.user_id === user!.id,
+        templateId:     appointment.assessment_template_id,
+        assessmentStatus: appointment.assessment_status,
+      });
 
       // Security: deny access if the appointment has no owner (shouldn't happen
       // in the normal authenticated booking flow) or if the owner is a different user.
       if (!appointment.user_id || appointment.user_id !== user!.id) {
+        console.log("[ASSESSMENT-DEBUG] BLOCKED: user_id mismatch — appt.user_id:", appointment.user_id, "current user:", user!.id);
         navigate("/", { replace: true });
         return;
       }
@@ -75,12 +91,14 @@ export default function AssessmentResponsePage() {
 
       // Already submitted
       if (appointment.assessment_status === "assessment_submitted") {
+        console.log("[ASSESSMENT-DEBUG] assessment already submitted");
         setPageState("submitted");
         return;
       }
 
       // No template assigned
       if (!appointment.assessment_template_id) {
+        console.log("[ASSESSMENT-DEBUG] BLOCKED: appointment has no assessment_template_id");
         setPageState("no_template");
         return;
       }
