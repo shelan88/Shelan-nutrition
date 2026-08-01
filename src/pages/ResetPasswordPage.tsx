@@ -11,9 +11,12 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, CheckCircle2, AlertCircle, ShieldCheck } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
+  const { lang, dir } = useLanguage();
+  const isAr = lang === "ar";
 
   type Status = "waiting" | "ready" | "invalid" | "done";
   const [status,      setStatus]      = useState<Status>("waiting");
@@ -39,7 +42,6 @@ export default function ResetPasswordPage() {
       if (event === "PASSWORD_RECOVERY") {
         setStatus("ready");
       } else if (event === "INITIAL_SESSION") {
-        // A null session here means no recovery token — expired link or direct nav.
         setStatus(session ? "ready" : "invalid");
       }
     });
@@ -55,11 +57,14 @@ export default function ResetPasswordPage() {
     setError(null);
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError(isAr
+        ? "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل"
+        : "Password must be at least 8 characters."
+      );
       return;
     }
     if (password !== confirm) {
-      setError("Passwords do not match.");
+      setError(isAr ? "كلمتا المرور غير متطابقتين" : "Passwords do not match.");
       return;
     }
 
@@ -76,7 +81,10 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#faf7ff] to-[#fff0f7] flex items-center justify-center p-4">
+    <div
+      dir={dir}
+      className="min-h-screen bg-gradient-to-br from-[#faf7ff] to-[#fff0f7] flex items-center justify-center p-4"
+    >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -94,16 +102,18 @@ export default function ResetPasswordPage() {
                 <CheckCircle2 size={32} className="text-emerald-500" />
               </div>
               <h1 className="font-heading text-2xl font-bold text-[#1c1033] mb-2">
-                Password updated
+                {isAr ? "تم تغيير كلمة المرور" : "Password updated"}
               </h1>
               <p className="text-sm text-[#7b6997] mb-8 leading-relaxed">
-                Your new password is set. You can now sign in.
+                {isAr
+                  ? "كلمة مرورك الجديدة جاهزة. يمكنكِ الآن تسجيل الدخول."
+                  : "Your new password is set. You can now sign in."}
               </p>
               <button
                 onClick={() => navigate("/", { replace: true })}
                 className="w-full py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple text-white font-semibold text-sm shadow-md shadow-deep-purple/20 hover:shadow-lg transition-all duration-200"
               >
-                Back to home
+                {isAr ? "العودة إلى الصفحة الرئيسية" : "Back to home"}
               </button>
             </div>
           )}
@@ -115,16 +125,18 @@ export default function ResetPasswordPage() {
                 <AlertCircle size={32} className="text-red-400" />
               </div>
               <h1 className="font-heading text-2xl font-bold text-[#1c1033] mb-2">
-                Invalid or expired link
+                {isAr ? "رابط غير صالح أو منتهي" : "Invalid or expired link"}
               </h1>
               <p className="text-sm text-[#7b6997] mb-8 leading-relaxed">
-                This password reset link is invalid or has expired. Please request a new one.
+                {isAr
+                  ? "رابط إعادة تعيين كلمة المرور هذا غير صالح أو انتهت صلاحيته. يرجى طلب رابط جديد."
+                  : "This password reset link is invalid or has expired. Please request a new one."}
               </p>
               <button
                 onClick={() => navigate("/", { replace: true })}
                 className="text-sm font-medium text-primary-pink hover:text-lavender-purple transition-colors"
               >
-                Back to home
+                {isAr ? "العودة إلى الصفحة الرئيسية" : "Back to home"}
               </button>
             </div>
           )}
@@ -133,7 +145,9 @@ export default function ResetPasswordPage() {
           {status === "waiting" && (
             <div className="flex flex-col items-center py-8">
               <div className="w-8 h-8 border-2 border-lavender-purple/30 border-t-lavender-purple rounded-full animate-spin mb-4" />
-              <p className="text-sm text-[#7b6997]">Verifying…</p>
+              <p className="text-sm text-[#7b6997]">
+                {isAr ? "جارٍ التحقق…" : "Verifying…"}
+              </p>
             </div>
           )}
 
@@ -144,10 +158,10 @@ export default function ResetPasswordPage() {
                 <ShieldCheck size={22} className="text-lavender-purple" />
               </div>
               <h1 className="font-heading text-2xl font-bold text-[#1c1033] mb-1">
-                Set a new password
+                {isAr ? "تعيين كلمة مرور جديدة" : "Set a new password"}
               </h1>
               <p className="text-sm text-[#7b6997] mb-7">
-                Enter your new password below.
+                {isAr ? "أدخلي كلمة مرورك الجديدة أدناه." : "Enter your new password below."}
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-4" noValidate>
@@ -156,7 +170,7 @@ export default function ResetPasswordPage() {
                   <input
                     type={showPw ? "text" : "password"}
                     autoComplete="new-password"
-                    placeholder="New password"
+                    placeholder={isAr ? "كلمة المرور الجديدة" : "New password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -166,6 +180,7 @@ export default function ResetPasswordPage() {
                     type="button"
                     onClick={() => setShowPw((v) => !v)}
                     tabIndex={-1}
+                    aria-label={showPw ? "Hide password" : "Show password"}
                     className="absolute end-4 top-1/2 -translate-y-1/2 text-[#b3a6c9] hover:text-[#7b6997] transition-colors"
                   >
                     {showPw ? <EyeOff size={16} strokeWidth={1.8} /> : <Eye size={16} strokeWidth={1.8} />}
@@ -177,7 +192,7 @@ export default function ResetPasswordPage() {
                   <input
                     type={showConfirm ? "text" : "password"}
                     autoComplete="new-password"
-                    placeholder="Confirm password"
+                    placeholder={isAr ? "تأكيد كلمة المرور" : "Confirm password"}
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
                     required
@@ -187,13 +202,18 @@ export default function ResetPasswordPage() {
                     type="button"
                     onClick={() => setShowConfirm((v) => !v)}
                     tabIndex={-1}
+                    aria-label={showConfirm ? "Hide password" : "Show password"}
                     className="absolute end-4 top-1/2 -translate-y-1/2 text-[#b3a6c9] hover:text-[#7b6997] transition-colors"
                   >
                     {showConfirm ? <EyeOff size={16} strokeWidth={1.8} /> : <Eye size={16} strokeWidth={1.8} />}
                   </button>
                 </div>
 
-                <p className="text-[11px] text-[#b3a6c9]">Must be at least 8 characters.</p>
+                <p className="text-[11px] text-[#b3a6c9]">
+                  {isAr
+                    ? "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل."
+                    : "Must be at least 8 characters."}
+                </p>
 
                 {error && (
                   <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-[13px] text-red-600 text-center">
@@ -206,13 +226,14 @@ export default function ResetPasswordPage() {
                   disabled={saving || !password || !confirm}
                   className="w-full py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-lavender-purple text-white font-semibold text-sm shadow-md shadow-deep-purple/20 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                 >
-                  {saving
-                    ? <span className="flex items-center justify-center gap-2">
-                        <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                        Saving…
-                      </span>
-                    : "Set password"
-                  }
+                  {saving ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      {isAr ? "جارٍ الحفظ…" : "Saving…"}
+                    </span>
+                  ) : (
+                    isAr ? "تعيين كلمة المرور" : "Set password"
+                  )}
                 </button>
               </form>
             </>
