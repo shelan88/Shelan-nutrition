@@ -18,7 +18,7 @@ import {
   TrendingUp, TrendingDown, ArrowUpRight,
   Clock, AlertCircle,
   Plus, BookOpen, Upload, Star, Briefcase, BarChart3,
-  MessageSquare, ChevronRight, Sparkles,
+  MessageSquare, ChevronRight, Sparkles, Trash2,
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useDashboardStore } from "@/admin/repositories/dashboard.repository";
@@ -191,12 +191,14 @@ function ScheduleItem({ time, client, service, status, isAr, isLast }: Appointme
 
 // ─── 3. Assessment row ─────────────────────────────────────────────────────────
 interface AssessmentProps {
+  id: string;
   client: string;
   initials: string;
   date: string;
   risk: "High" | "Medium" | "Low";
   status: "Pending" | "Reviewed" | "Flagged";
   isAr: boolean;
+  onDelete: (id: string, client: string) => void;
 }
 
 const riskStyle = {
@@ -213,7 +215,7 @@ const assessStatusStyle = {
 };
 const assessStatusAr = { Pending: "بانتظار المراجعة", Reviewed: "تمت المراجعة", Flagged: "مُعلَّق" };
 
-function AssessmentRow({ client, initials, date, risk, status, isAr }: AssessmentProps) {
+function AssessmentRow({ id, client, initials, date, risk, status, isAr, onDelete }: AssessmentProps) {
   return (
     <tr className="group border-b border-[var(--admin-border)] last:border-0 hover:bg-[var(--admin-hover-bg)] transition-colors">
       <td className="py-3 px-4">
@@ -237,11 +239,92 @@ function AssessmentRow({ client, initials, date, risk, status, isAr }: Assessmen
         </span>
       </td>
       <td className="py-3 px-4">
-        <button className="text-[12px] font-semibold text-primary-pink hover:text-soft-purple transition-colors opacity-0 group-hover:opacity-100">
-          {isAr ? "مراجعة ←" : "Review →"}
+        <button
+          onClick={() => onDelete(id, client)}
+          title={isAr ? "حذف" : "Delete"}
+          className="
+            inline-flex items-center justify-center w-7 h-7 rounded-lg
+            text-[var(--admin-text-faint)] hover:text-red-500
+            hover:bg-red-50 border border-transparent hover:border-red-200
+            opacity-0 group-hover:opacity-100
+            transition-all duration-150
+          "
+        >
+          <Trash2 size={13} strokeWidth={1.8} />
         </button>
       </td>
     </tr>
+  );
+}
+
+// ─── 3b. Delete confirmation modal ────────────────────────────────────────────
+interface DeleteConfirmModalProps {
+  clientName: string;
+  isAr: boolean;
+  deleting: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function DeleteConfirmModal({ clientName, isAr, deleting, onConfirm, onCancel }: DeleteConfirmModalProps) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onCancel}
+      />
+      {/* Card */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 8 }}
+        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        className="relative w-full max-w-sm bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] shadow-2xl shadow-black/20 p-6"
+      >
+        {/* Icon */}
+        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-red-50 border border-red-100 mx-auto mb-4">
+          <Trash2 size={20} className="text-red-500" strokeWidth={1.8} />
+        </div>
+
+        <h3 className="text-[15px] font-bold text-[var(--admin-text)] text-center mb-1">
+          {isAr ? "حذف التقييم؟" : "Delete assessment?"}
+        </h3>
+        <p className="text-[13px] text-[var(--admin-text-muted)] text-center mb-6 leading-relaxed">
+          {isAr
+            ? <>سيتم حذف تقييم <span className="font-semibold text-[var(--admin-text)]">{clientName}</span> نهائياً ولا يمكن التراجع عن هذا الإجراء.</>
+            : <>The assessment for <span className="font-semibold text-[var(--admin-text)]">{clientName}</span> will be permanently deleted. This cannot be undone.</>
+          }
+        </p>
+
+        <div className="flex gap-2.5">
+          <button
+            onClick={onCancel}
+            disabled={deleting}
+            className="flex-1 py-2.5 rounded-xl text-[13px] font-semibold text-[var(--admin-text-muted)] bg-[var(--admin-hover-bg)] hover:bg-[var(--admin-border)] border border-[var(--admin-border)] transition-all duration-150 disabled:opacity-50"
+          >
+            {isAr ? "إلغاء" : "Cancel"}
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={deleting}
+            className="flex-1 py-2.5 rounded-xl text-[13px] font-semibold text-white bg-red-500 hover:bg-red-600 shadow-sm shadow-red-200 transition-all duration-150 disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {deleting ? (
+              <>
+                <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                {isAr ? "جارٍ الحذف…" : "Deleting…"}
+              </>
+            ) : (
+              isAr ? "حذف" : "Delete"
+            )}
+          </button>
+        </div>
+      </motion.div>
+    </div>
   );
 }
 
@@ -318,6 +401,26 @@ export default function DashboardPage() {
   const isAr = lang === "ar";
   const store = useDashboardStore();
 
+  // ── Delete modal state ──
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; client: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteRequest = (id: string, client: string) => {
+    setDeleteTarget({ id, client });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    await store.removeAssessmentEntry(deleteTarget.id);
+    setDeleting(false);
+    setDeleteTarget(null);
+  };
+
+  const handleDeleteCancel = () => {
+    if (!deleting) setDeleteTarget(null);
+  };
+
   // ── KPI data ──
   const kpis: KpiProps[] = [
     {
@@ -380,12 +483,14 @@ export default function DashboardPage() {
 
   // ── Assessment data (live from dashboard repository) ──
   const assessments: AssessmentProps[] = store.assessmentEntries.slice(0, 5).map((e) => ({
+    id:       e.id,
     client:   e.client,
     initials: e.initials,
     date:     e.date,
     risk:     e.risk,
     status:   e.status,
     isAr,
+    onDelete: handleDeleteRequest,
   }));
 
   // ── Messages data (live from Supabase) ──
@@ -403,6 +508,16 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* ── Delete confirmation modal ────────────────────────────────────── */}
+      {deleteTarget && (
+        <DeleteConfirmModal
+          clientName={deleteTarget.client}
+          isAr={isAr}
+          deleting={deleting}
+          onConfirm={handleDeleteConfirm}
+          onCancel={handleDeleteCancel}
+        />
+      )}
 
       {/* ── 1. Welcome Header ─────────────────────────────────────────────── */}
       <motion.div

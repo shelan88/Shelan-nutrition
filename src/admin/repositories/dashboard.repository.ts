@@ -12,6 +12,7 @@ import type { RiskLevel } from "@/admin/data/clients";
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 export interface DashboardAssessmentEntry {
+  id:       string;
   client:   string;
   initials: string;
   date:     string;
@@ -108,6 +109,7 @@ async function fetchStats(): Promise<DashboardStats> {
         : riskRaw.toLowerCase() === "medium" ? "Medium"
         : "Low";
       return {
+        id:       a.id,
         client:   clientInfo?.full_name ?? "Unknown",
         initials: clientInfo?.initials  ?? "??",
         date:     new Date(a.submitted_at).toLocaleDateString("en-US", {
@@ -209,9 +211,10 @@ async function fetchRecentMessages(): Promise<DashboardMessage[]> {
 // ─── React hook ───────────────────────────────────────────────────────────────
 
 interface DashboardData extends DashboardStats {
-  loading:          boolean;
-  todaySchedule:    TodayAppointment[];
-  recentMessages:   DashboardMessage[];
+  loading:                boolean;
+  todaySchedule:          TodayAppointment[];
+  recentMessages:         DashboardMessage[];
+  removeAssessmentEntry:  (id: string) => Promise<void>;
 }
 
 export function useDashboardStore(): DashboardData {
@@ -240,7 +243,24 @@ export function useDashboardStore(): DashboardData {
     return () => { cancelled = true; };
   }, []);
 
-  return { ...stats, loading, todaySchedule, recentMessages };
+  // Optimistic removal: update local state immediately, then delete from DB.
+  // response_answers rows cascade-delete automatically (FK ON DELETE CASCADE).
+  const removeAssessmentEntry = async (id: string): Promise<void> => {
+    setStats((prev) => ({
+      ...prev,
+      assessmentEntries:  prev.assessmentEntries.filter((e) => e.id !== id),
+      pendingAssessments: Math.max(0, prev.pendingAssessments - 1),
+    }));
+    const { error } = await supabase
+      .from("assessment_responses")
+      .delete()
+      .eq("id", id);
+    if (error) {
+      console.error("[dashboard] deleteAssessment:", error.message);
+    }
+  };
+
+  return { ...stats, loading, todaySchedule, recentMessages, removeAssessmentEntry };
 }
 
 // ─── Mutation no-ops (kept for backward-compat with AssessmentWizard) ─────────
