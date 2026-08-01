@@ -193,6 +193,7 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
   const [date,          setDate]          = useState("");
   const [time,          setTime]          = useState("");
   const [name,          setName]          = useState("");
+  const [email,         setEmail]         = useState(user?.email ?? "");
   const [phone,         setPhone]         = useState("");
   const [status,        setStatus]        = useState<"idle" | "processing" | "success">("idle");
   const [error,         setError]         = useState<string | null>(null);
@@ -200,7 +201,8 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
   const [cardComplete,  setCardComplete]  = useState(false);
   const [cardError,     setCardError]     = useState<string | null>(null);
 
-  const canProceed = !!date && !!time;
+  const canProceed  = !!date && !!time;
+  const emailValid  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -246,8 +248,8 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
       };
 
       // ── 2. Confirm the card payment with Stripe ───────────────────────────
-      const clientName  = name.trim() || user?.email || "Customer";
-      const clientEmail = user?.email ?? "";
+      const clientName  = name.trim() || email.trim() || "Customer";
+      const clientEmail = email.trim();
 
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
         clientSecret,
@@ -366,7 +368,7 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setStatus("idle");
     }
-  }, [status, stripe, elements, plan, date, time, name, phone, user, navigate, onClose, cardComplete, lang]);
+  }, [status, stripe, elements, plan, date, time, name, email, phone, user, navigate, onClose, cardComplete, lang]);
 
   const stepLabel = step === 0
     ? "Step 1 of 2 — Pick a Date & Time"
@@ -468,6 +470,35 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
                   </span>
                 </div>
 
+                {/* Email address — required, pre-filled from auth */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    {t.emailLabel}
+                    <span className="text-primary-pink ms-0.5">*</span>
+                  </label>
+                  <input
+                    required
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={t.emailPlaceholder}
+                    autoComplete="email"
+                    className={`w-full rounded-xl border bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-all ${
+                      email && !emailValid
+                        ? "border-red-400 focus:ring-red-400/40 focus:border-red-400"
+                        : "border-gray-300 focus:ring-primary-pink/40 focus:border-primary-pink/60"
+                    }`}
+                  />
+                  {email && !emailValid ? (
+                    <p className="mt-1 text-[10px] text-red-500 flex items-center gap-1">
+                      <AlertCircle size={10} className="shrink-0" />
+                      {lang === "ar" ? "يرجى إدخال بريد إلكتروني صحيح." : "Please enter a valid email address."}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[10px] text-gray-400">{t.emailHint}</p>
+                  )}
+                </div>
+
                 {/* Cardholder name */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">
@@ -522,7 +553,7 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
                   )}
                 </div>
 
-                <button type="submit" disabled={status === "processing" || !stripe || !cardComplete}
+                <button type="submit" disabled={status === "processing" || !stripe || !cardComplete || !emailValid}
                   className="w-full mt-2 py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white font-semibold hover:from-primary-pink hover:to-lavender-purple transition-colors shadow-lg shadow-deep-purple/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {status === "processing" ? (
