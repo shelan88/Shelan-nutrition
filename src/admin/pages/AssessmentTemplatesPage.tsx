@@ -33,7 +33,7 @@ import type { LibraryCategory, MyLibraryFolder } from "@/admin/repositories/ques
 import { useLanguage } from "@/context/LanguageContext";
 import { useAdminLabels } from "@/admin/hooks/useAdminLabels";
 import PageHeader from "../components/PageHeader";
-import { supabase } from "@/lib/supabase";
+
 import {
   getAllTemplates,
   getTemplateWithDetails,
