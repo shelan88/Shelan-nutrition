@@ -158,7 +158,6 @@ export default function App() {
       <LanguageProvider>
         <ScrollToTop />
         <RouteLogger />
-        <GlobalAuthLogger />
         <Routes>
           {/* Admin — completely isolated, no public chrome */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
