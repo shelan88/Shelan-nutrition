@@ -19,7 +19,8 @@ import analyticsHandler          from "./analytics.js";
 import debugAnalyticsHandler     from "./debug-analytics.js";
 import createPaymentIntentHandler  from "./create-payment-intent.js";
 import stripeWebhookHandler       from "./stripe-webhook.js";
-import sendPasswordResetHandler   from "./send-password-reset.js";
+import sendPasswordResetHandler        from "./send-password-reset.js";
+import sendQuestionnaireReminderHandler from "./send-questionnaire-reminder.js";
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.post("/api/delete-account",       deleteAccountHandler);
 app.post("/api/send-booking-emails",  sendBookingEmailsHandler);
 app.post("/api/create-payment-intent", createPaymentIntentHandler);
 app.post("/api/send-password-reset",  sendPasswordResetHandler);
+app.post("/api/send-questionnaire-reminder", sendQuestionnaireReminderHandler);
 app.get("/api/health",                healthHandler);
 app.get("/api/analytics",             analyticsHandler);
 app.get("/api/debug-analytics",       debugAnalyticsHandler);

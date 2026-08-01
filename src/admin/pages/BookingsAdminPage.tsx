@@ -9,11 +9,12 @@ import { motion } from "framer-motion";
 import {
   Calendar, CheckCircle2, Clock, XCircle,
   Search, X, RefreshCw, ChevronDown,
-  CalendarCheck, TrendingUp, Eye, Trash2,
+  CalendarCheck, TrendingUp, Eye, Trash2, Mail, CheckCheck,
 } from "lucide-react";
 import AssessmentResponseDrawer from "@/admin/components/AssessmentResponseDrawer";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAdminTimezone, getTzAbbr } from "@/lib/timezone";
+import { supabase } from "@/lib/supabase";
 import PageHeader from "../components/PageHeader";
 import {
   getAllAppointments,
@@ -81,10 +82,13 @@ export default function BookingsAdminPage() {
   const [loading,         setLoading]         = useState(true);
   const [search,          setSearch]          = useState("");
   const [filter,          setFilter]          = useState<Status | "">("");
+  const [assessmentFilter, setAssessmentFilter] = useState<"awaiting_assessment" | "">("");
   const [updatingId,      setUpdatingId]      = useState<string | null>(null);
   const [viewingAssessment, setViewingAssessment] = useState<AppointmentRow | null>(null);
   const [deleteTarget,    setDeleteTarget]    = useState<{ id: string; name: string } | null>(null);
   const [deleting,        setDeleting]        = useState(false);
+  const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
+  const [sentReminderIds,   setSentReminderIds]   = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -98,6 +102,7 @@ export default function BookingsAdminPage() {
   const filtered = useMemo(() => {
     return appts.filter((a) => {
       if (filter && a.status !== filter) return false;
+      if (assessmentFilter && a.assessment_status !== assessmentFilter) return false;
       if (!search.trim()) return true;
       const q = search.toLowerCase();
       return (
@@ -105,14 +110,45 @@ export default function BookingsAdminPage() {
         (a.type ?? "").toLowerCase().includes(q)
       );
     });
-  }, [appts, filter, search]);
+  }, [appts, filter, assessmentFilter, search]);
 
   // Stats
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
     for (const s of ALL_STATUSES) c[s] = appts.filter((a) => a.status === s).length;
+    c.awaiting_assessment = appts.filter((a) => a.assessment_status === "awaiting_assessment").length;
     return c;
   }, [appts]);
+
+  async function sendReminder(appt: AppointmentRow) {
+    setSendingReminderId(appt.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const resp = await fetch("/api/send-questionnaire-reminder", {
+        method: "POST",
+        headers: {
+          "Content-Type":  "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          appointmentId: appt.id,
+          lang:          isAr ? "ar" : "en",
+        }),
+      });
+      if (resp.ok) {
+        setSentReminderIds((prev) => new Set(prev).add(appt.id));
+      } else {
+        const body = await resp.json().catch(() => ({}));
+        console.error("[Bookings] reminder failed:", body.error);
+        alert(body.error ?? (isAr ? "فشل إرسال التذكير. يرجى المحاولة مجدداً." : "Failed to send reminder. Please try again."));
+      }
+    } catch (err) {
+      console.error("[Bookings] reminder error:", err);
+      alert(isAr ? "فشل إرسال التذكير. يرجى المحاولة مجدداً." : "Failed to send reminder. Please try again.");
+    }
+    setSendingReminderId(null);
+  }
 
   async function changeStatus(id: string, status: KnownStatus) {
     setUpdatingId(id);
@@ -293,9 +329,26 @@ export default function BookingsAdminPage() {
             <ChevronDown size={11} className="pointer-events-none absolute end-2 top-1/2 -translate-y-1/2 text-[var(--admin-text-faint)]" />
           </div>
 
-          {(search || filter) && (
+          {/* Assessment filter */}
+          <div className="relative">
+            <select
+              value={assessmentFilter}
+              onChange={(e) => setAssessmentFilter(e.target.value as "awaiting_assessment" | "")}
+              className={`appearance-none h-9 ps-3 pe-7 rounded-lg border text-[12.5px] font-medium focus:outline-none focus:border-primary-pink/40 focus:ring-2 focus:ring-primary-pink/10 transition-all cursor-pointer ${
+                assessmentFilter
+                  ? "border-amber-300 bg-amber-50 text-amber-700"
+                  : "border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text-muted)]"
+              }`}
+            >
+              <option value="">{isAr ? "كل التقييمات" : "All assessments"}</option>
+              <option value="awaiting_assessment">{isAr ? "بانتظار التقييم" : "Awaiting assessment"}</option>
+            </select>
+            <ChevronDown size={11} className="pointer-events-none absolute end-2 top-1/2 -translate-y-1/2 text-[var(--admin-text-faint)]" />
+          </div>
+
+          {(search || filter || assessmentFilter) && (
             <button
-              onClick={() => { setSearch(""); setFilter(""); }}
+              onClick={() => { setSearch(""); setFilter(""); setAssessmentFilter(""); }}
               className="flex items-center gap-1 h-9 px-3 rounded-lg text-[12px] font-semibold text-[var(--admin-text-faint)] hover:text-primary-pink hover:bg-primary-pink/5 transition-all"
             >
               <X size={12} /> {isAr ? "إعادة تعيين" : "Clear"}
@@ -448,6 +501,30 @@ export default function BookingsAdminPage() {
                               <ChevronDown size={10} className="pointer-events-none absolute end-1.5 top-1/2 -translate-y-1/2 text-[var(--admin-text-faint)]" />
                             )}
                           </div>
+
+                          {/* Resend questionnaire reminder */}
+                          {appt.assessment_status === "awaiting_assessment" && appt.client_email && (
+                            sentReminderIds.has(appt.id) ? (
+                              <span
+                                title={isAr ? "تم إرسال التذكير" : "Reminder sent"}
+                                className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-emerald-600 bg-emerald-50 border border-emerald-200"
+                              >
+                                <CheckCheck size={13} strokeWidth={2} />
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => sendReminder(appt)}
+                                disabled={sendingReminderId === appt.id}
+                                title={isAr ? "إعادة إرسال رابط الاستبيان" : "Resend questionnaire link"}
+                                className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-[var(--admin-text-faint)] hover:text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-200 opacity-0 group-hover:opacity-100 transition-all duration-150 disabled:opacity-60"
+                              >
+                                {sendingReminderId === appt.id
+                                  ? <RefreshCw size={13} strokeWidth={1.8} className="animate-spin" />
+                                  : <Mail size={13} strokeWidth={1.8} />
+                                }
+                              </button>
+                            )
+                          )}
 
                           {/* Delete button */}
                           <button
