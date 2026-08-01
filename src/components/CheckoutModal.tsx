@@ -183,6 +183,10 @@ export interface CheckoutPlan {
   price:              string;
   period:             string;
   serviceId?:         string;
+  /** DB primary-key of the ConsultationRow this plan was built from.
+   *  When present, assessment_enabled is resolved by ID rather than by name,
+   *  so renaming the consultation in the CMS never silently breaks the toggle. */
+  consultationId?:    string;
   /** Mirrors the per-service assessment_enabled toggle in the admin panel.
    *  When undefined (legacy callers), defaults to true so existing behaviour
    *  is preserved. Set to false to suppress the post-payment questionnaire. */

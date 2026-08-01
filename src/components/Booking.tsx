@@ -90,18 +90,27 @@ export default function Booking() {
     return services.find((s) => s.name_en.trim().toLowerCase() === normalised)?.id;
   };
 
-  // Resolve the per-service assessment_enabled toggle from the loaded DB rows.
-  // Matches on either the English or Arabic title so it works for both languages.
+  // Resolve the per-consultation assessment_enabled toggle from the loaded DB rows.
+  // When a consultationId is supplied (DB-backed plan) it matches by primary key,
+  // making it immune to title renames.  Falls back to name-matching only for
+  // legacy hardcoded plans that have no DB row ID.
   // Returns true when dbPlans is not yet loaded or no matching row is found,
   // preserving the allow-assessment default for hardcoded fallback plans.
-  const resolveAssessmentEnabled = (planName: string): boolean => {
+  const resolveAssessmentEnabled = (
+    consultationId: string | undefined,
+    planName: string,
+  ): boolean => {
     if (!dbPlans || dbPlans.length === 0) return true;
-    const normalised = planName.trim().toLowerCase();
-    const match = dbPlans.find(
-      (r) =>
-        (r.title_en ?? "").trim().toLowerCase() === normalised ||
-        (r.title_ar ?? "").trim().toLowerCase() === normalised,
-    );
+    const match = consultationId
+      ? dbPlans.find((r) => r.id === consultationId)
+      : (() => {
+          const normalised = planName.trim().toLowerCase();
+          return dbPlans.find(
+            (r) =>
+              (r.title_en ?? "").trim().toLowerCase() === normalised ||
+              (r.title_ar ?? "").trim().toLowerCase() === normalised,
+          );
+        })();
     return match ? !!(match.assessment_enabled) : true;
   };
 
@@ -109,7 +118,7 @@ export default function Booking() {
     const plan: CheckoutPlan = {
       ...rawPlan,
       serviceId:         resolveServiceId(rawPlan.name),
-      assessmentEnabled: resolveAssessmentEnabled(rawPlan.name),
+      assessmentEnabled: resolveAssessmentEnabled(rawPlan.consultationId, rawPlan.name),
     };
     if (!loading && user) {
       setCheckoutPlan(plan);
@@ -203,7 +212,7 @@ export default function Booking() {
 
                 <button
                   type="button"
-                  onClick={() => handlePlanClick({ name: plan.name, price: plan.price, period: plan.period })}
+                  onClick={() => handlePlanClick({ name: plan.name, price: plan.price, period: plan.period, consultationId: plan.id })}
                   className={`w-full py-3.5 rounded-full font-semibold transition-colors shadow-lg ${
                     isFeatured
                       ? "bg-gradient-to-r from-primary-pink to-soft-pink text-white hover:from-primary-pink hover:to-lavender-purple shadow-deep-purple/20"
