@@ -400,8 +400,10 @@ export default function AssessmentWizard({ data, strings }: AssessmentWizardProp
         });
 
         // 3a. Existing client — update assessment, append timeline event
+        let responseId: string | null = null;
         if (existingClient) {
-          await saveAssessment(existingClient.id, result);
+          const { responseId: rid } = await saveAssessment(existingClient.id, result);
+          responseId = rid;
           await appendTimelineEvent(existingClient.id, {
             event:   "Assessment Re-submitted",
             eventAr: "تم تقديم التقييم مجدداً",
@@ -410,18 +412,22 @@ export default function AssessmentWizard({ data, strings }: AssessmentWizardProp
           });
         } else {
           // 3b. New client — create full record
-          await createClient(result);
+          const { responseId: rid } = await createClient(result);
+          responseId = rid;
           incrementClients();
         }
 
         // 4. Dashboard: prepend to recent-assessment queue, bump counter
-        addAssessmentEntry({
-          client:   result.fullName,
-          initials: result.avatarInitials,
-          date:     today,
-          risk:     result.riskLevel,
-          status:   result.riskLevel === "High" ? "Flagged" : "Pending",
-        });
+        if (responseId) {
+          addAssessmentEntry({
+            id:       responseId,
+            client:   result.fullName,
+            initials: result.avatarInitials,
+            date:     today,
+            risk:     result.riskLevel,
+            status:   result.riskLevel === "High" ? "Flagged" : "Pending",
+          });
+        }
         incrementAssessmentRequests();
         updateRiskCounters(result.riskLevel);
 

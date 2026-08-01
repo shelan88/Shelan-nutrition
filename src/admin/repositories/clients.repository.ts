@@ -259,7 +259,9 @@ export async function upsertClientFromAuth(user: SupabaseUser): Promise<void> {
   }
 }
 
-export async function createClient(result: AssessmentResult): Promise<Client | null> {
+export async function createClient(
+  result: AssessmentResult,
+): Promise<{ client: Client | null; responseId: string | null }> {
   const today = new Date().toISOString().slice(0, 10);
 
   const { data: clientRow, error: clientErr } = await supabase
@@ -288,7 +290,7 @@ export async function createClient(result: AssessmentResult): Promise<Client | n
 
   if (clientErr || !clientRow) {
     console.error("[clients] createClient insert:", clientErr?.message);
-    return null;
+    return { client: null, responseId: null };
   }
 
   const clientId = clientRow.id as string;
@@ -296,17 +298,21 @@ export async function createClient(result: AssessmentResult): Promise<Client | n
   // Write to assessment_responses (canonical table after unification fix).
   // Use the well-known legacy template UUID so the NOT NULL FK is satisfied.
   const LEGACY_TEMPLATE_ID = "00000000-0000-0000-0000-000000000001";
-  await supabase.from("assessment_responses").insert({
-    template_id:           LEGACY_TEMPLATE_ID,
-    client_id:             clientId,
-    status:                "submitted",
-    submitted_at:          new Date().toISOString(),
-    score:                 result.score,
-    risk_level:            result.riskLevel,
-    risk_percentage:       result.riskPercentage,
-    diagnosis_category:    result.diagnosisCategory,
-    diagnosis_category_ar: result.diagnosisCategoryAr,
-  });
+  const { data: responseRow } = await supabase
+    .from("assessment_responses")
+    .insert({
+      template_id:           LEGACY_TEMPLATE_ID,
+      client_id:             clientId,
+      status:                "submitted",
+      submitted_at:          new Date().toISOString(),
+      score:                 result.score,
+      risk_level:            result.riskLevel,
+      risk_percentage:       result.riskPercentage,
+      diagnosis_category:    result.diagnosisCategory,
+      diagnosis_category_ar: result.diagnosisCategoryAr,
+    })
+    .select("id")
+    .single();
 
   await supabase.from("timeline_events").insert({
     client_id: clientId,
@@ -316,13 +322,13 @@ export async function createClient(result: AssessmentResult): Promise<Client | n
     date:      today,
   });
 
-  return getClient(clientId);
+  return { client: await getClient(clientId), responseId: responseRow?.id ?? null };
 }
 
 export async function saveAssessment(
   clientId: string,
   result: AssessmentResult,
-): Promise<Client | null> {
+): Promise<{ client: Client | null; responseId: string | null }> {
   const today = new Date().toISOString().slice(0, 10);
 
   await supabase
@@ -339,19 +345,23 @@ export async function saveAssessment(
 
   // Write to assessment_responses (canonical table after unification fix).
   const LEGACY_TEMPLATE_ID = "00000000-0000-0000-0000-000000000001";
-  await supabase.from("assessment_responses").insert({
-    template_id:           LEGACY_TEMPLATE_ID,
-    client_id:             clientId,
-    status:                "submitted",
-    submitted_at:          new Date().toISOString(),
-    score:                 result.score,
-    risk_level:            result.riskLevel,
-    risk_percentage:       result.riskPercentage,
-    diagnosis_category:    result.diagnosisCategory,
-    diagnosis_category_ar: result.diagnosisCategoryAr,
-  });
+  const { data: responseRow } = await supabase
+    .from("assessment_responses")
+    .insert({
+      template_id:           LEGACY_TEMPLATE_ID,
+      client_id:             clientId,
+      status:                "submitted",
+      submitted_at:          new Date().toISOString(),
+      score:                 result.score,
+      risk_level:            result.riskLevel,
+      risk_percentage:       result.riskPercentage,
+      diagnosis_category:    result.diagnosisCategory,
+      diagnosis_category_ar: result.diagnosisCategoryAr,
+    })
+    .select("id")
+    .single();
 
-  return getClient(clientId);
+  return { client: await getClient(clientId), responseId: responseRow?.id ?? null };
 }
 
 export async function updateClient(
