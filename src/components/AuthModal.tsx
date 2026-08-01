@@ -119,9 +119,16 @@ export default function AuthModal({ onClose, onSuccess, initialView = "login" }:
   const handleResetSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setResetLoading(true);
-    await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    try {
+      await fetch("/api/send-password-reset", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ email: resetEmail.trim(), lang }),
+      });
+    } catch {
+      // Silently ignore network errors — the UI still shows "check your inbox"
+      // so we don't leak whether an account exists.
+    }
     setResetLoading(false);
     setResetSent(true);
   };

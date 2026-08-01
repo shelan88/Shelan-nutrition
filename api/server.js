@@ -17,8 +17,9 @@ import sendBookingEmailsHandler  from "./send-booking-emails.js";
 import sitemapHandler            from "./sitemap.js";
 import analyticsHandler          from "./analytics.js";
 import debugAnalyticsHandler     from "./debug-analytics.js";
-import createPaymentIntentHandler from "./create-payment-intent.js";
-import stripeWebhookHandler      from "./stripe-webhook.js";
+import createPaymentIntentHandler  from "./create-payment-intent.js";
+import stripeWebhookHandler       from "./stripe-webhook.js";
+import sendPasswordResetHandler   from "./send-password-reset.js";
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use(express.json());
 app.post("/api/delete-account",       deleteAccountHandler);
 app.post("/api/send-booking-emails",  sendBookingEmailsHandler);
 app.post("/api/create-payment-intent", createPaymentIntentHandler);
+app.post("/api/send-password-reset",  sendPasswordResetHandler);
 app.get("/api/health",                healthHandler);
 app.get("/api/analytics",             analyticsHandler);
 app.get("/api/debug-analytics",       debugAnalyticsHandler);
