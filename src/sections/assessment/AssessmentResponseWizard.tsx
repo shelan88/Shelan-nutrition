@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { saveAnswer, submitResponse, markResponseInProgress } from "@/admin/repositories/assessment-responses.repository";
 import type { TemplateWithDetails, QuestionWithOptions } from "@/admin/repositories/assessment-templates.repository";
+import { ISO_COUNTRIES, COUNTRY_LIST_SENTINEL } from "@/data/iso-countries";
 
 // ─── Variants ────────────────────────────────────────────────────────────────
 const variants = {
@@ -235,7 +236,12 @@ function QuestionInput({
       );
     }
 
-    case "dropdown":
+    case "dropdown": {
+      // If the admin marked this as a country dropdown (sentinel option),
+      // substitute the full ISO country list at render time.
+      const isCountryDropdown = question.options.some(
+        (o) => o.value === COUNTRY_LIST_SENTINEL,
+      );
       return (
         <select
           value={value as string}
@@ -243,13 +249,20 @@ function QuestionInput({
           className={`${inputCls} max-w-xs cursor-pointer`}
         >
           <option value="">{isAr ? "— اختاري —" : "— Select —"}</option>
-          {question.options.map((opt) => (
-            <option key={opt.id} value={opt.value}>
-              {isAr && opt.label_ar ? opt.label_ar : opt.label_en}
-            </option>
-          ))}
+          {isCountryDropdown
+            ? ISO_COUNTRIES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {isAr ? c.label_ar : c.label_en}
+                </option>
+              ))
+            : question.options.map((opt) => (
+                <option key={opt.id} value={opt.value}>
+                  {isAr && opt.label_ar ? opt.label_ar : opt.label_en}
+                </option>
+              ))}
         </select>
       );
+    }
 
     case "file_upload":
     case "image_upload":
@@ -318,8 +331,19 @@ function formatAnswerForDisplay(
       if (value === "yes") return isAr ? "نعم" : "Yes";
       if (value === "no")  return isAr ? "لا"  : "No";
       return value;
-    case "single_choice":
+    case "single_choice": {
+      const opt = question.options.find((o) => o.value === value);
+      return opt ? (isAr && opt.label_ar ? opt.label_ar : opt.label_en) : value;
+    }
     case "dropdown": {
+      // Country dropdown: resolve ISO code to display name
+      const isCountryDropdown = question.options.some(
+        (o) => o.value === COUNTRY_LIST_SENTINEL,
+      );
+      if (isCountryDropdown) {
+        const country = ISO_COUNTRIES.find((c) => c.value === value);
+        return country ? (isAr ? country.label_ar : country.label_en) : value;
+      }
       const opt = question.options.find((o) => o.value === value);
       return opt ? (isAr && opt.label_ar ? opt.label_ar : opt.label_en) : value;
     }

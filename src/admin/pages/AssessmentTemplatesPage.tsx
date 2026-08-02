@@ -17,8 +17,9 @@ import {
   AlertCircle, Type, AlignLeft, ToggleRight as YesNoIcon, List,
   CheckSquare, ChevronDown as DropdownIcon, Hash, Calendar as CalendarIcon,
   Paperclip, Image as ImageIcon, ClipboardList, BookOpen, Bookmark,
-  Eye, EyeOff,
+  Eye, EyeOff, Globe,
 } from "lucide-react";
+import { COUNTRY_LIST_SENTINEL } from "@/data/iso-countries";
 import QuestionLibraryDrawer from "../components/QuestionLibraryDrawer";
 import type { LibraryQuestion } from "../components/QuestionLibraryDrawer";
 import BundlePickerModal from "../components/BundlePickerModal";
@@ -1263,7 +1264,7 @@ function QuestionRow({
         <span className={isEnabled ? "text-[var(--admin-text-muted)]" : "text-[var(--admin-text-faint)]"}>{typeInfo?.icon}</span>
         <div className="flex-1 min-w-0" onClick={onToggle}>
           <p className="text-[13px] font-medium text-[var(--admin-text)] truncate">
-            {question.label_en || <span className="text-[var(--admin-text-faint)] italic">{isAr ? "بدون عنوان" : "Untitled"}</span>}
+            {(isAr ? (question.label_ar || question.label_en) : question.label_en) || <span className="text-[var(--admin-text-faint)] italic">{isAr ? "بدون عنوان" : "Untitled"}</span>}
             {!isEnabled && (
               <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-[var(--admin-text-faint)] bg-[var(--admin-hover-bg)] px-1.5 py-0.5 rounded">
                 {isAr ? "معطّل" : "Disabled"}
@@ -1443,41 +1444,91 @@ function QuestionForm({
       </div>
 
       {/* Options (choice types) */}
-      {showOptions && (
-        <div className="border border-[var(--admin-border)] rounded-xl p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <label className={`${LABEL} mb-0`}>{isAr ? "الخيارات" : "Options"}</label>
-            <button type="button" onClick={addOption} className="flex items-center gap-1 text-[11px] font-medium text-primary-pink hover:text-primary-pink/80 transition-colors">
-              <Plus size={11} /> {isAr ? "إضافة خيار" : "Add Option"}
-            </button>
-          </div>
-          {form.options.length === 0 && (
-            <p className="text-[11px] text-[var(--admin-text-faint)]">
-              {isAr ? "أضف خياراً على الأقل." : "Add at least one option."}
-            </p>
-          )}
-          {form.options.map((opt, i) => (
-            <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
-              <input
-                value={opt.label_en}
-                onChange={(e) => updateOption(i, "label_en", e.target.value)}
-                placeholder={`Option ${i + 1} EN`}
-                className={INPUT}
-              />
-              <input
-                dir="rtl"
-                value={opt.label_ar}
-                onChange={(e) => updateOption(i, "label_ar", e.target.value)}
-                placeholder={`الخيار ${i + 1} AR`}
-                className={INPUT}
-              />
-              <button type="button" onClick={() => removeOption(i)} className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-colors">
-                <X size={12} />
-              </button>
+      {showOptions && (() => {
+        // For dropdown, offer a toggle to use the built-in ISO country list.
+        const isDropdown = form.type === "dropdown";
+        const isCountryMode = form.options.some((o) => o.value === COUNTRY_LIST_SENTINEL);
+
+        function toggleCountryMode() {
+          if (isCountryMode) {
+            // Remove sentinel → switch back to manual options
+            set("options", form.options.filter((o) => o.value !== COUNTRY_LIST_SENTINEL));
+          } else {
+            // Add sentinel, clear any manual options to avoid confusion
+            set("options", [{ label_en: "Built-in Country List", label_ar: "قائمة الدول المدمجة", value: COUNTRY_LIST_SENTINEL }]);
+          }
+        }
+
+        return (
+          <div className="border border-[var(--admin-border)] rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className={`${LABEL} mb-0`}>{isAr ? "الخيارات" : "Options"}</label>
+              {!isCountryMode && (
+                <button type="button" onClick={addOption} className="flex items-center gap-1 text-[11px] font-medium text-primary-pink hover:text-primary-pink/80 transition-colors">
+                  <Plus size={11} /> {isAr ? "إضافة خيار" : "Add Option"}
+                </button>
+              )}
             </div>
-          ))}
-        </div>
-      )}
+
+            {/* Country list toggle (dropdown only) */}
+            {isDropdown && (
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isCountryMode}
+                  onChange={toggleCountryMode}
+                  className="w-4 h-4 accent-pink-500 rounded"
+                />
+                <Globe size={13} className="text-[var(--admin-text-muted)]" />
+                <span className="text-[12px] text-[var(--admin-text)]">
+                  {isAr
+                    ? "استخدام قائمة الدول المدمجة (195 دولة)"
+                    : "Use built-in country list (195 countries)"}
+                </span>
+              </label>
+            )}
+
+            {isCountryMode ? (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-soft-purple/5 border border-soft-purple/20">
+                <Globe size={14} className="text-lavender-purple flex-shrink-0" />
+                <p className="text-[12px] text-[var(--admin-text-muted)]">
+                  {isAr
+                    ? "سيتم تحميل قائمة كاملة بـ 195 دولة تلقائياً في الاستبيان (عربي/إنجليزي)."
+                    : "The full 195-country ISO list will load automatically in the questionnaire (Arabic & English)."}
+                </p>
+              </div>
+            ) : (
+              <>
+                {form.options.length === 0 && (
+                  <p className="text-[11px] text-[var(--admin-text-faint)]">
+                    {isAr ? "أضف خياراً على الأقل." : "Add at least one option."}
+                  </p>
+                )}
+                {form.options.map((opt, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                    <input
+                      value={opt.label_en}
+                      onChange={(e) => updateOption(i, "label_en", e.target.value)}
+                      placeholder={`Option ${i + 1} EN`}
+                      className={INPUT}
+                    />
+                    <input
+                      dir="rtl"
+                      value={opt.label_ar}
+                      onChange={(e) => updateOption(i, "label_ar", e.target.value)}
+                      placeholder={`الخيار ${i + 1} AR`}
+                      className={INPUT}
+                    />
+                    <button type="button" onClick={() => removeOption(i)} className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-colors">
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Conditional visibility */}
       {allQuestions.length > 0 && (
@@ -1497,7 +1548,7 @@ function QuestionForm({
                 <option value="">{isAr ? "— لا يوجد —" : "— None —"}</option>
                 {allQuestions.map((q) => (
                   <option key={q.id} value={q.id}>
-                    {q.label_en || "(untitled)"}
+                    {(isAr ? (q.label_ar || q.label_en) : q.label_en) || "(untitled)"}
                   </option>
                 ))}
               </select>
