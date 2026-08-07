@@ -135,9 +135,22 @@ export default function Footer() {
         )}
       </div>
 
-      {/* Copyright */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 border-t border-white/10 text-xs text-ivory-muted/70 text-center">
-        © {new Date().getFullYear()} {meta.name}. {t.rights}
+      {/* Copyright + DevLogic credit */}
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 border-t border-white/10 text-center space-y-1.5">
+        <p className="text-xs text-ivory-muted/70">
+          © {new Date().getFullYear()} {meta.name}. {t.rights}
+        </p>
+        <p className="text-xs text-ivory-muted/50">
+          {lang === "ar" ? "تم تطوير الموقع بواسطة" : "Developed by"}{" "}
+          <a
+            href="https://www.instagram.com/devlogic_web?igsh=ejE2NDd6MGhocjVh"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ivory-muted/80 hover:text-white transition-colors underline underline-offset-2"
+          >
+            DevLogic
+          </a>
+        </p>
       </div>
     </footer>
   );
