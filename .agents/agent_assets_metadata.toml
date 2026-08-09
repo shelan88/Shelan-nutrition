@@ -18,3 +18,136 @@ id = "ANssc32T7oCgvFIb8-DGV"
 uri = "file://attached_assets/generated_videos/shelan_promo_ar_final.mp4"
 type = "video"
 title = "SHELAN — Arabic Promo Video"
+
+[[outputs]]
+id = "ziZsu0FeUuSri7ZuZovX8"
+uri = "file://attached_assets/generated_audio/slide_02.mp3"
+type = "audio"
+title = "slide 2"
+description = "Text-to-speech audio: الأخصائية شيلان هي أخصائية تغذية شمولية معتمدة، متخصصة في الييبيديما وصحة الأمعاء والتوازن الهرموني وإدارة الوزن."
+
+[[outputs]]
+id = "VlzXUBr4WyzrMsbR24m9d"
+uri = "file://attached_assets/generated_audio/slide_12.mp3"
+type = "audio"
+title = "slide 12"
+description = "Text-to-speech audio: ثم رقم الهاتف في السؤال الثالث."
+
+[[outputs]]
+id = "-4pzCyYqRKAeOOtxK3xcE"
+uri = "file://attached_assets/generated_audio/slide_04.mp3"
+type = "audio"
+title = "slide 4"
+description = "Text-to-speech audio: للحجز، انتقلي إلى قسم الباقات واختاري ما يناسبكِ. يمكنكِ البدء بجلسة تشخيصية واحدة، أو الاشتراك في الباقة الشاملة التي تتضمن أربع جلسات شهرياً."
+
+[[outputs]]
+id = "f_MNc-nxlo5t4HeG9oeUU"
+uri = "file://attached_assets/generated_audio/slide_01.mp3"
+type = "audio"
+title = "slide 1"
+description = "Text-to-speech audio: أهلاً بكِ في موقع شيلان للتغذية. هذا الموقع مخصص لمساعدتكِ في الحصول على خطة تغذية شخصية متخصصة، مبنية على الأدلة العلمية."
+
+[[outputs]]
+id = "Hitqw1yt0MJPe5bpaGN8u"
+uri = "file://attached_assets/generated_audio/slide_16.mp3"
+type = "audio"
+title = "slide 16"
+description = "Text-to-speech audio: السؤال السابع يسأل كيف سمعتِ عن شيلان. اختاري الإجابة التي تنطبق عليكِ."
+
+[[outputs]]
+id = "mDLsLWmm4mfOvtFxxQwI7"
+uri = "file://attached_assets/generated_audio/slide_05.mp3"
+type = "audio"
+title = "slide 5"
+description = "Text-to-speech audio: أو اختاري الخطة المخصصة الجاهزة بخمسة وستين دولاراً، وستصلكِ خطة تغذية بصيغة PDF خلال ثمانية وأربعين ساعة."
+
+[[outputs]]
+id = "BiX9xHwOg0TZ9ry80DHHF"
+uri = "file://attached_assets/generated_audio/slide_11.mp3"
+type = "audio"
+title = "slide 11"
+description = "Text-to-speech audio: السؤال الثاني يطلب منكِ إدخال البريد الإلكتروني."
+
+[[outputs]]
+id = "ArByVkX1TD_u2XnUdxczH"
+uri = "file://attached_assets/generated_audio/slide_07.mp3"
+type = "audio"
+title = "slide 7"
+description = "Text-to-speech audio: بعد اختيار التاريخ، ستظهر لكِ الأوقات المتاحة بتوقيتكِ المحلي. اختاري الوقت المناسب ثم اضغطي على زر المتابعة للدفع."
+
+[[outputs]]
+id = "hUr1QNMfWtIeglRJPhO5Q"
+uri = "file://attached_assets/generated_audio/slide_09.mp3"
+type = "audio"
+title = "slide 9"
+description = "Text-to-speech audio: بعد إتمام الدفع، ستنتقلين تلقائياً إلى استبيان التقييم الأولي. هذا الاستبيان يحتوي على ثلاثة عشر سؤالاً لجمع معلوماتكِ الصحية قبل الاستشارة."
+
+[[outputs]]
+id = "znJQmQa4LQh0unirP6nW7"
+uri = "file://attached_assets/generated_audio/slide_14.mp3"
+type = "audio"
+title = "slide 14"
+description = "Text-to-speech audio: السؤال الخامس يطلب منكِ إدخال عمركِ."
+
+[[outputs]]
+id = "5RbnUXY-DtzlEIN16CuxY"
+uri = "file://attached_assets/generated_audio/slide_15.mp3"
+type = "audio"
+title = "slide 15"
+description = "Text-to-speech audio: السؤال السادس يطلب مكان الإقامة من خلال قائمة دول شاملة."
+
+[[outputs]]
+id = "7gajMek-S7jHVOzTt-nJM"
+uri = "file://attached_assets/generated_audio/slide_10.mp3"
+type = "audio"
+title = "slide 10"
+description = "Text-to-speech audio: في نفس الوقت، ستصلكِ رسالة تأكيد على بريدكِ الإلكتروني تحتوي على تفاصيل موعدكِ كاملاً."
+
+[[outputs]]
+id = "ST1mfFgRzPXVuH1ZtDdWC"
+uri = "file://attached_assets/generated_audio/slide_08.mp3"
+type = "audio"
+title = "slide 8"
+description = "Text-to-speech audio: في الخطوة الثانية، أدخلي بريدكِ الإلكتروني، واسمكِ الكامل، ورقم هاتفكِ، وبيانات بطاقتكِ البنكية، ثم اضغطي على دفع آمن عبر Stripe."
+
+[[outputs]]
+id = "fBaBwMoaWEBZlyqQVYsOz"
+uri = "file://attached_assets/generated_audio/slide_17.mp3"
+type = "audio"
+title = "slide 17"
+description = "Text-to-speech audio: بعد الإجابة على جميع الأسئلة وصولاً إلى السؤال الثالث عشر، اضغطي على زر إرسال الاستبيان."
+
+[[outputs]]
+id = "mdzJD_bX1g1KZXw3sqns8"
+uri = "file://attached_assets/generated_audio/slide_18.mp3"
+type = "audio"
+title = "slide 18"
+description = "Text-to-speech audio: تهانيّ! تم إرسال استبيانكِ بنجاح. سيراجع فريق شيلان إجاباتكِ ويتواصل معكِ قبل موعدكِ. رحلتكِ نحو الصحة والعافية قد بدأت."
+
+[[outputs]]
+id = "AmpLFl-Trn7gJViJgjjoy"
+uri = "file://attached_assets/generated_audio/slide_03.mp3"
+type = "audio"
+title = "slide 3"
+description = "Text-to-speech audio: تحمل شيلان شهادات دولية معتمدة، وتجمع بين الخبرة السريرية والتجربة الشخصية، مما يجعلها مرجعاً متميزاً في هذا المجال."
+
+[[outputs]]
+id = "tqiEwxESvgvP3xFI1sMGE"
+uri = "file://attached_assets/generated_audio/slide_13.mp3"
+type = "audio"
+title = "slide 13"
+description = "Text-to-speech audio: السؤال الرابع يطلب تاريخ الميلاد."
+
+[[outputs]]
+id = "zSksF6dU4Ddv7rK9YjfB2"
+uri = "file://attached_assets/generated_audio/slide_06.mp3"
+type = "audio"
+title = "slide 6"
+description = "Text-to-speech audio: بعد الضغط على زر احجزي الآن، تفتح نافذة الحجز الآمن. في الخطوة الأولى، اختاري التاريخ المناسب من التقويم."
+
+[[outputs]]
+id = "1_U2Bemeq10M1diIF-arp"
+uri = "file://attached_assets/shelan_tutorial.mp4"
+type = "video"
+title = "فيديو إرشادي — طريقة الحجز وتعبئة الاستبيان | شيلان للتغذية"
+description = "فيديو تعليمي كامل بصوت أنثوي عربي — 18 شاشة تغطي الحجز، الدفع، وتعبئة الاستبيان. المدة: ~3 دقائق."
