@@ -151,3 +151,24 @@ uri = "file://attached_assets/shelan_tutorial.mp4"
 type = "video"
 title = "فيديو إرشادي — طريقة الحجز وتعبئة الاستبيان | شيلان للتغذية"
 description = "فيديو تعليمي كامل بصوت أنثوي عربي — 18 شاشة تغطي الحجز، الدفع، وتعبئة الاستبيان. المدة: ~3 دقائق."
+
+[[outputs]]
+id = "a5SRdC_MTEVR8kYweT1kv"
+uri = "file://attached_assets/generated_audio/slide_05_2.mp3"
+type = "audio"
+title = "slide 5 revised"
+description = "Text-to-speech audio: بعد اختيار الباقة أو البرنامج المناسب لأهدافكِ الصحية، اضغطي على زر احجزي الآن للمتابعة."
+
+[[outputs]]
+id = "LiMfdd7yHdy6mVem8EnDA"
+uri = "file://attached_assets/generated_audio/slide_04_2.mp3"
+type = "audio"
+title = "slide 4 revised"
+description = "Text-to-speech audio: في قسم الخدمات، ستجدين باقات واستشارات متنوعة تناسب احتياجاتكِ المختلفة. تصفحي الخيارات المتاحة واختاري الباقة أو البرنامج الأنسب لكِ."
+
+[[outputs]]
+id = "x-qYaG7B8YFOs4VYw_qBt"
+uri = "file://attached_assets/shelan_tutorial_v2.mp4"
+type = "video"
+title = "فيديو إرشادي v2 — شيلان للتغذية"
+description = "فيديو محدّث بصور جديدة، بدون أسعار أو أسماء باقات، مع انتقالات fade احترافية بين كل شاشة. المدة: ~3 دقائق."
