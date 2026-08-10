@@ -172,3 +172,10 @@ uri = "file://attached_assets/shelan_tutorial_v2.mp4"
 type = "video"
 title = "فيديو إرشادي v2 — شيلان للتغذية"
 description = "فيديو محدّث بصور جديدة، بدون أسعار أو أسماء باقات، مع انتقالات fade احترافية بين كل شاشة. المدة: ~3 دقائق."
+
+[[outputs]]
+id = "OdcvgF4d-vdTmJyGfe_e2"
+uri = "file://attached_assets/shelan_tutorial_final.mp4"
+type = "video"
+title = "فيديو إرشادي — شيلان للتغذية (نسخة متوافقة)"
+description = "H.264 baseline — متوافق مع كل الأجهزة والمتصفحات. المدة: 2:38 دقيقة — 13 MB"
