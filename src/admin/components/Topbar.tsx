@@ -103,11 +103,11 @@ function UserMenu({ lang }: { lang: "en" | "ar" }) {
   const items = lang === "ar"
     ? [
         { icon: User,         label: "الملف الشخصي", href: "/admin/profile",  external: false },
-        { icon: ExternalLink, label: "الموقع العام",  href: "/",              external: true  },
+        { icon: ExternalLink, label: "الموقع العام",  href: "/",              external: false },
       ]
     : [
         { icon: User,         label: "Profile",          href: "/admin/profile", external: false },
-        { icon: ExternalLink, label: "View public site",  href: "/",             external: true  },
+        { icon: ExternalLink, label: "View public site",  href: "/",             external: false },
       ];
 
   return (

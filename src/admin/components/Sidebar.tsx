@@ -233,8 +233,6 @@ export default function Sidebar() {
         <div className="px-3 pb-2">
           <a
             href="/"
-            target="_blank"
-            rel="noopener noreferrer"
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] text-[var(--admin-text-faint)] hover:bg-[var(--admin-hover-bg)] hover:text-[var(--admin-text-muted)] transition-colors"
           >
             <ExternalLink size={13} strokeWidth={1.8} />
