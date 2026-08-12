@@ -298,10 +298,58 @@ export async function getFirstActiveTemplate(): Promise<TemplateWithDetails | nu
   return getTemplateWithDetails(data.id);
 }
 
-export async function setServiceAssignments(templateId: string, serviceIds: string[]): Promise<void> {
-  await supabase.from("service_template_assignments").delete().eq("template_id", templateId);
-  for (const serviceId of serviceIds) {
-    await supabase.from("service_template_assignments").delete().eq("service_id", serviceId);
-    await supabase.from("service_template_assignments").insert({ template_id: templateId, service_id: serviceId });
+export async function setServiceAssignments(templateId: string, serviceIds: string[]): Promise<boolean> {
+  // 1. Delete all current assignments for this template
+  const { error: delErr } = await supabase
+    .from("service_template_assignments")
+    .delete()
+    .eq("template_id", templateId);
+  if (delErr) {
+    console.error("[assessment] setServiceAssignments — delete by template failed:", delErr.message);
+    return false;
   }
+
+  // 2. For each selected service: satisfy the FK then upsert the assignment.
+  for (const serviceId of serviceIds) {
+    // ── Shadow-services workaround ─────────────────────────────────────────
+    // service_template_assignments.service_id has a FK → services(id).
+    // Programs and consultations live in their own tables, so their UUIDs are
+    // not present in `services`. We upsert a minimal shadow row (ignoreDuplicates
+    // preserves any existing richer row) so the FK is satisfied without DDL.
+    // Long-term fix: scripts/migrations/drop-service-assignment-fk.sql
+    const [{ data: prog }, { data: cons }] = await Promise.all([
+      supabase.from("programs").select("name_en, name_ar").eq("id", serviceId).maybeSingle(),
+      supabase.from("consultations").select("title_en, title_ar").eq("id", serviceId).maybeSingle(),
+    ]);
+    if (prog || cons) {
+      const nameEn = prog?.name_en ?? cons?.title_en ?? serviceId;
+      const nameAr = prog?.name_ar ?? cons?.title_ar ?? serviceId;
+      const { error: svcErr } = await supabase.from("services").upsert(
+        { id: serviceId, name_en: nameEn, name_ar: nameAr },
+        { onConflict: "id", ignoreDuplicates: true },
+      );
+      if (svcErr) {
+        console.error("[assessment] setServiceAssignments — services upsert failed:", serviceId, svcErr.message);
+        return false;
+      }
+    }
+    // ── Delete any prior assignment for this service (UNIQUE constraint) ───
+    const { error: delSvcErr } = await supabase
+      .from("service_template_assignments")
+      .delete()
+      .eq("service_id", serviceId);
+    if (delSvcErr) {
+      console.error("[assessment] setServiceAssignments — delete by service failed:", serviceId, delSvcErr.message);
+      return false;
+    }
+    // ── Insert new assignment ──────────────────────────────────────────────
+    const { error: insErr } = await supabase
+      .from("service_template_assignments")
+      .insert({ template_id: templateId, service_id: serviceId });
+    if (insErr) {
+      console.error("[assessment] setServiceAssignments — insert failed:", serviceId, insErr.message);
+      return false;
+    }
+  }
+  return true;
 }

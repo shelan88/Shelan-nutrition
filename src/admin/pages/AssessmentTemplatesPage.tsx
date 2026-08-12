@@ -343,7 +343,21 @@ export default function AssessmentTemplatesPage() {
     }
 
     if (templateId) {
-      await setServiceAssignments(templateId, templateForm.assignedServiceIds);
+      const ok = await setServiceAssignments(templateId, templateForm.assignedServiceIds);
+      if (!ok) {
+        setMetaError(isAr ? "فشل حفظ تعيينات الخدمات. يرجى المحاولة مرة أخرى." : "Failed to save service assignments. Please try again.");
+        setMetaSaving(false);
+        return;
+      }
+      // Reload the editing template from DB to confirm the saved state is reflected in UI
+      const refreshed = await getTemplateWithDetails(templateId);
+      if (refreshed) {
+        setEditingTemplate(refreshed);
+        setTemplateForm((prev) => ({
+          ...prev,
+          assignedServiceIds: refreshed.assignedServiceIds,
+        }));
+      }
     }
 
     await load();

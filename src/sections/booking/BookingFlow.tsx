@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { debugLog } from "@/shared/debug/logger";
 import { trackEvent } from "@/lib/analytics";
 import { createAppointment } from "@/admin/repositories/appointments.repository";
-import { getTemplateForService, getFirstActiveTemplate } from "@/admin/repositories/assessment-templates.repository";
+import { getTemplateForService } from "@/admin/repositories/assessment-templates.repository";
 import { createResponse } from "@/admin/repositories/assessment-responses.repository";
 import { getProgramById } from "@/admin/repositories/programs.repository";
 import { recordPayment } from "@/admin/repositories/payments.repository";
@@ -826,23 +826,9 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
         programAssessment: programMode ? program?.assessment_enabled : undefined,
       });
 
-      // When assessment is enabled but no service-specific template is assigned yet,
-      // fall back to the first active template in the system so the redirect still fires.
-      if (!template && assessmentEnabled) {
-        template = await getFirstActiveTemplate();
-        console.log("[ASSESSMENT-DEBUG] fallback getFirstActiveTemplate", {
-          templateId:     template?.id ?? null,
-          templateActive: template?.active ?? null,
-        });
-        if (template) {
-          console.warn(
-            "[ASSESSMENT-DEBUG] WARNING: no template assigned to service", lookupId,
-            "— using fallback template:", template.name_en,
-            "— assign this template to the service in the admin panel to suppress this warning.",
-          );
-        }
-      }
-
+      // No global fallback — the service-specific assignment is the source of truth.
+      // If no template is assigned to this service, assessment is skipped even if
+      // assessment_enabled is true on the service row.
       const hasTemplate = !!(template?.active) && assessmentEnabled;
       console.log("[ASSESSMENT-DEBUG] hasTemplate decision", {
         hasTemplate,

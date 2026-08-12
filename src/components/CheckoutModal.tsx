@@ -16,7 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { checkoutModal } from "@/content/content";
 import { supabase } from "@/lib/supabase";
 import { createAppointment } from "@/admin/repositories/appointments.repository";
-import { getTemplateForService, getFirstAssignedActiveTemplate, getFirstActiveTemplate } from "@/admin/repositories/assessment-templates.repository";
+import { getTemplateForService } from "@/admin/repositories/assessment-templates.repository";
 import { createResponse } from "@/admin/repositories/assessment-responses.repository";
 import { recordPayment } from "@/admin/repositories/payments.repository";
 import { stripePromise, parsePriceCents } from "@/lib/stripe";
@@ -306,30 +306,20 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
         assessmentEnabled: plan.assessmentEnabled,
       });
 
-      // Try service-specific assignment first
-      let template = plan.serviceId
-        ? await getTemplateForService(plan.serviceId)
-        : await getFirstAssignedActiveTemplate();
+      // Resolve the service/consultation ID for the assignment lookup.
+      // ConsultationSection passes consultationId; program bookings pass serviceId.
+      const lookupId = plan.consultationId ?? plan.serviceId ?? null;
+
+      // Strict service-specific lookup only — no global fallback.
+      // If the service is not explicitly assigned to a template the assessment is skipped.
+      const template = lookupId
+        ? await getTemplateForService(lookupId)
+        : null;
       console.log("[ASSESSMENT-DEBUG] primary template lookup result", {
+        lookupId,
         templateId:     template?.id ?? null,
         templateActive: template?.active ?? null,
       });
-
-      // If no assignment found but assessment is enabled, fall back to any active template
-      if (!template && plan.assessmentEnabled !== false) {
-        template = await getFirstActiveTemplate();
-        console.log("[ASSESSMENT-DEBUG] fallback getFirstActiveTemplate", {
-          templateId:     template?.id ?? null,
-          templateActive: template?.active ?? null,
-        });
-        if (template) {
-          console.warn(
-            "[ASSESSMENT-DEBUG] WARNING: no template assigned to service", plan.serviceId,
-            "— using fallback template:", template.name_en,
-            "— assign this template to the service in the admin panel to suppress this warning.",
-          );
-        }
-      }
 
       // Gate on both the template being active AND the per-service toggle.
       // plan.assessmentEnabled is undefined for legacy callers → treat as true.
