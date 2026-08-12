@@ -243,7 +243,7 @@ export default function ConsultationsAdminPage() {
         description={L("Manage consultation and follow-up packages shown in the homepage section.","إدارة باقات الاستشارات والمتابعة المعروضة في الصفحة الرئيسية.")}
         breadcrumbs={[
           { label: L("Admin","الإدارة"), href: "/admin" },
-          { label: L("Consultations","الاستشارات") },
+          { label: L("Consultations & Follow-up Packages","الاستشارات وباقات المتابعة") },
         ]}
       />
 

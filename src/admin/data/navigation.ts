@@ -97,8 +97,8 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "consultations",
-    label: "Consultations",
-    labelAr: "الاستشارات",
+    label: "Consultations & Follow-up Packages",
+    labelAr: "الاستشارات وباقات المتابعة",
     href: "/admin/consultations",
     iconName: "CalendarCheck",
     group: "content",
@@ -294,10 +294,10 @@ export const PAGE_META: Record<string, PageMeta> = {
     illustrationVariant: "services",
   },
   consultations: {
-    title: "Consultations",
-    titleAr: "الاستشارات",
-    description: "Manage the consultation packages shown in the booking section of your website.",
-    descriptionAr: "إدارة باقات الاستشارة المعروضة في قسم الحجز بموقعك.",
+    title: "Consultations & Follow-up Packages",
+    titleAr: "الاستشارات وباقات المتابعة",
+    description: "Manage consultation and follow-up packages shown in the homepage section.",
+    descriptionAr: "إدارة باقات الاستشارات والمتابعة المعروضة في الصفحة الرئيسية.",
     illustrationVariant: "calendar",
   },
   "free-guide": {
