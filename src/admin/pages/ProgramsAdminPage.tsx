@@ -3,10 +3,11 @@ import { useAdminLabels } from "@/admin/hooks/useAdminLabels";
 import PageHeader from "../components/PageHeader";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Pencil, Trash2, ArrowLeft, Save, X, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowLeft, Save, X, ChevronUp, ChevronDown, Eye, EyeOff } from "lucide-react";
 import {
   getAllPrograms, createProgram, updateProgram, deleteProgram,
 } from "@/admin/repositories/programs.repository";
+import { getSetting, setSetting } from "@/admin/repositories/settings.repository";
 import type { ProgramRow } from "@/types/database.types";
 import FileUploadField from "../components/FileUploadField";
 import CurrencySelect from "../components/CurrencySelect";
@@ -81,6 +82,8 @@ export default function ProgramsAdminPage() {
   const [saveError,   setSaveError]   = useState<string | null>(null);
   const [deletingId,  setDeletingId]  = useState<string | null>(null);
   const [reorderingId,setReorderingId]= useState<string | null>(null);
+  const [sectionOn,   setSectionOn]   = useState(true);
+  const [togglingSection, setTogglingSection] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -89,6 +92,28 @@ export default function ProgramsAdminPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Load section-level visibility
+  useEffect(() => {
+    getSetting("section_visibility").then((val) => {
+      if (val && typeof val === "object" && !Array.isArray(val) && "programs" in (val as object)) {
+        setSectionOn((val as { programs: boolean }).programs !== false);
+      }
+    }).catch(() => {});
+  }, []);
+
+  async function toggleSection() {
+    setTogglingSection(true);
+    const next = !sectionOn;
+    const current = await getSetting("section_visibility");
+    const base: Record<string, unknown> = (current && typeof current === "object" && !Array.isArray(current))
+      ? { ...(current as object) } : {};
+    if (!("consultations" in base)) base.consultations = true;
+    base.programs = next;
+    await setSetting("section_visibility", base as any);
+    setSectionOn(next);
+    setTogglingSection(false);
+  }
 
   function openNew() {
     setEditing(null); setForm(initForm());
@@ -193,6 +218,49 @@ export default function ProgramsAdminPage() {
           { label: L("Programs", "البرامج") },
         ]}
       />
+
+      {/* ── Section visibility toggle ──────────────────────────────────────── */}
+      {view === "list" && (
+        <div className={`flex items-center justify-between rounded-2xl border px-5 py-3.5 mb-4 transition-colors ${
+          sectionOn
+            ? "bg-emerald-50 border-emerald-200"
+            : "bg-[var(--admin-hover-bg)] border-[var(--admin-border)]"
+        }`}>
+          <div className="flex items-center gap-3">
+            {sectionOn
+              ? <Eye size={16} className="text-emerald-600 shrink-0" />
+              : <EyeOff size={16} className="text-[var(--admin-text-faint)] shrink-0" />}
+            <div>
+              <p className={`text-[13px] font-semibold ${sectionOn ? "text-emerald-800" : "text-[var(--admin-text-muted)]"}`}>
+                {sectionOn
+                  ? L("Programs section is visible on the public website", "قسم البرامج ظاهر على الموقع العام")
+                  : L("Programs section is hidden from the public website", "قسم البرامج مخفي عن الموقع العام")}
+              </p>
+              <p className={`text-[11px] mt-0.5 ${sectionOn ? "text-emerald-600" : "text-[var(--admin-text-faint)]"}`}>
+                {L("Individual program active/inactive status is separate", "حالة كل برنامج (نشط/غير نشط) مستقلة عن هذا الإعداد")}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={toggleSection}
+            disabled={togglingSection}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold border transition-all disabled:opacity-60 shrink-0 ${
+              sectionOn
+                ? "border-emerald-300 bg-white text-emerald-700 hover:bg-emerald-50"
+                : "border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text-muted)] hover:bg-[var(--admin-hover-bg)]"
+            }`}
+          >
+            {togglingSection ? (
+              <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            ) : sectionOn ? (
+              <><EyeOff size={14} /> {L("Hide Section", "إخفاء القسم")}</>
+            ) : (
+              <><Eye size={14} /> {L("Show Section", "إظهار القسم")}</>
+            )}
+          </button>
+        </div>
+      )}
 
       <AnimatePresence mode="wait">
         {/* ── LIST ──────────────────────────────────────────────────────────── */}
