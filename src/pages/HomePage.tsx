@@ -22,7 +22,7 @@ import Testimonials from "@/components/Testimonials";
 import SymptomsQuiz from "@/components/SymptomsQuiz";
 import FAQ from "@/components/FAQ";
 import LeadMagnet from "@/components/LeadMagnet";
-import Booking from "@/components/Booking";
+import ConsultationsSection from "@/components/ConsultationsSection";
 import CTA from "@/components/CTA";
 import { supabase } from "@/lib/supabase";
 import {
@@ -104,8 +104,8 @@ export default function HomePage() {
       {/* 4. Services — off-white #F9FAFB */}
       <Services />
 
-      {/* 5. Booking (Consultations) — dark brand gradient; high-value action above the fold */}
-      <Booking />
+      {/* 5. Consultations & Follow-up Packages — dark brand gradient */}
+      <ConsultationsSection />
 
       {/* 6. Programs — white */}
       <Programs />

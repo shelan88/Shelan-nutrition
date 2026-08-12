@@ -239,8 +239,8 @@ export default function ConsultationsAdminPage() {
   return (
     <div>
       <PageHeader
-        title={L("Consultations","الاستشارات")}
-        description={L("Manage consultation packages shown in the booking section.","إدارة باقات الاستشارة المعروضة في قسم الحجز.")}
+        title={L("Consultations & Follow-up Packages","الاستشارات وباقات المتابعة")}
+        description={L("Manage consultation and follow-up packages shown in the homepage section.","إدارة باقات الاستشارات والمتابعة المعروضة في الصفحة الرئيسية.")}
         breadcrumbs={[
           { label: L("Admin","الإدارة"), href: "/admin" },
           { label: L("Consultations","الاستشارات") },

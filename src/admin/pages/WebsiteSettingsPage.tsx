@@ -18,7 +18,7 @@ const fadeUp = (delay = 0) => ({
   transition: { duration: 0.42, delay, ease: [0.22, 1, 0.36, 1] as const },
 });
 
-type Tab = "hero" | "about" | "contact" | "nav";
+type Tab = "hero" | "about" | "contact" | "nav" | "sections";
 
 // ─── Field helpers ─────────────────────────────────────────────────────────────
 
@@ -134,30 +134,42 @@ export default function WebsiteSettingsPage() {
   const [about,   setAbout]   = useState({ ...defaultAbout });
   const [contact, setContact] = useState({ ...defaultContact });
   const [navItems, setNavItems] = useState<NavItem[]>([...DEFAULT_NAV_ITEMS]);
+  const [sectionVis, setSectionVis] = useState({ programs: true, consultations: true });
 
   const [saving, setSaving] = useState(false);
   const [saved,  setSaved]  = useState(false);
 
-  const keyMap: Record<Tab, string> = {
+  const keyMap: Record<Exclude<Tab, "sections">, string> = {
     hero: "site.hero", about: "site.about", contact: "site.contact", nav: "site.nav",
   };
 
-  const setterMap: Record<Tab, (v: any) => void> = {
+  const setterMap: Record<Exclude<Tab, "sections">, (v: any) => void> = {
     hero: setHero, about: setAbout, contact: setContact, nav: () => {},
   };
 
-  const defaultMap: Record<Tab, object> = {
+  const defaultMap: Record<Exclude<Tab, "sections">, object> = {
     hero: defaultHero, about: defaultAbout, contact: defaultContact, nav: {},
   };
 
-  const getterMap: Record<Tab, object> = {
+  const getterMap: Record<Exclude<Tab, "sections">, object> = {
     hero, about, contact, nav: {},
   };
 
   // Load on tab switch
   useEffect(() => {
     (async () => {
-      const val = await getSetting(keyMap[tab]);
+      if (tab === "sections") {
+        const val = await getSetting("section_visibility");
+        if (val && typeof val === "object" && !Array.isArray(val)) {
+          setSectionVis({
+            programs:      (val as any).programs      !== false,
+            consultations: (val as any).consultations !== false,
+          });
+        }
+        return;
+      }
+
+      const val = await getSetting(keyMap[tab as Exclude<Tab, "sections">]);
 
       if (tab === "nav") {
         if (val && typeof val === "object" && !Array.isArray(val) && Array.isArray((val as any).items)) {
@@ -169,9 +181,9 @@ export default function WebsiteSettingsPage() {
       }
 
       if (val && typeof val === "object" && !Array.isArray(val)) {
-        setterMap[tab]({ ...defaultMap[tab], ...(val as object) });
+        setterMap[tab as Exclude<Tab, "sections">]({ ...defaultMap[tab as Exclude<Tab, "sections">], ...(val as object) });
       } else {
-        setterMap[tab]({ ...defaultMap[tab] });
+        setterMap[tab as Exclude<Tab, "sections">]({ ...defaultMap[tab as Exclude<Tab, "sections">] });
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -179,23 +191,30 @@ export default function WebsiteSettingsPage() {
 
   const handleSave = useCallback(async () => {
     setSaving(true);
-    const key = keyMap[tab];
+    if (tab === "sections") {
+      const ok = await setSetting("section_visibility", sectionVis as any);
+      setSaving(false);
+      if (ok) { setSaved(true); setTimeout(() => setSaved(false), 2000); }
+      return;
+    }
+    const key = keyMap[tab as Exclude<Tab, "sections">];
     const itemsToSave = navItems.map(item => ({
       ...item,
       href: item.sectionId ? getSectionHref(item.sectionId) : item.href,
     }));
-    const value = tab === "nav" ? { items: itemsToSave } : getterMap[tab];
+    const value = tab === "nav" ? { items: itemsToSave } : getterMap[tab as Exclude<Tab, "sections">];
     const ok = await setSetting(key, value as any);
     setSaving(false);
     if (ok) { setSaved(true); setTimeout(() => setSaved(false), 2000); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, hero, about, contact, navItems]);
+  }, [tab, hero, about, contact, navItems, sectionVis]);
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: "hero",    label: lang === "ar" ? "الرئيسية"     : "Hero" },
-    { key: "about",   label: lang === "ar" ? "من أنا"      : "About" },
-    { key: "contact", label: lang === "ar" ? "التواصل"     : "Contact" },
-    { key: "nav",     label: lang === "ar" ? "قائمة التنقل" : "Navigation" },
+    { key: "hero",     label: lang === "ar" ? "الرئيسية"     : "Hero" },
+    { key: "about",    label: lang === "ar" ? "من أنا"      : "About" },
+    { key: "contact",  label: lang === "ar" ? "التواصل"     : "Contact" },
+    { key: "nav",      label: lang === "ar" ? "قائمة التنقل" : "Navigation" },
+    { key: "sections", label: lang === "ar" ? "الأقسام"      : "Sections" },
   ];
 
   return (
@@ -422,6 +441,75 @@ export default function WebsiteSettingsPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+              <SaveBar lang={lang} saved={saved} saving={saving} onSave={handleSave} />
+            </div>
+          )}
+
+          {/* ── SECTIONS TAB ─────────────────────────────────────────────────── */}
+          {tab === "sections" && (
+            <div>
+              <div className="px-5 py-5 space-y-4">
+                <div className="mb-4">
+                  <p className="text-[13px] font-bold text-[var(--admin-text)]">
+                    {lang === "ar" ? "إظهار / إخفاء الأقسام" : "Section Visibility"}
+                  </p>
+                  <p className="text-[11px] text-[var(--admin-text-faint)] mt-0.5">
+                    {lang === "ar"
+                      ? "تحكم في الأقسام الظاهرة على الصفحة الرئيسية."
+                      : "Control which sections are visible on the homepage."}
+                  </p>
+                </div>
+
+                {/* Programs toggle */}
+                <div className="flex items-center justify-between rounded-xl border border-[var(--admin-border)] bg-[var(--admin-hover-bg)]/30 px-4 py-3">
+                  <div>
+                    <p className="text-[13px] font-semibold text-[var(--admin-text)]">
+                      {lang === "ar" ? "البرامج" : "Programs"}
+                    </p>
+                    <p className="text-[11px] text-[var(--admin-text-faint)] mt-0.5">
+                      {lang === "ar" ? "قسم البرامج الظاهر في الصفحة الرئيسية" : "Programs section on the homepage"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSectionVis(v => ({ ...v, programs: !v.programs }))}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-semibold border transition-all ${
+                      sectionVis.programs
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-[var(--admin-border)] text-[var(--admin-text-faint)]"
+                    }`}
+                  >
+                    {sectionVis.programs
+                      ? <><Eye size={13} /> {lang === "ar" ? "ظاهر" : "Visible"}</>
+                      : <><EyeOff size={13} /> {lang === "ar" ? "مخفي" : "Hidden"}</>}
+                  </button>
+                </div>
+
+                {/* Consultations toggle */}
+                <div className="flex items-center justify-between rounded-xl border border-[var(--admin-border)] bg-[var(--admin-hover-bg)]/30 px-4 py-3">
+                  <div>
+                    <p className="text-[13px] font-semibold text-[var(--admin-text)]">
+                      {lang === "ar" ? "الاستشارات وباقات المتابعة" : "Consultations & Follow-up Packages"}
+                    </p>
+                    <p className="text-[11px] text-[var(--admin-text-faint)] mt-0.5">
+                      {lang === "ar" ? "قسم الاستشارات الظاهر في الصفحة الرئيسية" : "Consultations section on the homepage"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSectionVis(v => ({ ...v, consultations: !v.consultations }))}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-semibold border transition-all ${
+                      sectionVis.consultations
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-[var(--admin-border)] text-[var(--admin-text-faint)]"
+                    }`}
+                  >
+                    {sectionVis.consultations
+                      ? <><Eye size={13} /> {lang === "ar" ? "ظاهر" : "Visible"}</>
+                      : <><EyeOff size={13} /> {lang === "ar" ? "مخفي" : "Hidden"}</>}
+                  </button>
                 </div>
               </div>
               <SaveBar lang={lang} saved={saved} saving={saving} onSave={handleSave} />

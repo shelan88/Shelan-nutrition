@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { getActivePrograms } from "@/admin/repositories/programs.repository";
+import { getSetting } from "@/admin/repositories/settings.repository";
 import type { ProgramRow } from "@/types/database.types";
 
 const PROGRAM_ICONS: Record<string, React.ElementType> = {
@@ -30,16 +31,22 @@ const cardAccents = [
 
 export default function Programs() {
   const { lang, dir } = useLanguage();
-  const [programs, setPrograms] = useState<ProgramRow[] | null>(null); // null = loading
+  const [programs,      setPrograms]      = useState<ProgramRow[] | null>(null); // null = loading
+  const [sectionVisible, setSectionVisible] = useState(true); // global admin toggle
 
   useEffect(() => {
     getActivePrograms()
       .then(setPrograms)
       .catch(() => setPrograms([]));
+    getSetting("section_visibility").then((val) => {
+      if (val && typeof val === "object" && !Array.isArray(val) && "programs" in (val as object)) {
+        setSectionVisible((val as { programs: boolean }).programs !== false);
+      }
+    }).catch(() => {});
   }, []);
 
-  // Hide section entirely while loading or when no active programs
-  if (programs === null || programs.length === 0) return null;
+  // Hide section entirely: global toggle off, still loading, or no active programs
+  if (!sectionVisible || programs === null || programs.length === 0) return null;
 
   return (
     <section id="programs" className="py-24 bg-white" dir={dir}>
