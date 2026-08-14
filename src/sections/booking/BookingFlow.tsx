@@ -26,8 +26,8 @@ import {
 import type { CMSBookingData, CMSBookingService } from "@/types/cms.types";
 import { resolveAvailability, getDisabledDays, getEnabledTimeSlots } from "@/lib/availability";
 import type { AvailabilitySettings } from "@/lib/availability";
-import { useAdminTimezone, slotToLocalDisplay, getLocalTimezone, getTzAbbr, todayInTz } from "@/lib/timezone";
-import { getSetting } from "@/admin/repositories/settings.repository";
+import { useAdminTimezone, slotToLocalDisplay, getLocalTimezone, getTzAbbr } from "@/lib/timezone";
+import { useBookingAvailability, availabilityMessage } from "@/lib/bookingAvailability";
 import PhoneInput from "@/components/PhoneInput";
 import {
   Elements,
@@ -638,20 +638,8 @@ interface Props {
   serviceAssessmentMap?: Record<string, boolean>;
 }
 
-// ─── Booking-open date helper ─────────────────────────────────────────────────
-function formatBookingOpenDate(dateStr: string, lang: string): string {
-  try {
-    return new Date(`${dateStr}T12:00:00`).toLocaleDateString(
-      lang === "ar" ? "ar-SA" : "en-US",
-      { year: "numeric", month: "long", day: "numeric" },
-    );
-  } catch {
-    return dateStr;
-  }
-}
-
 function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProgramId, canonicalServices, serviceAvailabilityMap, serviceAssessmentMap }: Props) {
-  const { adminTz, tzLoading } = useAdminTimezone();
+  const { adminTz } = useAdminTimezone();
   const stripe   = useStripe();
   const elements = useElements();
 
@@ -685,24 +673,9 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
   const [cardComplete,    setCardComplete]    = useState(false);
   const [cardFieldError,  setCardFieldError]  = useState<string | null>(null);
 
-  // ── Booking start date gate ────────────────────────────────────────────────
-  const [bookingStartDate,    setBookingStartDate]    = useState<string | null>(null);
-  const [bookingDateLoading,  setBookingDateLoading]  = useState(true);
-
-  useEffect(() => {
-    getSetting("booking_start_date")
-      .then((val) => setBookingStartDate(typeof val === "string" && val ? val : null))
-      .catch(() => setBookingStartDate(null))
-      .finally(() => setBookingDateLoading(false));
-  }, []);
-
-  // Open when: date not configured, still loading, or today >= start date.
-  // Safety: treat any loading or missing config as "open" to preserve existing behavior.
-  const isBookingOpen = useMemo(() => {
-    if (bookingDateLoading || tzLoading) return true;
-    if (!bookingStartDate) return true;
-    return todayInTz(adminTz ?? "UTC") >= bookingStartDate;
-  }, [bookingDateLoading, tzLoading, bookingStartDate, adminTz]);
+  // ── Global booking availability gate ──────────────────────────────────────
+  const { availability } = useBookingAvailability();
+  const isBookingOpen = availability.state === "open";
 
   const { user } = useAuth();
   const { lang } = useLanguage();
@@ -1069,26 +1042,24 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
     <div className="max-w-3xl mx-auto">
       {programMode && program && <ProgramBanner program={program} lang={lang} />}
 
-      {/* ── Booking-closed banner ─────────────────────────────────────────── */}
-      {!isBookingOpen && bookingStartDate && (
-        <div className={`mb-6 rounded-2xl border border-primary-pink/20 bg-gradient-to-br from-light-pink/50 to-soft-purple/20 p-6 text-${isAr ? "right" : "left"}`} dir={isAr ? "rtl" : "ltr"}>
-          <div className="flex items-start gap-4">
-            <div className="shrink-0 w-11 h-11 rounded-xl bg-primary-pink/10 flex items-center justify-center">
-              <Lock size={20} className="text-primary-pink" />
-            </div>
-            <div>
-              <h3 className="text-[15px] font-bold text-deep-purple mb-1">
-                {isAr ? "الحجز غير متاح بعد" : "Booking Not Yet Open"}
-              </h3>
-              <p className="text-[13px] text-deep-purple/70 leading-relaxed">
-                {isAr
-                  ? `سيبدأ قبول الحجوزات اعتباراً من ${formatBookingOpenDate(bookingStartDate, lang)}. يمكنك الاطلاع على الخدمات المتاحة في الأثناء.`
-                  : `Booking opens on ${formatBookingOpenDate(bookingStartDate, lang)}. You can browse the available services in the meantime.`}
-              </p>
+      {/* ── Booking-unavailable banner (scheduled or closed) ──────────────── */}
+      {!isBookingOpen && (() => {
+        const msg = availabilityMessage(availability, lang);
+        if (!msg) return null;
+        return (
+          <div className={`mb-6 rounded-2xl border border-primary-pink/20 bg-gradient-to-br from-light-pink/50 to-soft-purple/20 p-6 text-${isAr ? "right" : "left"}`} dir={isAr ? "rtl" : "ltr"}>
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 w-11 h-11 rounded-xl bg-primary-pink/10 flex items-center justify-center">
+                <Lock size={20} className="text-primary-pink" />
+              </div>
+              <div>
+                <h3 className="text-[15px] font-bold text-deep-purple mb-1">{msg.title}</h3>
+                <p className="text-[13px] text-deep-purple/70 leading-relaxed">{msg.body}</p>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <StepIndicator steps={steps} current={step} />
 

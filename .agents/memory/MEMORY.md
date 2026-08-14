@@ -18,4 +18,5 @@
 - [About page CMS](about-cms.md) — 4 tables (qualifications/expertise/certifications/cert_settings); logo-or-initials display mode; admin at /admin/about-cms; public components DB-driven with fallback.
 - [Delete Account architecture](delete-account-architecture.md) — service_role stays in api/server.js (port 3001); Vite proxies /api; concurrently runs both; Node 20 needs ws transport for supabase-js.
 - [Timezone system](timezone-system.md) — admin TZ in website_settings; slots stored as admin-TZ strings; visitor display via slotToLocalDisplay; getTzAbbr+todayInTz added; emails receive adminTz/visitorTz/visitorTime.
+- [Booking availability gate](booking-availability-gate.md) — open/scheduled/closed gate enforced server-side at create-payment-intent; fail-closed on lookup errors; two Stripe paths exist.
 - [Password recovery architecture](password-recovery-architecture.md) — AuthModal had no redirectTo; App.tsx had no PASSWORD_RECOVERY interceptor; fix is PasswordRecoveryInterceptor + /reset-password page + Supabase allowlist entries.

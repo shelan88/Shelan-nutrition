@@ -10,10 +10,35 @@
  */
 
 import Stripe from "stripe";
+import { getBookingAvailability } from "./_lib/booking-availability.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  // ── Authoritative booking-availability gate ─────────────────────────────
+  // Covers ALL payment paths (BookingFlow, CheckoutModal, anything future):
+  // no PaymentIntent is ever created while bookings are scheduled/closed.
+  const availability = await getBookingAvailability();
+  if (availability.state === "unknown") {
+    // Availability could not be verified (settings lookup failed) — never
+    // create a PaymentIntent when the gate state is unverifiable.
+    return res.status(503).json({
+      error: "Booking availability could not be verified. Please try again shortly.",
+      code: "BOOKING_AVAILABILITY_UNVERIFIABLE",
+    });
+  }
+  if (availability.state !== "open") {
+    return res.status(403).json({
+      error:
+        availability.state === "scheduled"
+          ? `Bookings are not open yet. Booking opens on ${availability.opensOn}.`
+          : "Bookings are currently closed.",
+      code: "BOOKING_UNAVAILABLE",
+      state: availability.state,
+      opensOn: availability.opensOn ?? null,
+    });
   }
 
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;

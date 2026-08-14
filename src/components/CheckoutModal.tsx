@@ -22,6 +22,7 @@ import { recordPayment } from "@/admin/repositories/payments.repository";
 import { stripePromise, parsePriceCents } from "@/lib/stripe";
 import PhoneInput from "@/components/PhoneInput";
 import { useAdminTimezone, slotToLocalDisplay, getLocalTimezone, getTzAbbr } from "@/lib/timezone";
+import { useBookingAvailability, availabilityMessage } from "@/lib/bookingAvailability";
 
 // ─── Card element styles ──────────────────────────────────────────────────────
 
@@ -209,6 +210,10 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
   const elements  = useElements();
   const { adminTz } = useAdminTimezone();
 
+  // ── Global booking availability gate ────────────────────────────────────
+  const { availability } = useBookingAvailability();
+  const isBookingOpen = availability.state === "open";
+
   const [step,          setStep]          = useState<0 | 1>(0);
   const [date,          setDate]          = useState("");
   const [time,          setTime]          = useState("");
@@ -227,6 +232,15 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (status !== "idle" || !stripe || !elements) return;
+
+    // Safety guard — bookings scheduled/closed (server also enforces this).
+    if (!isBookingOpen) {
+      setError(
+        availabilityMessage(availability, lang)?.body ??
+          "Bookings are currently unavailable.",
+      );
+      return;
+    }
 
     const cardElement = elements.getElement(CardElement);
     if (!cardElement) {
@@ -428,7 +442,7 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setStatus("idle");
     }
-  }, [status, stripe, elements, plan, date, time, name, email, phone, user, navigate, onClose, cardComplete, lang, adminTz]);
+  }, [status, stripe, elements, plan, date, time, name, email, phone, user, navigate, onClose, cardComplete, lang, adminTz, isBookingOpen, availability]);
 
   const stepLabel = step === 0
     ? "Step 1 of 2 — Pick a Date & Time"
@@ -472,6 +486,27 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
                 <CheckCircle2 className="mx-auto text-primary-pink mb-4" size={48} />
                 <h4 className="font-heading text-lg font-bold text-gray-900 mb-2">{t.success}</h4>
                 <p className="text-sm text-gray-500 mb-6 leading-relaxed">{t.successNote}</p>
+                <button onClick={onClose}
+                  className="px-8 py-3 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white text-sm font-semibold shadow-md">
+                  {t.close}
+                </button>
+              </motion.div>
+
+            ) : !isBookingOpen ? (
+              <motion.div key="unavailable"
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="text-center py-6"
+                dir={lang === "ar" ? "rtl" : "ltr"}
+              >
+                <div className="w-12 h-12 mx-auto rounded-2xl bg-primary-pink/10 flex items-center justify-center mb-4">
+                  <Lock className="text-primary-pink" size={22} />
+                </div>
+                <h4 className="font-heading text-lg font-bold text-gray-900 mb-2">
+                  {availabilityMessage(availability, lang)?.title}
+                </h4>
+                <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                  {availabilityMessage(availability, lang)?.body}
+                </p>
                 <button onClick={onClose}
                   className="px-8 py-3 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white text-sm font-semibold shadow-md">
                   {t.close}

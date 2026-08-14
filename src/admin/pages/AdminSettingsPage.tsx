@@ -96,7 +96,9 @@ export default function AdminSettingsPage() {
   const [apptConfig,      setApptConfig]      = useState<AppointmentConfig>(DEFAULT_APPOINTMENT);
   const [notifications,   setNotifications]   = useState<NotificationConfig>(DEFAULT_NOTIFICATIONS);
   const [timezone,        setTimezone]        = useState("");
-  const [bookingStartDate,setBookingStartDate] = useState("2026-08-24");
+  const [bookingStatus,   setBookingStatus]   = useState<"open" | "scheduled" | "closed">("open");
+  const [bookingStartDate,setBookingStartDate] = useState("");
+  const [bookingEndDate,  setBookingEndDate]  = useState("");
 
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
@@ -105,11 +107,12 @@ export default function AdminSettingsPage() {
   // ── Load settings ──────────────────────────────────────────────────────────
   const loadSettings = useCallback(async () => {
     setLoading(true);
-    const [wh, ac, nc, tzCfg, bsd] = await Promise.all([
+    const [wh, ac, nc, tzCfg, ba, bsd] = await Promise.all([
       getSetting("working_hours"),
       getSetting("appointment_config"),
       getSetting("notification_config"),
       getSetting("timezone_config"),
+      getSetting("booking_availability"),
       getSetting("booking_start_date"),
     ]);
     if (wh)  setWorkingHours(wh as unknown as WorkingHours);
@@ -118,7 +121,18 @@ export default function AdminSettingsPage() {
     if (tzCfg && typeof tzCfg === "object" && "timezone" in tzCfg) {
       setTimezone(String((tzCfg as { timezone: string }).timezone) || "");
     }
-    if (typeof bsd === "string" && bsd) setBookingStartDate(bsd);
+    if (ba && typeof ba === "object" && !Array.isArray(ba)) {
+      const obj = ba as { status?: string; startDate?: string | null; endDate?: string | null };
+      if (obj.status === "open" || obj.status === "scheduled" || obj.status === "closed") {
+        setBookingStatus(obj.status);
+      }
+      setBookingStartDate(typeof obj.startDate === "string" ? obj.startDate : "");
+      setBookingEndDate(typeof obj.endDate === "string" ? obj.endDate : "");
+    } else if (typeof bsd === "string" && bsd) {
+      // Legacy fallback: booking_start_date string → scheduled
+      setBookingStatus("scheduled");
+      setBookingStartDate(bsd);
+    }
     setLoading(false);
   }, []);
 
@@ -126,13 +140,30 @@ export default function AdminSettingsPage() {
 
   // ── Save all ───────────────────────────────────────────────────────────────
   async function handleSave() {
+    // Scheduled requires a start date — refuse to save a config that would
+    // silently close bookings.
+    if (bookingStatus === "scheduled" && !bookingStartDate) {
+      alert(isAr
+        ? "الرجاء تحديد تاريخ بدء الحجوزات قبل الحفظ."
+        : "Please set a booking start date before saving.");
+      return;
+    }
     setSaving(true);
     await Promise.all([
       setSetting("working_hours",      workingHours  as unknown as import("@/types/database.types").Json),
       setSetting("appointment_config", apptConfig    as unknown as import("@/types/database.types").Json),
       setSetting("notification_config",notifications as unknown as import("@/types/database.types").Json),
       ...(timezone ? [setSetting("timezone_config", { timezone } as unknown as import("@/types/database.types").Json)] : []),
-      ...(bookingStartDate ? [setSetting("booking_start_date", bookingStartDate as unknown as import("@/types/database.types").Json)] : []),
+      setSetting("booking_availability", {
+        status:    bookingStatus,
+        startDate: bookingStatus === "scheduled" ? (bookingStartDate || null) : null,
+        endDate:   bookingStatus === "closed" ? null : (bookingEndDate || null),
+      } as unknown as import("@/types/database.types").Json),
+      // Keep legacy key in sync for compatibility with older readers.
+      setSetting(
+        "booking_start_date",
+        (bookingStatus === "scheduled" && bookingStartDate ? bookingStartDate : "") as unknown as import("@/types/database.types").Json,
+      ),
     ]);
     setSaving(false);
     setSaved(true);
@@ -186,26 +217,77 @@ export default function AdminSettingsPage() {
         </button>
       </div>
 
-      {/* ── Booking Start Date ───────────────────────────────────────────────── */}
-      <Section icon={CalendarCheck} title={isAr ? "تاريخ بدء الحجوزات" : "Booking Start Date"}>
-        <div className="space-y-3">
+      {/* ── Booking Availability ─────────────────────────────────────────────── */}
+      <Section icon={CalendarCheck} title={isAr ? "إدارة الحجوزات" : "Booking Availability"}>
+        <div className="space-y-4">
           <p className="text-[12px] text-[var(--admin-text-faint)] leading-relaxed">
             {isAr
-              ? "حدد تاريخ بدء قبول الحجوزات من الموقع. قبل هذا التاريخ تبقى الخدمات مرئية ولكن لا يمكن إتمام الحجز. اتركه فارغاً لفتح الحجز دون قيد."
-              : "Set the date when bookings open on the website. Before this date, services remain visible but booking is blocked. Leave empty to allow bookings immediately."}
+              ? "تحكم بإتاحة الحجوزات على الموقع بالكامل. تبقى الخدمات مرئية دائماً، لكن الدفع والحجز يُمنعان عندما تكون الحجوزات مجدولة أو مغلقة — ويُطبَّق المنع أيضاً من جهة الخادم."
+              : "Control booking availability site-wide. Services always stay visible, but payment and booking are blocked while bookings are scheduled or closed — enforced on the server as well."}
           </p>
-          <input
-            type="date"
-            value={bookingStartDate}
-            onChange={(e) => setBookingStartDate(e.target.value)}
-            className="form-input"
-          />
-          {bookingStartDate && (
-            <p className="text-[11px] text-amber-600 font-medium">
-              {isAr
-                ? `✓ الحجز متاح اعتباراً من: ${bookingStartDate}`
-                : `✓ Bookings open from: ${bookingStartDate}`}
-            </p>
+
+          {/* Status radio */}
+          <div className="space-y-2">
+            {([
+              { value: "open",      ar: "مفتوحة — الحجز متاح الآن",                      en: "Open — bookings are available now" },
+              { value: "scheduled", ar: "مجدولة — تفتح الحجوزات في تاريخ محدد",           en: "Scheduled — bookings open on a set date" },
+              { value: "closed",    ar: "مغلقة — الحجز غير متاح",                          en: "Closed — bookings are unavailable" },
+            ] as const).map((opt) => (
+              <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="booking-status"
+                  checked={bookingStatus === opt.value}
+                  onChange={() => setBookingStatus(opt.value)}
+                  className="accent-primary-pink"
+                />
+                <span className="text-[13px] text-[var(--admin-text)]">
+                  {isAr ? opt.ar : opt.en}
+                </span>
+              </label>
+            ))}
+          </div>
+
+          {/* Start date — scheduled only */}
+          {bookingStatus === "scheduled" && (
+            <div className="space-y-1.5">
+              <label className="form-input-label">
+                {isAr ? "تاريخ بدء الحجوزات" : "Booking start date"}
+              </label>
+              <input
+                type="date"
+                value={bookingStartDate}
+                onChange={(e) => setBookingStartDate(e.target.value)}
+                className="form-input"
+              />
+              {!bookingStartDate && (
+                <p className="text-[11px] text-red-500 font-medium">
+                  {isAr
+                    ? "يجب تحديد تاريخ بدء — بدونه تُعامل الحجوزات كمغلقة."
+                    : "A start date is required — without it, bookings are treated as closed."}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* End date — open & scheduled */}
+          {bookingStatus !== "closed" && (
+            <div className="space-y-1.5">
+              <label className="form-input-label">
+                {isAr ? "تاريخ التوقف (اختياري)" : "Stop date (optional)"}
+              </label>
+              <input
+                type="date"
+                value={bookingEndDate}
+                onChange={(e) => setBookingEndDate(e.target.value)}
+                className="form-input"
+              />
+              <p className="text-[11px] text-[var(--admin-text-faint)]">
+                {isAr
+                  ? "آخر يوم تُقبل فيه الحجوزات. تُغلق الحجوزات تلقائياً بعده."
+                  : "Last day bookings are accepted. Bookings close automatically after it."}
+              </p>
+            </div>
           )}
         </div>
       </Section>
