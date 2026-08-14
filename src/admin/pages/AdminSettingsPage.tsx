@@ -9,7 +9,7 @@
  *   • AdminProfilePage     — personal account settings (password, language, theme)
  */
 import { useState, useEffect, useCallback } from "react";
-import { Clock, Calendar, Bell, Save, Loader2, CheckCircle2, Globe } from "lucide-react";
+import { Clock, Calendar, Bell, Save, Loader2, CheckCircle2, Globe, CalendarCheck } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { getSetting, setSetting } from "@/admin/repositories/settings.repository";
 import { COMMON_TIMEZONES } from "@/lib/timezone";
@@ -92,10 +92,11 @@ export default function AdminSettingsPage() {
   const { lang } = useLanguage();
   const isAr = lang === "ar";
 
-  const [workingHours,   setWorkingHours]   = useState<WorkingHours>(DEFAULT_WORKING_HOURS);
-  const [apptConfig,     setApptConfig]     = useState<AppointmentConfig>(DEFAULT_APPOINTMENT);
-  const [notifications,  setNotifications]  = useState<NotificationConfig>(DEFAULT_NOTIFICATIONS);
-  const [timezone,       setTimezone]       = useState("");
+  const [workingHours,    setWorkingHours]    = useState<WorkingHours>(DEFAULT_WORKING_HOURS);
+  const [apptConfig,      setApptConfig]      = useState<AppointmentConfig>(DEFAULT_APPOINTMENT);
+  const [notifications,   setNotifications]   = useState<NotificationConfig>(DEFAULT_NOTIFICATIONS);
+  const [timezone,        setTimezone]        = useState("");
+  const [bookingStartDate,setBookingStartDate] = useState("2026-08-24");
 
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
@@ -104,11 +105,12 @@ export default function AdminSettingsPage() {
   // ── Load settings ──────────────────────────────────────────────────────────
   const loadSettings = useCallback(async () => {
     setLoading(true);
-    const [wh, ac, nc, tzCfg] = await Promise.all([
+    const [wh, ac, nc, tzCfg, bsd] = await Promise.all([
       getSetting("working_hours"),
       getSetting("appointment_config"),
       getSetting("notification_config"),
       getSetting("timezone_config"),
+      getSetting("booking_start_date"),
     ]);
     if (wh)  setWorkingHours(wh as unknown as WorkingHours);
     if (ac)  setApptConfig(ac as unknown as AppointmentConfig);
@@ -116,6 +118,7 @@ export default function AdminSettingsPage() {
     if (tzCfg && typeof tzCfg === "object" && "timezone" in tzCfg) {
       setTimezone(String((tzCfg as { timezone: string }).timezone) || "");
     }
+    if (typeof bsd === "string" && bsd) setBookingStartDate(bsd);
     setLoading(false);
   }, []);
 
@@ -129,6 +132,7 @@ export default function AdminSettingsPage() {
       setSetting("appointment_config", apptConfig    as unknown as import("@/types/database.types").Json),
       setSetting("notification_config",notifications as unknown as import("@/types/database.types").Json),
       ...(timezone ? [setSetting("timezone_config", { timezone } as unknown as import("@/types/database.types").Json)] : []),
+      ...(bookingStartDate ? [setSetting("booking_start_date", bookingStartDate as unknown as import("@/types/database.types").Json)] : []),
     ]);
     setSaving(false);
     setSaved(true);
@@ -181,6 +185,30 @@ export default function AdminSettingsPage() {
             : (isAr ? "حفظ التغييرات" : "Save Changes")}
         </button>
       </div>
+
+      {/* ── Booking Start Date ───────────────────────────────────────────────── */}
+      <Section icon={CalendarCheck} title={isAr ? "تاريخ بدء الحجوزات" : "Booking Start Date"}>
+        <div className="space-y-3">
+          <p className="text-[12px] text-[var(--admin-text-faint)] leading-relaxed">
+            {isAr
+              ? "حدد تاريخ بدء قبول الحجوزات من الموقع. قبل هذا التاريخ تبقى الخدمات مرئية ولكن لا يمكن إتمام الحجز. اتركه فارغاً لفتح الحجز دون قيد."
+              : "Set the date when bookings open on the website. Before this date, services remain visible but booking is blocked. Leave empty to allow bookings immediately."}
+          </p>
+          <input
+            type="date"
+            value={bookingStartDate}
+            onChange={(e) => setBookingStartDate(e.target.value)}
+            className="form-input"
+          />
+          {bookingStartDate && (
+            <p className="text-[11px] text-amber-600 font-medium">
+              {isAr
+                ? `✓ الحجز متاح اعتباراً من: ${bookingStartDate}`
+                : `✓ Bookings open from: ${bookingStartDate}`}
+            </p>
+          )}
+        </div>
+      </Section>
 
       {/* ── Time Zone ────────────────────────────────────────────────────────── */}
       <Section icon={Globe} title={isAr ? "المنطقة الزمنية" : "Time Zone"}>
