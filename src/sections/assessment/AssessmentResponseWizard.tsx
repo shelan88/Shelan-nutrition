@@ -521,6 +521,18 @@ export default function AssessmentResponseWizard({
       if (!ok) throw new Error("submit failed");
       // Clear localStorage draft
       try { localStorage.removeItem(lsKey(appointmentId)); } catch { /* ignore */ }
+
+      // ── Notify admin that assessment is complete (fire-and-forget) ──────────
+      // Non-blocking — the UI must never stall or error because of this call.
+      // The server verifies all data independently; we only pass the IDs.
+      if (appointmentId) {
+        fetch("/api/send-assessment-notification", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ appointmentId, responseId }),
+        }).catch(() => {/* non-critical — ignore network errors */});
+      }
+
       onSubmitted();
     } catch {
       setSubmitError(isAr ? "حدث خطأ أثناء الإرسال. حاولي مرة أخرى." : "Something went wrong. Please try again.");
