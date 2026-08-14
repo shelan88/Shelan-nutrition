@@ -955,6 +955,8 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
             adminTz:      adminTz ?? null,
             visitorTz,
             visitorTime,
+            // When assessment is required, defer admin email until after submission
+            assessmentPending: hasTemplate,
           }),
         });
       } catch (networkErr) {

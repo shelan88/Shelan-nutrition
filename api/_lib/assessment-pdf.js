@@ -2,7 +2,7 @@
  * api/_lib/assessment-pdf.js
  *
  * Shared helpers for the assessment PDF/report system.
- * Imported by both get-assessment-pdf.js and send-assessment-notification.js.
+ * Imported by get-assessment-pdf.js and send-booking-emails.js.
  *
  * Keeping the HMAC in one place ensures the signing and verification always
  * use the same algorithm — if one drifts, all links break immediately.

@@ -22,7 +22,6 @@ import stripeWebhookHandler       from "./stripe-webhook.js";
 import sendPasswordResetHandler            from "./send-password-reset.js";
 import sendQuestionnaireReminderHandler   from "./send-questionnaire-reminder.js";
 import getAssessmentPdfHandler            from "./get-assessment-pdf.js";
-import sendAssessmentNotificationHandler  from "./send-assessment-notification.js";
 
 const app = express();
 
@@ -44,7 +43,6 @@ app.post("/api/create-payment-intent", createPaymentIntentHandler);
 app.post("/api/send-password-reset",  sendPasswordResetHandler);
 app.post("/api/send-questionnaire-reminder",   sendQuestionnaireReminderHandler);
 app.get("/api/get-assessment-pdf",            getAssessmentPdfHandler);
-app.post("/api/send-assessment-notification", sendAssessmentNotificationHandler);
 app.get("/api/health",                        healthHandler);
 app.get("/api/analytics",             analyticsHandler);
 app.get("/api/debug-analytics",       debugAnalyticsHandler);

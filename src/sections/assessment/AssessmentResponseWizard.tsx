@@ -522,15 +522,22 @@ export default function AssessmentResponseWizard({
       // Clear localStorage draft
       try { localStorage.removeItem(lsKey(appointmentId)); } catch { /* ignore */ }
 
-      // ── Notify admin that assessment is complete (fire-and-forget) ──────────
-      // Non-blocking — the UI must never stall or error because of this call.
-      // The server verifies all data independently; we only pass the IDs.
+      // ── Send admin booking confirmation email with assessment PDF link ───────
+      // Triggered after assessment submission. The server fetches all appointment
+      // data, builds a signed report URL, and sends the ONE admin booking email.
+      // Non-blocking for UX — onSubmitted() transitions the page immediately.
       if (appointmentId) {
-        fetch("/api/send-assessment-notification", {
+        fetch("/api/send-booking-emails", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify({ appointmentId, responseId }),
-        }).catch(() => {/* non-critical — ignore network errors */});
+          body:    JSON.stringify({ appointmentId, adminOnly: true }),
+        }).then((resp) => {
+          if (!resp.ok) {
+            resp.json()
+              .then((b) => console.error("[AssessmentWizard] admin email error:", b))
+              .catch(() => {});
+          }
+        }).catch((err) => console.error("[AssessmentWizard] admin email network error:", err));
       }
 
       onSubmitted();

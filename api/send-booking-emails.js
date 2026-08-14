@@ -18,11 +18,18 @@
  *   ADMIN_NOTIFICATION_EMAIL     — recipient for admin notifications
  */
 
-import { adminClient } from "./_lib/clients.js";
+import { adminClient }  from "./_lib/clients.js";
+import { computePdfSig } from "./_lib/assessment-pdf.js";
 
 // ── Fallback domain used when WEBSITE_URL env var is not set ─────────────────
 // Defined once here so brandHeader() and clientEmailHtml() can't drift apart.
 const DEFAULT_WEBSITE_URL = "https://shelancircle.com";
+
+// ── Per-process deduplication for admin emails sent after assessment ──────────
+// Prevents a double-send if the assessment wizard retries in the same process.
+// (Long-running Express server on Replit.) For Vercel serverless the primary
+// guard is the DB check below — assessment_status must equal 'assessment_submitted'.
+const notifiedAppointments = new Set();
 
 // ── Env vars are read inside the handler (not at module load) so that changes
 // to Vercel / Replit env vars take effect on the next request without a
@@ -389,7 +396,7 @@ function clientEmailHtml({ clientName, service, date, time, lang, adminTz, visit
 
 // ── Email HTML: admin notification ───────────────────────────────────────────
 
-function adminEmailHtml({ clientName, clientEmail, phone, service, date, time, notes, adminTz, visitorTz, visitorTime }) {
+function adminEmailHtml({ clientName, clientEmail, phone, service, date, time, notes, adminTz, visitorTz, visitorTime, pdfUrl = null }) {
   const formattedDate = formatDate(date, "en");
   const refDate       = date ? new Date(`${date}T12:00:00Z`) : new Date();
   const adminAbbr     = adminTz  ? tzAbbrNode(adminTz,  refDate) : "";
@@ -600,6 +607,32 @@ function adminEmailHtml({ clientName, clientEmail, phone, service, date, time, n
               </table>
               <!-- End booking details card -->
 
+              ${pdfUrl ? `
+              <!-- ── Assessment download ── -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation"
+                     style="border-radius:14px;overflow:hidden;border:1px solid #ddd5f0;
+                            margin-bottom:24px;background-color:#f9f5ff;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 4px;font-family:Arial,'Helvetica Neue',sans-serif;
+                               font-size:10px;font-weight:700;color:#9b87b8;
+                               text-transform:uppercase;letter-spacing:1.5px;">Assessment Submitted</p>
+                    <p style="margin:0 0 14px;font-family:Arial,'Helvetica Neue',sans-serif;
+                               font-size:13px;color:#4a3566;line-height:1.5;">
+                      The client has completed and submitted their questionnaire.
+                    </p>
+                    <a href="${pdfUrl}"
+                       target="_blank"
+                       style="display:inline-block;padding:12px 28px;
+                              background:linear-gradient(135deg,#f35e98 0%,#6a35b5 100%);
+                              border-radius:50px;font-family:Arial,'Helvetica Neue',sans-serif;
+                              font-size:14px;font-weight:700;color:#ffffff;
+                              text-decoration:none;direction:rtl;"
+                    >&#128203; تحميل الاستبيان والإجابات PDF</a>
+                  </td>
+                </tr>
+              </table>` : ""}
+
               <!-- Auto-send note -->
               <p style="margin:0;font-family:Arial,'Helvetica Neue',sans-serif;
                          font-size:12px;color:#b3a6c9;line-height:1.6;">
@@ -651,16 +684,120 @@ export default async function handler(req, res) {
     date,
     time,
     notes,
-    lang       = "en",
-    adminTz    = null,   // IANA clinic timezone e.g. "America/Detroit"
-    visitorTz  = null,   // IANA visitor browser timezone e.g. "Asia/Riyadh"
-    visitorTime = null,  // Pre-converted display time string in visitor's TZ
+    lang            = "en",
+    adminTz         = null,    // IANA clinic timezone e.g. "America/Detroit"
+    visitorTz       = null,    // IANA visitor browser timezone e.g. "Asia/Riyadh"
+    visitorTime     = null,    // Pre-converted display time string in visitor's TZ
+    assessmentPending = false, // When true: skip admin email (will be sent after assessment)
+    adminOnly       = false,   // When true: skip client email; send admin email with PDF link
   } = req.body ?? {};
 
   // Log the exact body received so we can trace any data mismatch
   console.log("[send-booking-emails] body received:", JSON.stringify({
-    appointmentId, clientName, clientEmail, phone, service, date, time, notes, lang,
+    appointmentId, clientName, clientEmail, service, date, time, lang,
+    assessmentPending, adminOnly,
   }));
+
+  const { RESEND_API_KEY, ADMIN_EMAIL } = getEnv();
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MODE: adminOnly — called after assessment submission.
+  // Fetches all appointment data from the DB, verifies assessment is submitted,
+  // then sends the ONE admin booking confirmation email with the PDF link.
+  // Client email is NOT re-sent.
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (adminOnly) {
+    if (!appointmentId) {
+      return res.status(400).json({ error: "Missing required field: appointmentId." });
+    }
+
+    // ── Deduplication: in-memory guard for same-process retries ─────────────
+    if (notifiedAppointments.has(appointmentId)) {
+      console.log(`[send-booking-emails] adminOnly dedup — already notified ${appointmentId}`);
+      return res.status(200).json({ ok: true, dedup: true });
+    }
+
+    // ── Fetch full appointment data from DB (service-role, bypasses RLS) ────
+    const { data: appt, error: apptErr } = await adminClient
+      .from("appointments")
+      .select("id, client_name, client_email, type, date, time, notes, assessment_status, assessment_response_id")
+      .eq("id", appointmentId)
+      .single();
+
+    if (apptErr || !appt) {
+      console.error("[send-booking-emails] adminOnly — appointment lookup failed:", apptErr?.message);
+      return res.status(404).json({ error: "Appointment not found." });
+    }
+
+    // ── Guard: only send when assessment is actually submitted ───────────────
+    if (appt.assessment_status !== "assessment_submitted") {
+      console.warn(`[send-booking-emails] adminOnly — assessment_status is '${appt.assessment_status}', not 'assessment_submitted'. Skipping.`);
+      return res.status(200).json({ ok: false, reason: "Assessment not yet submitted." });
+    }
+
+    // ── Admin env diagnostic ─────────────────────────────────────────────────
+    console.log(
+      `[send-booking-emails] adminOnly env check | RESEND_API_KEY=${RESEND_API_KEY ? "SET" : "MISSING"} | ` +
+      `ADMIN_EMAIL=${ADMIN_EMAIL || "MISSING"}`
+    );
+
+    if (!ADMIN_EMAIL) {
+      console.warn("[send-booking-emails] adminOnly — ADMIN_EMAIL not set, skipping email.");
+      return res.status(200).json({ ok: true, skipped: true });
+    }
+
+    // ── Fetch admin timezone from website_settings ───────────────────────────
+    const { data: settings } = await adminClient
+      .from("website_settings")
+      .select("admin_tz")
+      .limit(1)
+      .maybeSingle();
+    const apptAdminTz = settings?.admin_tz ?? null;
+
+    // ── Build signed PDF URL ─────────────────────────────────────────────────
+    let pdfUrl = null;
+    try {
+      const { WEBSITE_URL } = getEnv();
+      const websiteBase = WEBSITE_URL || DEFAULT_WEBSITE_URL;
+      const sig = computePdfSig(appointmentId);
+      pdfUrl = `${websiteBase}/api/get-assessment-pdf?appointmentId=${encodeURIComponent(appointmentId)}&sig=${encodeURIComponent(sig)}`;
+    } catch (sigErr) {
+      // SESSION_SECRET not set — log warning but still send email without the link
+      console.warn("[send-booking-emails] adminOnly — PDF URL generation failed:", sigErr.message);
+    }
+
+    // ── Send admin booking confirmation email (with assessment PDF link) ─────
+    try {
+      await sendEmail({
+        to:      ADMIN_EMAIL,
+        subject: `New Booking: ${appt.client_name} — ${appt.type}`,
+        html:    adminEmailHtml({
+          clientName:  appt.client_name,
+          clientEmail: appt.client_email,
+          phone:       null, // phone not stored on appointments row
+          service:     appt.type,
+          date:        appt.date,
+          time:        appt.time,
+          notes:       appt.notes ?? null,
+          adminTz:     apptAdminTz,
+          visitorTz:   null,
+          visitorTime: null,
+          pdfUrl,
+        }),
+        label: "admin-notification-with-assessment",
+      });
+      notifiedAppointments.add(appointmentId);
+      return res.status(200).json({ ok: true });
+    } catch (err) {
+      console.error("[send-booking-emails] adminOnly — admin email failed:", err.message);
+      return res.status(500).json({ error: "Failed to send admin email. " + err.message });
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NORMAL FLOW (immediate post-payment): validate, send client email,
+  // conditionally send admin email.
+  // ═══════════════════════════════════════════════════════════════════════════
 
   if (!appointmentId || !clientEmail) {
     return res.status(400).json({ error: "Missing required fields: appointmentId, clientEmail." });
@@ -679,7 +816,6 @@ export default async function handler(req, res) {
   }
 
   // ── Per-request env diagnostic ───────────────────────────────────────────────
-  const { RESEND_API_KEY, ADMIN_EMAIL } = getEnv();
   console.log(
     `[send-booking-emails] env check | RESEND_API_KEY=${RESEND_API_KEY ? "SET" : "MISSING"} | ` +
     `ADMIN_EMAIL=${ADMIN_EMAIL || "MISSING (ADMIN_NOTIFICATION_EMAIL not set)"}`
@@ -698,6 +834,12 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error("[send-booking-emails] ✗ client email failed:", err.message);
     return res.status(500).json({ error: "Failed to send confirmation email. " + err.message });
+  }
+
+  // ── When assessment is pending, skip admin email now (sent after submission) ─
+  if (assessmentPending) {
+    console.log("[send-booking-emails] assessmentPending=true — admin email deferred until assessment submitted.");
+    return res.status(200).json({ ok: true });
   }
 
   // ── Send admin notification (optional — failure is logged but never blocks) ─
