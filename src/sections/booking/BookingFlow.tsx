@@ -187,6 +187,8 @@ function PickTime({
   disabledDays,
   adminTz,
   lang,
+  minimumDate,
+  maximumDate,
 }: {
   timeSlots: CMSBookingData["timeSlots"];
   selectedDate: string;
@@ -197,6 +199,8 @@ function PickTime({
   disabledDays?: Set<number>;
   adminTz?: string | null;
   lang?: string;
+  minimumDate?: string | null;
+  maximumDate?: string | null;
 }) {
   const today = new Date();
   const [viewYear,    setViewYear]    = useState(today.getFullYear());
@@ -260,7 +264,11 @@ function PickTime({
             {Array.from({ length: firstDay }).map((_, i) => <span key={`empty-${i}`} />)}
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
               const ds       = dateStr(day);
-              const disabled = isPast(day) || isDisabledDay(day);
+              const disabled =
+                isPast(day) ||
+                isDisabledDay(day) ||
+                (!!minimumDate && ds < minimumDate) ||
+                (!!maximumDate && ds > maximumDate);
               const sel      = selectedDate === ds;
               return (
                 <button
@@ -674,8 +682,16 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
   const [cardFieldError,  setCardFieldError]  = useState<string | null>(null);
 
   // ── Global booking availability gate ──────────────────────────────────────
-  const { availability } = useBookingAvailability();
+  const { availability, settings: bookingAvailabilitySettings } = useBookingAvailability();
   const isBookingOpen = availability.state === "open";
+  const bookingMinimumDate =
+    bookingAvailabilitySettings?.status === "open"
+      ? bookingAvailabilitySettings.startDate
+      : null;
+  const bookingMaximumDate =
+    bookingAvailabilitySettings?.status === "open"
+      ? bookingAvailabilitySettings.endDate
+      : null;
 
   const { user } = useAuth();
   const { lang } = useLanguage();
@@ -1085,6 +1101,8 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
                 disabledDays={disabledDays}
                 adminTz={adminTz}
                 lang={lang}
+                minimumDate={bookingMinimumDate}
+                maximumDate={bookingMaximumDate}
                 strings={{
                   calendarLabel:    str.calendarLabel,
                   selectTimeLabel:  str.selectTimeLabel,

@@ -61,12 +61,16 @@ function DateTimePicker({
   onDateChange,
   onTimeChange,
   adminTz,
+  minimumDate,
+  maximumDate,
 }: {
   selectedDate: string;
   selectedTime: string;
   onDateChange: (d: string) => void;
   onTimeChange: (t: string) => void;
   adminTz?: string | null;
+  minimumDate?: string | null;
+  maximumDate?: string | null;
 }) {
   const today = new Date();
   const [viewYear,  setViewYear]  = useState(today.getFullYear());
@@ -121,7 +125,11 @@ function DateTimePicker({
             {Array.from({ length: firstDay }).map((_, i) => <span key={`e-${i}`} />)}
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
               const ds       = dateStr(day);
-              const disabled = isPast(day) || isSunday(day);
+              const disabled =
+                isPast(day) ||
+                isSunday(day) ||
+                (!!minimumDate && ds < minimumDate) ||
+                (!!maximumDate && ds > maximumDate);
               const sel      = selectedDate === ds;
               return (
                 <button key={day} type="button" disabled={disabled}
@@ -211,8 +219,16 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
   const { adminTz } = useAdminTimezone();
 
   // ── Global booking availability gate ────────────────────────────────────
-  const { availability } = useBookingAvailability();
+  const { availability, settings: bookingAvailabilitySettings } = useBookingAvailability();
   const isBookingOpen = availability.state === "open";
+  const bookingMinimumDate =
+    bookingAvailabilitySettings?.status === "open"
+      ? bookingAvailabilitySettings.startDate
+      : null;
+  const bookingMaximumDate =
+    bookingAvailabilitySettings?.status === "open"
+      ? bookingAvailabilitySettings.endDate
+      : null;
 
   const [step,          setStep]          = useState<0 | 1>(0);
   const [date,          setDate]          = useState("");
@@ -533,6 +549,8 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
                   selectedDate={date} selectedTime={time}
                   onDateChange={setDate} onTimeChange={setTime}
                   adminTz={adminTz}
+                  minimumDate={bookingMinimumDate}
+                  maximumDate={bookingMaximumDate}
                 />
 
                 <button type="button" disabled={!canProceed} onClick={() => setStep(1)}

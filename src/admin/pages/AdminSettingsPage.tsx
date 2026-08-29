@@ -156,13 +156,13 @@ export default function AdminSettingsPage() {
       ...(timezone ? [setSetting("timezone_config", { timezone } as unknown as import("@/types/database.types").Json)] : []),
       setSetting("booking_availability", {
         status:    bookingStatus,
-        startDate: bookingStatus === "scheduled" ? (bookingStartDate || null) : null,
+        startDate: bookingStatus !== "closed" ? (bookingStartDate || null) : null,
         endDate:   bookingStatus === "closed" ? null : (bookingEndDate || null),
       } as unknown as import("@/types/database.types").Json),
       // Keep legacy key in sync for compatibility with older readers.
       setSetting(
         "booking_start_date",
-        (bookingStatus === "scheduled" && bookingStartDate ? bookingStartDate : "") as unknown as import("@/types/database.types").Json,
+        (bookingStatus !== "closed" && bookingStartDate ? bookingStartDate : "") as unknown as import("@/types/database.types").Json,
       ),
     ]);
     setSaving(false);
@@ -248,11 +248,13 @@ export default function AdminSettingsPage() {
             ))}
           </div>
 
-          {/* Start date — scheduled only */}
-          {bookingStatus === "scheduled" && (
+          {/* Start date — optional for open, required for scheduled */}
+          {bookingStatus !== "closed" && (
             <div className="space-y-1.5">
               <label className="form-input-label">
-                {isAr ? "تاريخ بدء الحجوزات" : "Booking start date"}
+                {bookingStatus === "open"
+                  ? (isAr ? "تاريخ بداية الحجز (اختياري)" : "Booking start date (optional)")
+                  : (isAr ? "تاريخ بدء الحجوزات" : "Booking start date")}
               </label>
               <input
                 type="date"
@@ -260,7 +262,7 @@ export default function AdminSettingsPage() {
                 onChange={(e) => setBookingStartDate(e.target.value)}
                 className="form-input"
               />
-              {!bookingStartDate && (
+              {bookingStatus === "scheduled" && !bookingStartDate && (
                 <p className="text-[11px] text-red-500 font-medium">
                   {isAr
                     ? "يجب تحديد تاريخ بدء — بدونه تُعامل الحجوزات كمغلقة."
