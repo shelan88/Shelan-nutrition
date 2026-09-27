@@ -60,6 +60,7 @@ function toCheckout(row: ConsultationRow, lang: "en" | "ar"): CheckoutPlan {
     price:             final != null ? `${cur}${final}` : "",
     period:            (lang === "ar" ? row.period_ar : row.period_en) || "",
     consultationId:    row.id,
+    availability:      row.availability,
     assessmentEnabled: row.assessment_enabled ?? false,
   };
 }

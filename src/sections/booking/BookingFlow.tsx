@@ -178,7 +178,7 @@ function SelectService({
 }
 
 // ─── Step 2: Calendar + time ──────────────────────────────────────────────────
-function PickTime({
+export function PickTime({
   timeSlots,
   selectedDate,
   selectedTime,
@@ -668,7 +668,7 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
   const programMode = !!preselectedProgramId;
   const [appointmentSchedulingEnabled, setAppointmentSchedulingEnabled] = useState(true);
   const [schedulingSettingLoaded, setSchedulingSettingLoaded] = useState(false);
-  const requiresAppointmentTime = appointmentSchedulingEnabled && !programMode;
+  const requiresAppointmentTime = appointmentSchedulingEnabled;
 
   useEffect(() => {
     let current = true;
@@ -1103,10 +1103,11 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
   };
 
   const str = strings as Record<string, string>;
-  const stepLabels = requiresAppointmentTime
-    ? steps
-    : steps.filter((_, index) => index !== 1);
-  const indicatorStep = !requiresAppointmentTime && step > 1 ? step - 1 : step;
+  const visibleStepIndices = programMode
+    ? (requiresAppointmentTime ? [1, 2, 3] : [2, 3])
+    : (requiresAppointmentTime ? [0, 1, 2, 3] : [0, 2, 3]);
+  const stepLabels = visibleStepIndices.map((index) => steps[index]);
+  const indicatorStep = Math.max(0, visibleStepIndices.indexOf(step));
 
   if (!schedulingSettingLoaded || (programMode && programLoading)) {
     return (

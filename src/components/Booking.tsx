@@ -21,6 +21,7 @@ type DisplayPlan = {
   badge: string | null;
   features: string[];
   cta: string;
+  availability?: ConsultationRow["availability"];
 };
 
 /** Map a DB ConsultationRow → DisplayPlan for the given lang. */
@@ -51,6 +52,7 @@ function rowToDisplay(row: ConsultationRow, lang: "en" | "ar"): DisplayPlan {
     badge:    (lang === "ar" ? row.badge_ar    : row.badge_en)    || null,
     features: (lang === "ar" ? row.features_ar : row.features_en) ?? [],
     cta:      (lang === "ar" ? row.cta_text_ar : row.cta_text_en) || (lang === "ar" ? "احجزي الآن" : "Book Now"),
+    availability: row.availability,
   };
 }
 
@@ -212,7 +214,13 @@ export default function Booking() {
 
                 <button
                   type="button"
-                  onClick={() => handlePlanClick({ name: plan.name, price: plan.price, period: plan.period, consultationId: plan.id })}
+                  onClick={() => handlePlanClick({
+                    name: plan.name,
+                    price: plan.price,
+                    period: plan.period,
+                    consultationId: plan.id,
+                    availability: plan.availability,
+                  })}
                   className={`w-full py-3.5 rounded-full font-semibold transition-colors shadow-lg ${
                     isFeatured
                       ? "bg-gradient-to-r from-primary-pink to-soft-pink text-white hover:from-primary-pink hover:to-lavender-purple shadow-deep-purple/20"

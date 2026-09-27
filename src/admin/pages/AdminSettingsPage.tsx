@@ -312,13 +312,13 @@ export default function AdminSettingsPage() {
             </p>
             <p className="text-[12px] text-[var(--admin-text-faint)] leading-relaxed">
               {isAr
-                ? "يتحكم هذا الخيار بصفحة «احجزي الآن» المستقلة فقط. عند التفعيل، يختار العميل التاريخ والوقت قبل الدفع؛ وعند الإيقاف، ينتقل مباشرة إلى بياناته والدفع. مشتريات البرامج والخدمات من البطاقات تتجاوز اختيار الموعد دائمًا، وسيتواصل الفريق بعد الدفع لتنسيقه."
-                : "This controls only the standalone Book Now page. When on, clients choose a date and time before payment; when off, they go straight to their details and payment. Program and service-card purchases always skip appointment selection; the team arranges a time after payment."}
+                ? "يتحكم هذا الخيار بطلب اختيار الموعد قبل الدفع في صفحة «احجزي الآن» ومشتريات البرامج والخدمات من البطاقات. عند التفعيل، يختار العميل التاريخ والوقت؛ وعند الإيقاف، ينتقل مباشرة إلى بياناته والدفع، ثم يتواصل الفريق معه لتنسيق الموعد."
+                : "This controls whether clients must choose an appointment before payment on Book Now and program/service-card checkouts. When off, they go straight to their details and payment, then the team contacts them to arrange a time."}
             </p>
             <p className="text-[11px] text-[var(--admin-text-faint)]">
               {isAr
-                ? "تُطبّق التغييرات بعد الضغط على «حفظ التغييرات» ثم فتح صفحة الحجز من جديد."
-                : "Changes apply after you select Save Changes and reopen the booking page."}
+                ? "تُطبّق التغييرات بعد الضغط على «حفظ التغييرات» ثم إعادة فتح صفحة الحجز أو نافذة الشراء."
+                : "Changes apply after you select Save Changes and reopen the booking page or checkout."}
             </p>
           </div>
           <button

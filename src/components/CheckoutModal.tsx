@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,7 +13,8 @@ import {
 } from "@stripe/react-stripe-js";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/hooks/useAuth";
-import { checkoutModal } from "@/content/content";
+import { bookingStrings, checkoutModal } from "@/content/content";
+import { bookingData } from "@/data/booking.data";
 import { supabase } from "@/lib/supabase";
 import { createAppointment } from "@/admin/repositories/appointments.repository";
 import { getTemplateForService } from "@/admin/repositories/assessment-templates.repository";
@@ -22,6 +23,11 @@ import { recordPayment } from "@/admin/repositories/payments.repository";
 import { stripePromise, parsePriceCents } from "@/lib/stripe";
 import PhoneInput from "@/components/PhoneInput";
 import { useBookingAvailability, availabilityMessage } from "@/lib/bookingAvailability";
+import { getSetting } from "@/admin/repositories/settings.repository";
+import { getDisabledDays, getEnabledTimeSlots, resolveAvailability } from "@/lib/availability";
+import type { AvailabilitySettings } from "@/lib/availability";
+import { getLocalTimezone, slotToLocalDisplay, useAdminTimezone } from "@/lib/timezone";
+import { PickTime } from "@/sections/booking/BookingFlow";
 
 // ─── Card element styles ──────────────────────────────────────────────────────
 
@@ -48,6 +54,8 @@ export interface CheckoutPlan {
    *  When present, assessment_enabled is resolved by ID rather than by name,
    *  so renaming the consultation in the CMS never silently breaks the toggle. */
   consultationId?:    string;
+  /** Appointment-day and time availability from the consultation row, when available. */
+  availability?:       AvailabilitySettings | null;
   /** Mirrors the per-service assessment_enabled toggle in the admin panel.
    *  When undefined (legacy callers), defaults to true so existing behaviour
    *  is preserved. Set to false to suppress the post-payment questionnaire. */
@@ -68,18 +76,49 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
   const navigate  = useNavigate();
   const stripe    = useStripe();
   const elements  = useElements();
+  const { adminTz } = useAdminTimezone();
 
   // ── Global booking availability gate ────────────────────────────────────
-  const { availability } = useBookingAvailability();
-  const isBookingOpen = availability.state === "open";
+  const { availability: bookingAvailability, settings: bookingAvailabilitySettings } = useBookingAvailability();
+  const isBookingOpen = bookingAvailability.state === "open";
+  const [appointmentSchedulingEnabled, setAppointmentSchedulingEnabled] = useState(true);
+  const [schedulingSettingLoaded, setSchedulingSettingLoaded] = useState(false);
   const [name,          setName]          = useState("");
   const [email,         setEmail]         = useState(user?.email ?? "");
   const [phone,         setPhone]         = useState("");
+  const [date,          setDate]          = useState("");
+  const [time,          setTime]          = useState("");
   const [status,        setStatus]        = useState<"idle" | "processing" | "success">("idle");
   const [error,         setError]         = useState<string | null>(null);
   // Card element completeness — tracked via CardElement onChange
   const [cardComplete,  setCardComplete]  = useState(false);
   const [cardError,     setCardError]     = useState<string | null>(null);
+
+  useEffect(() => {
+    let current = true;
+    getSetting("appointment_scheduling_enabled")
+      .then((value) => {
+        if (current && typeof value === "boolean") setAppointmentSchedulingEnabled(value);
+      })
+      .catch((settingError) => {
+        console.error("[CheckoutModal] failed to load appointment scheduling setting:", settingError);
+      })
+      .finally(() => {
+        if (current) setSchedulingSettingLoaded(true);
+      });
+    return () => { current = false; };
+  }, []);
+
+  const bookingCopy = bookingStrings[lang];
+  const serviceAvailability = plan.availability !== undefined
+    ? resolveAvailability(plan.availability)
+    : null;
+  const appointmentTimeSlots = serviceAvailability
+    ? getEnabledTimeSlots(serviceAvailability)
+    : bookingData[lang].timeSlots;
+  const disabledDays = serviceAvailability
+    ? getDisabledDays(serviceAvailability)
+    : undefined;
 
   const emailValid  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
@@ -90,9 +129,13 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
     // Safety guard — bookings scheduled/closed (server also enforces this).
     if (!isBookingOpen) {
       setError(
-        availabilityMessage(availability, lang)?.body ??
+        availabilityMessage(bookingAvailability, lang)?.body ??
           "Bookings are currently unavailable.",
       );
+      return;
+    }
+    if (appointmentSchedulingEnabled && (!date || !time)) {
+      setError(lang === "ar" ? "يرجى اختيار التاريخ والوقت." : "Please choose a date and time.");
       return;
     }
 
@@ -207,8 +250,8 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
         client_email: clientEmail || null,
         client_phone: phone.trim() || null,
         user_id:      user?.id    ?? null,
-        date:         null,
-        time:         null,
+        date:         appointmentSchedulingEnabled ? date : null,
+        time:         appointmentSchedulingEnabled ? time : null,
         type:         plan.name,
         status:       "scheduled",
         notes:        null,
@@ -248,10 +291,15 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
             clientEmail,
             phone:        phone.trim() || null,
             service:      plan.name,
-            date:         null,
-            time:         null,
+            date:         appointmentSchedulingEnabled ? date : null,
+            time:         appointmentSchedulingEnabled ? time : null,
             notes:        null,
             lang,
+            adminTz:      adminTz ?? null,
+            visitorTz:    getLocalTimezone(),
+            visitorTime:  appointmentSchedulingEnabled && adminTz
+              ? slotToLocalDisplay(date, time, adminTz)
+              : time,
           }),
         });
         if (!emailResp.ok) {
@@ -294,7 +342,11 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setStatus("idle");
     }
-  }, [status, stripe, elements, plan, name, email, phone, user, navigate, onClose, cardComplete, lang, isBookingOpen, availability]);
+  }, [
+    status, stripe, elements, plan, name, email, phone, date, time, user,
+    navigate, onClose, cardComplete, lang, isBookingOpen, bookingAvailability,
+    appointmentSchedulingEnabled, adminTz,
+  ]);
 
   return createPortal(
     <motion.div
@@ -333,12 +385,30 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
                 dir={lang === "ar" ? "rtl" : "ltr"}
               >
                 <CheckCircle2 className="mx-auto text-primary-pink mb-4" size={48} />
-                <h4 className="font-heading text-lg font-bold text-gray-900 mb-2">{t.success}</h4>
-                <p className="text-sm text-gray-500 mb-6 leading-relaxed">{t.successNote}</p>
+                <h4 className="font-heading text-lg font-bold text-gray-900 mb-2">
+                  {appointmentSchedulingEnabled
+                    ? (lang === "ar" ? "تم تأكيد حجزك!" : "Booking Confirmed!")
+                    : t.success}
+                </h4>
+                <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                  {appointmentSchedulingEnabled
+                    ? (lang === "ar"
+                        ? "تم تأكيد موعدك وإرسال تفاصيل الحجز إلى بريدك الإلكتروني."
+                        : "Your appointment is confirmed. The booking details have been sent to your email.")
+                    : t.successNote}
+                </p>
                 <button onClick={onClose}
                   className="px-8 py-3 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white text-sm font-semibold shadow-md">
                   {t.close}
                 </button>
+              </motion.div>
+
+            ) : !schedulingSettingLoaded ? (
+              <motion.div key="loading-settings"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="flex min-h-40 items-center justify-center"
+              >
+                <span className="w-8 h-8 rounded-full border-2 border-primary-pink/25 border-t-primary-pink animate-spin" />
               </motion.div>
 
             ) : !isBookingOpen ? (
@@ -351,10 +421,10 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
                   <Lock className="text-primary-pink" size={22} />
                 </div>
                 <h4 className="font-heading text-lg font-bold text-gray-900 mb-2">
-                  {availabilityMessage(availability, lang)?.title}
+                  {availabilityMessage(bookingAvailability, lang)?.title}
                 </h4>
                 <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-                  {availabilityMessage(availability, lang)?.body}
+                  {availabilityMessage(bookingAvailability, lang)?.body}
                 </p>
                 <button onClick={onClose}
                   className="px-8 py-3 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white text-sm font-semibold shadow-md">
@@ -377,6 +447,37 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
                   </div>
                   <p className="font-heading font-extrabold text-primary-pink text-lg">{plan.price}</p>
                 </div>
+
+                {appointmentSchedulingEnabled && (
+                  <div className="rounded-2xl border border-gray-100 bg-gray-50/70 p-4">
+                    <h4 className="text-sm font-bold text-gray-800 mb-1">
+                      {lang === "ar" ? "اختاري موعدك" : "Choose an appointment time"}
+                    </h4>
+                    <p className="text-xs text-gray-500 mb-4">
+                      {lang === "ar"
+                        ? "اختاري تاريخًا ووقتًا متاحين قبل إتمام الدفع."
+                        : "Select an available date and time before completing payment."}
+                    </p>
+                    <PickTime
+                      timeSlots={appointmentTimeSlots}
+                      selectedDate={date}
+                      selectedTime={time}
+                      onDateChange={(selectedDate) => { setDate(selectedDate); setTime(""); }}
+                      onTimeChange={setTime}
+                      disabledDays={disabledDays}
+                      adminTz={adminTz}
+                      lang={lang}
+                      minimumDate={bookingAvailabilitySettings?.startDate}
+                      maximumDate={bookingAvailabilitySettings?.endDate}
+                      strings={{
+                        calendarLabel: bookingCopy.calendarLabel,
+                        selectTimeLabel: bookingCopy.selectTimeLabel,
+                        unavailableLabel: bookingCopy.unavailableLabel,
+                        noSlotsMessage: bookingCopy.noSlotsMessage,
+                      }}
+                    />
+                  </div>
+                )}
 
                 {/* Email address — required, pre-filled from auth */}
                 <div>

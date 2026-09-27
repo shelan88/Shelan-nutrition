@@ -13,10 +13,10 @@ description: Global open/scheduled/closed booking gate — settings shape, dual 
 - Admin UI (AdminSettingsPage "Booking Availability") keeps legacy `booking_start_date` in sync on save and refuses to save scheduled without a start date.
 - Remember Express api server (port 3001) must be restarted to pick up api/ changes — a stale process will happily serve the old ungated code and make tests lie.
 
-## Payment-first course checkout
+## Appointment scheduling toggle across checkout paths
 
-The pricing-card `CheckoutModal` and program-purchase mode of `BookingFlow` are payment-first: they do not ask for a date or time, and the team coordinates the appointment after payment. The standalone appointment-booking mode of `BookingFlow` still honors its scheduling toggle, availability, and timezone behavior. Pending-schedule confirmations should say the team will contact the customer without promising automated WhatsApp contact.
+**Rule:** `appointment_scheduling_enabled` applies to standalone booking, program booking, and consultation/service-card checkout. When enabled, each path requires a date and time before payment; when disabled, each skips the slot and tells the customer the team will arrange it after payment. Keep global and per-item availability plus admin-timezone conversion intact. Assessment routing remains controlled by the assigned template.
 
-**Why:** The consultation cards and standalone booking page are separate purchase paths; changing only `BookingFlow` left the date picker visible in the course/consultation checkout.
+**Why:** The setting is presented as an admin-wide scheduling control. Excluding program mode or a separate checkout modal made it appear ineffective.
 
-**How to apply:** Keep purchase flows distinct from standalone appointment booking. Payment-first purchases write null date/time and require the optional-scheduling Supabase migration before they are safe to use in production; standalone booking continues to require a selected slot when its toggle is on.
+**How to apply:** Every purchase path must read the saved setting before allowing payment. Date/time selections must use the existing availability and timezone rules. No-date purchases write null date/time and require the nullable-appointment migration before production use; do not apply that migration without authorization. Pending-schedule copy must not promise automated WhatsApp contact.
