@@ -128,7 +128,8 @@ function fmtDate(d: string, isAr: boolean): string {
   } catch { return d; }
 }
 
-function fmtDateLong(d: string, isAr: boolean): string {
+function fmtDateLong(d: string | null, isAr: boolean): string {
+  if (!d) return isAr ? "بانتظار تنسيق الموعد" : "Scheduling pending";
   try {
     return new Date(d).toLocaleDateString(isAr ? "ar-SA" : "en-US", {
       weekday: "short", month: "short", day: "numeric", year: "numeric",
@@ -1734,10 +1735,11 @@ export default function ClientProfilePage() {
       appointments
         .filter(
           (a) =>
+            !!a.date &&
             a.date >= today &&
             (a.status === "scheduled" || a.status === "confirmed"),
         )
-        .sort((a, b) => a.date.localeCompare(b.date))[0] ?? null
+        .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""))[0] ?? null
     );
   }, [appointments]);
 
@@ -1796,7 +1798,7 @@ export default function ClientProfilePage() {
 
   // Called by BookAppointmentModal when a new appointment is saved
   function handleBooked(appt: AppointmentRow) {
-    setAppointments((prev) => [appt, ...prev].sort((a, b) => b.date.localeCompare(a.date)));
+    setAppointments((prev) => [appt, ...prev].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? "")));
   }
 
   // Archive client — sets status to Inactive

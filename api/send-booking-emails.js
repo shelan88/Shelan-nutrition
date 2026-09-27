@@ -177,7 +177,8 @@ function clientEmailHtml({ clientName, service, date, time, lang, adminTz, visit
   const isAr          = lang === "ar";
   const dir           = isAr ? "rtl" : "ltr";
   const textAlign     = isAr ? "right" : "left";
-  const formattedDate = formatDate(date, lang);
+  const schedulingPending = !date || !time;
+  const formattedDate = date ? formatDate(date, lang) : "";
 
   // Resolve display time and timezone labels
   const refDate       = date ? new Date(`${date}T12:00:00Z`) : new Date();
@@ -201,13 +202,19 @@ function clientEmailHtml({ clientName, service, date, time, lang, adminTz, visit
   // ── Copy
   const pageTitle   = isAr ? "تأكيد الحجز — شيلان" : "Booking Confirmed — SHELAN";
   const eyebrow     = isAr ? "تأكيد الحجز" : "BOOKING CONFIRMED";
-  const headerTitle = isAr ? "تم تأكيد موعدكِ ✓" : "Your appointment is confirmed ✓";
+  const headerTitle = schedulingPending
+    ? (isAr ? "تم تأكيد حجزك ✓" : "Your booking is confirmed ✓")
+    : (isAr ? "تم تأكيد موعدكِ ✓" : "Your appointment is confirmed ✓");
   const greeting    = isAr
     ? `عزيزتي <strong style="color:#6a35b5;">${clientName}</strong>،`
     : `Dear <strong style="color:#6a35b5;">${clientName}</strong>,`;
-  const intro       = isAr
-    ? "يسعدنا إخباركِ بأن حجزكِ مع شيلان للتغذية قد تم تأكيده بنجاح. إليكِ ملخص جلستكِ القادمة:"
-    : "We\u2019re delighted to confirm your upcoming session with Shelan Nutrition. Here is a summary of your appointment:";
+  const intro       = schedulingPending
+    ? (isAr
+        ? "تم تأكيد حجزك بنجاح، وسيتم التواصل معك قريبًا عبر WhatsApp لتنسيق موعدك."
+        : "Your booking is confirmed. We’ll contact you soon via WhatsApp to arrange your appointment.")
+    : (isAr
+        ? "يسعدنا إخباركِ بأن حجزكِ مع شيلان للتغذية قد تم تأكيده بنجاح. إليكِ ملخص جلستكِ القادمة:"
+        : "We\u2019re delighted to confirm your upcoming session with Shelan Nutrition. Here is a summary of your appointment:");
   const lblSvc      = isAr ? "الخدمة"  : "Service";
   const lblDate     = isAr ? "التاريخ" : "Date";
   const lblTime     = isAr ? "الوقت"   : "Time";
@@ -303,6 +310,7 @@ function clientEmailHtml({ clientName, service, date, time, lang, adminTz, visit
                   </td>
                 </tr>
 
+                ${!schedulingPending ? `
                 <!-- Date row -->
                 <tr>
                   <td bgcolor="#ffffff"
@@ -334,6 +342,7 @@ function clientEmailHtml({ clientName, service, date, time, lang, adminTz, visit
                           dir="ltr">${clinicRef}</span>` : ""}
                   </td>
                 </tr>
+                ` : ""}
 
               </table>
               <!-- End booking details card -->
@@ -397,7 +406,8 @@ function clientEmailHtml({ clientName, service, date, time, lang, adminTz, visit
 // ── Email HTML: admin notification ───────────────────────────────────────────
 
 function adminEmailHtml({ clientName, clientEmail, phone, service, date, time, notes, adminTz, visitorTz, visitorTime, pdfUrl = null }) {
-  const formattedDate = formatDate(date, "en");
+  const schedulingPending = !date || !time;
+  const formattedDate = date ? formatDate(date, "en") : "";
   const refDate       = date ? new Date(`${date}T12:00:00Z`) : new Date();
   const adminAbbr     = adminTz  ? tzAbbrNode(adminTz,  refDate) : "";
   const visitorAbbr   = visitorTz ? tzAbbrNode(visitorTz, refDate) : "";
@@ -512,7 +522,7 @@ function adminEmailHtml({ clientName, clientEmail, phone, service, date, time, n
                            style="width:100%;">
                       <tr>
                         <td style="vertical-align:middle;">
-                          <a href="tel:${phone}"
+                          <a href="${waHref || `tel:${phone}`}"${waHref ? ' target="_blank"' : ""}
                              style="font-family:Arial,'Helvetica Neue',sans-serif;font-size:15px;
                                     font-weight:600;color:#6a35b5;text-decoration:none;"
                              dir="ltr">${phone}</a>
@@ -558,6 +568,22 @@ function adminEmailHtml({ clientName, clientEmail, phone, service, date, time, n
                   </td>
                 </tr>
 
+                ${schedulingPending ? `
+                <!-- Appointment to be coordinated -->
+                <tr>
+                  <td bgcolor="#fffaf0"
+                      style="padding:16px 20px;background-color:#fffaf0;border-bottom:1px solid #e8d5f5;">
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:10px;font-weight:700;color:#9b87b8;
+                                 text-transform:uppercase;letter-spacing:1px;
+                                 margin-bottom:5px;">Scheduling</span>
+                    <span style="display:block;font-family:Arial,'Helvetica Neue',sans-serif;
+                                 font-size:14px;font-weight:600;color:#4a3566;">
+                      Pending — contact the client via WhatsApp to arrange a date and time.
+                    </span>
+                  </td>
+                </tr>
+                ` : `
                 <!-- Date -->
                 <tr>
                   <td bgcolor="#f9f5ff"
@@ -589,6 +615,7 @@ function adminEmailHtml({ clientName, clientEmail, phone, service, date, time, n
                           dir="ltr">Client's local time: ${visitorTime} (${visitorAbbr})</span>` : ""}
                   </td>
                 </tr>
+                `}
 
                 ${safeNotes ? `
                 <!-- Notes -->
@@ -720,7 +747,7 @@ export default async function handler(req, res) {
     // ── Fetch full appointment data from DB (service-role, bypasses RLS) ────
     const { data: appt, error: apptErr } = await adminClient
       .from("appointments")
-      .select("id, client_name, client_email, type, date, time, notes, assessment_status, assessment_response_id")
+      .select("id, client_name, client_email, client_phone, type, date, time, notes, assessment_status, assessment_response_id")
       .eq("id", appointmentId)
       .single();
 
@@ -774,7 +801,7 @@ export default async function handler(req, res) {
         html:    adminEmailHtml({
           clientName:  appt.client_name,
           clientEmail: appt.client_email,
-          phone:       null, // phone not stored on appointments row
+          phone:       appt.client_phone ?? null,
           service:     appt.type,
           date:        appt.date,
           time:        appt.time,

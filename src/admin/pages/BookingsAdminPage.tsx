@@ -59,7 +59,8 @@ const STATUS_LABEL_AR: Record<KnownStatus, string> = {
 
 const ALL_STATUSES: KnownStatus[] = ["scheduled", "confirmed", "completed", "cancelled"];
 
-function formatDate(dateStr: string, isAr: boolean): string {
+function formatDate(dateStr: string | null, isAr: boolean): string {
+  if (!dateStr) return isAr ? "بانتظار تنسيق الموعد" : "Scheduling pending";
   try {
     return new Date(dateStr).toLocaleDateString(isAr ? "ar-SA" : "en-US", {
       weekday: "short",

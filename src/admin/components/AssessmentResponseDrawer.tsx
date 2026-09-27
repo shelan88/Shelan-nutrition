@@ -36,7 +36,8 @@ interface Props {
   onClose: () => void;
 }
 
-function formatDate(d: string, isAr: boolean) {
+function formatDate(d: string | null, isAr: boolean) {
+  if (!d) return isAr ? "بانتظار تنسيق الموعد" : "Scheduling pending";
   try {
     return new Date(d).toLocaleDateString(isAr ? "ar-SA" : "en-US", {
       weekday: "long", month: "long", day: "numeric", year: "numeric",

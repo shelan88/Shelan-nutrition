@@ -28,6 +28,7 @@ import { resolveAvailability, getDisabledDays, getEnabledTimeSlots } from "@/lib
 import type { AvailabilitySettings } from "@/lib/availability";
 import { useAdminTimezone, slotToLocalDisplay, getLocalTimezone, getTzAbbr } from "@/lib/timezone";
 import { useBookingAvailability, availabilityMessage } from "@/lib/bookingAvailability";
+import { getSetting } from "@/admin/repositories/settings.repository";
 import PhoneInput from "@/components/PhoneInput";
 import {
   Elements,
@@ -461,6 +462,7 @@ function BookingSummary({
   service,
   date,
   time,
+  appointmentSchedulingEnabled,
   strings,
   paymentNote,
   onConfirm,
@@ -476,6 +478,7 @@ function BookingSummary({
   service: CMSBookingService | undefined;
   date: string;
   time: string;
+  appointmentSchedulingEnabled: boolean;
   strings: Record<string, string>;
   paymentNote: string;
   onConfirm: () => void;
@@ -512,9 +515,13 @@ function BookingSummary({
           {strings.successTitle ?? (lang === "ar" ? "تم تأكيد الحجز!" : "Booking Confirmed!")}
         </h3>
         <p className="text-body opacity-75 max-w-sm">
-          {strings.successMessage ?? (lang === "ar"
-            ? "تم إرسال بريد تأكيد إليكِ. نتطلع إلى لقائكِ!"
-            : "A confirmation email has been sent to you. We look forward to seeing you!")}
+          {!appointmentSchedulingEnabled
+            ? (lang === "ar"
+                ? "تم تأكيد حجزك بنجاح، وسيتم التواصل معك قريبًا عبر WhatsApp لتنسيق موعدك."
+                : "Your booking is confirmed. We’ll contact you soon via WhatsApp to arrange your appointment.")
+            : (strings.successMessage ?? (lang === "ar"
+                ? "تم إرسال بريد تأكيد إليكِ. نتطلع إلى لقائكِ!"
+                : "A confirmation email has been sent to you. We look forward to seeing you!"))}
         </p>
       </motion.div>
     );
@@ -528,8 +535,12 @@ function BookingSummary({
         <ul className="space-y-4">
           {[
             { label: strings.serviceLabel, value: service?.name ?? "—" },
-            { label: strings.dateLabel,    value: formattedDate },
-            { label: strings.timeLabel,    value: displayTime || "—" },
+            ...(appointmentSchedulingEnabled
+              ? [
+                  { label: strings.dateLabel, value: formattedDate },
+                  { label: strings.timeLabel, value: displayTime || "—" },
+                ]
+              : []),
             { label: strings.totalLabel,   value: service?.price ?? "—" },
           ].map(({ label, value }) => (
             <li key={label} className="flex items-center justify-between border-b border-soft-purple/10 pb-3 last:border-0 last:pb-0">
@@ -653,6 +664,24 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
 
   const steps       = (strings.steps as string[]) ?? [];
   const programMode = !!preselectedProgramId;
+  const [appointmentSchedulingEnabled, setAppointmentSchedulingEnabled] = useState(true);
+  const [schedulingSettingLoaded, setSchedulingSettingLoaded] = useState(false);
+
+  useEffect(() => {
+    let current = true;
+    getSetting("appointment_scheduling_enabled")
+      .then((value) => {
+        if (!current) return;
+        if (typeof value === "boolean") setAppointmentSchedulingEnabled(value);
+      })
+      .catch((error) => {
+        console.error("[BookingFlow] failed to load appointment scheduling setting:", error);
+      })
+      .finally(() => {
+        if (current) setSchedulingSettingLoaded(true);
+      });
+    return () => { current = false; };
+  }, []);
 
   const [program,        setProgram]        = useState<ProgramRow | null>(null);
   const [programLoading, setProgramLoading] = useState(programMode);
@@ -680,6 +709,11 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
   // Card element completeness — tracked via CardElement onChange in BookingSummary
   const [cardComplete,    setCardComplete]    = useState(false);
   const [cardFieldError,  setCardFieldError]  = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!schedulingSettingLoaded || !programMode) return;
+    setStep(appointmentSchedulingEnabled ? 1 : 2);
+  }, [appointmentSchedulingEnabled, programMode, schedulingSettingLoaded]);
 
   // ── Global booking availability gate ──────────────────────────────────────
   const { availability, settings: bookingAvailabilitySettings } = useBookingAvailability();
@@ -776,6 +810,10 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
       }
       setForceShowErrors(false);
     }
+    if (step === 0 && !appointmentSchedulingEnabled && canNext[0]) {
+      setStep(2);
+      return;
+    }
     if (step < steps.length - 1 && canNext[step]) {
       setStep((s) => s + 1);
     }
@@ -783,17 +821,35 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
 
   const handleBack = () => {
     setForceShowErrors(false);
-    setStep((s) => Math.max(programMode ? 1 : 0, s - 1));
+    setStep((s) => {
+      if (!appointmentSchedulingEnabled) {
+        if (s === 3) return 2;
+        if (s === 2) return programMode ? 2 : 0;
+      }
+      return Math.max(programMode ? 1 : 0, s - 1);
+    });
   };
 
   // ── Confirm ────────────────────────────────────────────────────────────────
   const handleConfirm = async () => {
     if (!isBookingOpen) return; // safety guard — booking not yet open
+    if (!personalInfoValid) {
+      setForceShowErrors(true);
+      setStep(2);
+      return;
+    }
+    if (appointmentSchedulingEnabled && (!date || !time)) {
+      setStep(1);
+      setBookingError(lang === "ar" ? "يرجى اختيار التاريخ والوقت." : "Please choose a date and time.");
+      return;
+    }
     setConfirming(true);
     setBookingError(null);
 
     const isAr       = lang === "ar";
     const t0         = performance.now();
+    const clientEmail = personalInfo.email.trim();
+    const clientPhone = personalInfo.phone.trim();
     const fieldCount = Object.values(personalInfo).filter((v) => String(v).trim()).length + (date ? 1 : 0) + (time ? 1 : 0);
 
     debugLog({
@@ -891,13 +947,13 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
       };
 
       // ── 2. Confirm card payment with Stripe ────────────────────────────────
-      const clientName = `${personalInfo.firstName} ${personalInfo.lastName}`.trim() || personalInfo.email;
+      const clientName = `${personalInfo.firstName} ${personalInfo.lastName}`.trim();
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
         clientSecret,
         {
           payment_method: {
             card:            cardElement,
-            billing_details: { name: clientName, email: personalInfo.email },
+            billing_details: { name: clientName, email: clientEmail },
           },
         },
       );
@@ -925,10 +981,11 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
       // ── 3. Create appointment ──────────────────────────────────────────────
       const appt = await createAppointment({
         client_name:  clientName,
-        client_email: personalInfo.email || user?.email || null,
+        client_email: clientEmail,
+        client_phone: clientPhone,
         user_id:      user?.id ?? null,
-        date,
-        time,
+        date:         appointmentSchedulingEnabled ? date : null,
+        time:         appointmentSchedulingEnabled ? time : null,
         type:         serviceType,
         status:       "scheduled",
         notes:        personalInfo.notes || null,
@@ -950,7 +1007,7 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
         currency:                 "usd",
         status:                   "succeeded",
         client_name:              clientName,
-        client_email:             personalInfo.email || user?.email || null,
+        client_email:             clientEmail,
         service_name:             serviceType,
         appointment_id:           appt.id,
       });
@@ -961,18 +1018,18 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
       let emailResp: Response | undefined;
       try {
         const visitorTz   = getLocalTimezone();
-        const visitorTime = adminTz ? slotToLocalDisplay(date, time, adminTz) : time;
+        const visitorTime = appointmentSchedulingEnabled && adminTz ? slotToLocalDisplay(date, time, adminTz) : time;
         emailResp = await fetch("/api/send-booking-emails", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify({
             appointmentId: appt.id,
             clientName,
-            clientEmail:   personalInfo.email,
-            phone:         personalInfo.phone || null,
+            clientEmail,
+            phone:         clientPhone,
             service:       serviceType,
-            date,
-            time,
+            date:          appointmentSchedulingEnabled ? date : null,
+            time:          appointmentSchedulingEnabled ? time : null,
             notes:         personalInfo.notes || null,
             lang,
             adminTz:      adminTz ?? null,
@@ -1043,8 +1100,12 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
   };
 
   const str = strings as Record<string, string>;
+  const stepLabels = appointmentSchedulingEnabled
+    ? steps
+    : steps.filter((_, index) => index !== 1);
+  const indicatorStep = !appointmentSchedulingEnabled && step > 1 ? step - 1 : step;
 
-  if (programMode && programLoading) {
+  if (!schedulingSettingLoaded || (programMode && programLoading)) {
     return (
       <div className="max-w-3xl mx-auto flex items-center justify-center min-h-64">
         <div className="w-10 h-10 border-2 border-primary-pink/20 border-t-primary-pink rounded-full animate-spin" />
@@ -1077,7 +1138,7 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
         );
       })()}
 
-      <StepIndicator steps={steps} current={step} />
+      <StepIndicator steps={stepLabels} current={indicatorStep} />
 
       <div className="bg-white rounded-3xl border border-soft-purple/12 shadow-xl shadow-deep-purple/10 p-8 lg:p-10 min-h-96">
         <AnimatePresence mode="wait">
@@ -1091,7 +1152,7 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
             {step === 0 && (
               <SelectService services={data.services} selected={serviceId} onSelect={setServiceId} />
             )}
-            {step === 1 && (
+            {step === 1 && appointmentSchedulingEnabled && (
               <PickTime
                 timeSlots={effectiveTimeSlots}
                 selectedDate={date}
@@ -1125,6 +1186,7 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
                 service={selectedService}
                 date={date}
                 time={time}
+                appointmentSchedulingEnabled={appointmentSchedulingEnabled}
                 strings={str}
                 paymentNote={data.paymentNote}
                 onConfirm={handleConfirm}
@@ -1150,14 +1212,14 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
         <div className="flex items-center justify-between mt-6">
           <button
             onClick={handleBack}
-            disabled={step === (programMode ? 1 : 0)}
+            disabled={step === (programMode ? (appointmentSchedulingEnabled ? 1 : 2) : 0)}
             className="flex items-center gap-2 px-6 py-3 rounded-full border border-soft-purple/20 text-deep-purple text-sm font-semibold hover:bg-light-pink/30 disabled:opacity-0 disabled:pointer-events-none transition-all"
           >
             <ChevronLeft size={16} className="rtl:rotate-180" />
             {str.backLabel}
           </button>
 
-          {step < steps.length - 1 && (
+          {step < 3 && (
             <button
               onClick={handleNext}
               // Booking not open: always disabled.

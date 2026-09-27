@@ -96,6 +96,7 @@ export default function AdminSettingsPage() {
   const [apptConfig,      setApptConfig]      = useState<AppointmentConfig>(DEFAULT_APPOINTMENT);
   const [notifications,   setNotifications]   = useState<NotificationConfig>(DEFAULT_NOTIFICATIONS);
   const [timezone,        setTimezone]        = useState("");
+  const [appointmentSchedulingEnabled, setAppointmentSchedulingEnabled] = useState(true);
   const [bookingStatus,   setBookingStatus]   = useState<"open" | "scheduled" | "closed">("open");
   const [bookingStartDate,setBookingStartDate] = useState("");
   const [bookingEndDate,  setBookingEndDate]  = useState("");
@@ -107,17 +108,19 @@ export default function AdminSettingsPage() {
   // ── Load settings ──────────────────────────────────────────────────────────
   const loadSettings = useCallback(async () => {
     setLoading(true);
-    const [wh, ac, nc, tzCfg, ba, bsd] = await Promise.all([
+    const [wh, ac, nc, tzCfg, ba, bsd, scheduling] = await Promise.all([
       getSetting("working_hours"),
       getSetting("appointment_config"),
       getSetting("notification_config"),
       getSetting("timezone_config"),
       getSetting("booking_availability"),
       getSetting("booking_start_date"),
+      getSetting("appointment_scheduling_enabled"),
     ]);
     if (wh)  setWorkingHours(wh as unknown as WorkingHours);
     if (ac)  setApptConfig(ac as unknown as AppointmentConfig);
     if (nc)  setNotifications(nc as unknown as NotificationConfig);
+    if (typeof scheduling === "boolean") setAppointmentSchedulingEnabled(scheduling);
     if (tzCfg && typeof tzCfg === "object" && "timezone" in tzCfg) {
       setTimezone(String((tzCfg as { timezone: string }).timezone) || "");
     }
@@ -149,10 +152,11 @@ export default function AdminSettingsPage() {
       return;
     }
     setSaving(true);
-    await Promise.all([
+    const saveResults = await Promise.all([
       setSetting("working_hours",      workingHours  as unknown as import("@/types/database.types").Json),
       setSetting("appointment_config", apptConfig    as unknown as import("@/types/database.types").Json),
       setSetting("notification_config",notifications as unknown as import("@/types/database.types").Json),
+      setSetting("appointment_scheduling_enabled", appointmentSchedulingEnabled),
       ...(timezone ? [setSetting("timezone_config", { timezone } as unknown as import("@/types/database.types").Json)] : []),
       setSetting("booking_availability", {
         status:    bookingStatus,
@@ -165,6 +169,11 @@ export default function AdminSettingsPage() {
         (bookingStatus !== "closed" && bookingStartDate ? bookingStartDate : "") as unknown as import("@/types/database.types").Json,
       ),
     ]);
+    if (saveResults.some((ok) => !ok)) {
+      setSaving(false);
+      alert(isAr ? "تعذّر حفظ بعض الإعدادات. يرجى المحاولة مجدداً." : "Some settings could not be saved. Please try again.");
+      return;
+    }
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
@@ -291,6 +300,41 @@ export default function AdminSettingsPage() {
               </p>
             </div>
           )}
+        </div>
+      </Section>
+
+      {/* ── Appointment Scheduling ──────────────────────────────────────────── */}
+      <Section icon={CalendarCheck} title={isAr ? "جدولة المواعيد" : "Appointment Scheduling"}>
+        <div className="flex items-start justify-between gap-5">
+          <div className="space-y-1.5">
+            <p className="text-[13px] font-semibold text-[var(--admin-text)]">
+              Enable Appointment Scheduling
+            </p>
+            <p className="text-[12px] text-[var(--admin-text-faint)] leading-relaxed">
+              {isAr
+                ? "عند الإيقاف، يتجاوز العميل اختيار التاريخ والوقت وينتقل إلى بياناته والدفع. تبقى إعدادات المواعيد والمنطقة الزمنية والتوفر محفوظة."
+                : "When off, clients skip date and time selection and continue to their details and payment. Appointment, timezone, and availability settings remain saved."}
+            </p>
+            <p className="text-[11px] text-[var(--admin-text-faint)]">
+              {isAr ? "تُطبّق التغييرات بعد الضغط على حفظ التغييرات." : "Changes apply after you select Save Changes."}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={appointmentSchedulingEnabled}
+            aria-label="Enable Appointment Scheduling"
+            onClick={() => setAppointmentSchedulingEnabled((enabled) => !enabled)}
+            className={`relative mt-1 h-6 w-11 shrink-0 rounded-full transition-colors ${
+              appointmentSchedulingEnabled ? "bg-primary-pink" : "bg-[var(--admin-border)]"
+            }`}
+          >
+            <span
+              className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-all ${
+                appointmentSchedulingEnabled ? "start-[calc(100%-20px)]" : "start-1"
+              }`}
+            />
+          </button>
         </div>
       </Section>
 

@@ -178,7 +178,8 @@ export interface AppointmentRow {
   user_id: string | null;
   client_name: string | null;
   client_email: string | null;
-  date: string;
+  client_phone?: string | null;
+  date: string | null;
   time: string | null;
   type: string | null;
   status: "scheduled" | "confirmed" | "completed" | "cancelled" | null;

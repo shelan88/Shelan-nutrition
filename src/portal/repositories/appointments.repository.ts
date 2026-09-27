@@ -37,6 +37,6 @@ export async function getOwnAppointments(
     isPast:
       row.status === "completed" ||
       row.status === "cancelled" ||
-      new Date(row.date) < today,
+      (!!row.date && new Date(row.date) < today),
   }));
 }
