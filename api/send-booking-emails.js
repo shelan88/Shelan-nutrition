@@ -200,18 +200,22 @@ function clientEmailHtml({ clientName, service, date, time, lang, adminTz, visit
                      || "";
 
   // ── Copy
-  const pageTitle   = isAr ? "تأكيد الحجز — شيلان" : "Booking Confirmed — SHELAN";
-  const eyebrow     = isAr ? "تأكيد الحجز" : "BOOKING CONFIRMED";
+  const pageTitle   = schedulingPending
+    ? (isAr ? "تأكيد الدفع — شيلان" : "Payment Confirmed — SHELAN")
+    : (isAr ? "تأكيد الحجز — شيلان" : "Booking Confirmed — SHELAN");
+  const eyebrow     = schedulingPending
+    ? (isAr ? "تم استلام الدفع" : "PAYMENT RECEIVED")
+    : (isAr ? "تأكيد الحجز" : "BOOKING CONFIRMED");
   const headerTitle = schedulingPending
-    ? (isAr ? "تم تأكيد حجزك ✓" : "Your booking is confirmed ✓")
+    ? (isAr ? "تم استلام دفعتك بنجاح ✓" : "Your payment was received ✓")
     : (isAr ? "تم تأكيد موعدكِ ✓" : "Your appointment is confirmed ✓");
   const greeting    = isAr
     ? `عزيزتي <strong style="color:#6a35b5;">${clientName}</strong>،`
     : `Dear <strong style="color:#6a35b5;">${clientName}</strong>,`;
   const intro       = schedulingPending
     ? (isAr
-        ? "تم تأكيد حجزك بنجاح، وسيتم التواصل معك قريبًا عبر WhatsApp لتنسيق موعدك."
-        : "Your booking is confirmed. We’ll contact you soon via WhatsApp to arrange your appointment.")
+        ? "تم تأكيد دفعتك بنجاح، وسيتواصل معك فريقنا قريبًا لتنسيق موعد مناسب لك."
+        : "Your payment is confirmed. Our team will contact you soon to arrange a suitable appointment time.")
     : (isAr
         ? "يسعدنا إخباركِ بأن حجزكِ مع شيلان للتغذية قد تم تأكيده بنجاح. إليكِ ملخص جلستكِ القادمة:"
         : "We\u2019re delighted to confirm your upcoming session with Shelan Nutrition. Here is a summary of your appointment:");

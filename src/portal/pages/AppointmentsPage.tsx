@@ -31,7 +31,7 @@ function AppointmentCard({ appt, isAr }: { appt: PortalAppointment; isAr: boolea
     ? new Date(appt.date).toLocaleDateString(isAr ? "ar-KW" : "en-US", {
         weekday: "short", month: "long", day: "numeric", year: "numeric",
       })
-    : (isAr ? "سيتم تنسيق الموعد عبر WhatsApp" : "To be arranged via WhatsApp");
+    : (isAr ? "موعدك قيد التنسيق" : "Appointment to be arranged");
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-start gap-4">

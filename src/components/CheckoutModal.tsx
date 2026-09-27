@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Lock, ShieldCheck, X, CheckCircle2, ChevronLeft, ChevronRight, AlertCircle,
+  Lock, ShieldCheck, X, CheckCircle2, AlertCircle,
 } from "lucide-react";
 import {
   Elements,
@@ -21,7 +21,6 @@ import { createResponse } from "@/admin/repositories/assessment-responses.reposi
 import { recordPayment } from "@/admin/repositories/payments.repository";
 import { stripePromise, parsePriceCents } from "@/lib/stripe";
 import PhoneInput from "@/components/PhoneInput";
-import { useAdminTimezone, slotToLocalDisplay, getLocalTimezone, getTzAbbr } from "@/lib/timezone";
 import { useBookingAvailability, availabilityMessage } from "@/lib/bookingAvailability";
 
 // ─── Card element styles ──────────────────────────────────────────────────────
@@ -37,153 +36,6 @@ const CARD_ELEMENT_OPTIONS = {
     invalid: { color: "#ef4444" },
   },
 };
-
-// ─── Static time slots ────────────────────────────────────────────────────────
-const TIME_SLOTS = [
-  { time: "9:00 AM",  available: true  },
-  { time: "9:30 AM",  available: false },
-  { time: "10:00 AM", available: true  },
-  { time: "10:30 AM", available: true  },
-  { time: "11:00 AM", available: false },
-  { time: "11:30 AM", available: true  },
-  { time: "1:00 PM",  available: true  },
-  { time: "1:30 PM",  available: true  },
-  { time: "2:00 PM",  available: true  },
-  { time: "3:00 PM",  available: true  },
-  { time: "4:00 PM",  available: true  },
-  { time: "4:30 PM",  available: true  },
-];
-
-// ─── Step 0: Date + Time picker ───────────────────────────────────────────────
-function DateTimePicker({
-  selectedDate,
-  selectedTime,
-  onDateChange,
-  onTimeChange,
-  adminTz,
-  minimumDate,
-  maximumDate,
-}: {
-  selectedDate: string;
-  selectedTime: string;
-  onDateChange: (d: string) => void;
-  onTimeChange: (t: string) => void;
-  adminTz?: string | null;
-  minimumDate?: string | null;
-  maximumDate?: string | null;
-}) {
-  const today = new Date();
-  const [viewYear,  setViewYear]  = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth());
-
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
-  const monthName   = new Date(viewYear, viewMonth).toLocaleString("en-US", {
-    month: "long", year: "numeric",
-  });
-
-  const isPast    = (day: number) => {
-    const d = new Date(viewYear, viewMonth, day);
-    return d < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  };
-  const isSunday  = (day: number) => new Date(viewYear, viewMonth, day).getDay() === 0;
-  const dateStr   = (day: number) =>
-    `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-
-  const prevMonth = () => {
-    if (viewMonth === 0) { setViewMonth(11); setViewYear((y) => y - 1); }
-    else setViewMonth((m) => m - 1);
-  };
-  const nextMonth = () => {
-    if (viewMonth === 11) { setViewMonth(0); setViewYear((y) => y + 1); }
-    else setViewMonth((m) => m + 1);
-  };
-
-  return (
-    <div className="space-y-5">
-      {/* Calendar */}
-      <div>
-        <p className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Select Date</p>
-        <div className="border border-gray-200 rounded-2xl p-4 bg-gray-50/50">
-          <div className="flex items-center justify-between mb-3">
-            <button type="button" onClick={prevMonth}
-              className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
-              <ChevronLeft size={14} className="text-gray-600" />
-            </button>
-            <span className="text-sm font-bold text-gray-800">{monthName}</span>
-            <button type="button" onClick={nextMonth}
-              className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
-              <ChevronRight size={14} className="text-gray-600" />
-            </button>
-          </div>
-          <div className="grid grid-cols-7 mb-1">
-            {["S","M","T","W","T","F","S"].map((d, i) => (
-              <span key={i} className="text-center text-[10px] font-bold text-gray-400 py-1">{d}</span>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-0.5">
-            {Array.from({ length: firstDay }).map((_, i) => <span key={`e-${i}`} />)}
-            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
-              const ds       = dateStr(day);
-              const disabled =
-                isPast(day) ||
-                isSunday(day) ||
-                (!!minimumDate && ds < minimumDate) ||
-                (!!maximumDate && ds > maximumDate);
-              const sel      = selectedDate === ds;
-              return (
-                <button key={day} type="button" disabled={disabled}
-                  onClick={() => { onDateChange(ds); onTimeChange(""); }}
-                  className={`aspect-square rounded-full text-[11px] font-medium transition-all flex items-center justify-center ${
-                    sel       ? "bg-gradient-to-br from-primary-pink to-lavender-purple text-white shadow-sm scale-110"
-                    : disabled ? "text-gray-300 cursor-not-allowed"
-                              : "text-gray-700 hover:bg-pink-50"
-                  }`}
-                >
-                  {day}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Time slots */}
-      <div>
-        <p className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">
-          {selectedDate ? "Available Times" : "Select a date to see times"}
-        </p>
-        {adminTz && selectedDate && (
-          <p className="text-[10px] text-gray-400 mb-2">
-            Times shown in your local timezone ({getTzAbbr(getLocalTimezone())})
-          </p>
-        )}
-        {selectedDate && (
-          <div className="grid grid-cols-4 gap-1.5">
-            {TIME_SLOTS.map((slot) => {
-              const sel         = selectedTime === slot.time;
-              const displayTime = (adminTz && selectedDate)
-                ? slotToLocalDisplay(selectedDate, slot.time, adminTz)
-                : slot.time;
-              return (
-                <button key={slot.time} type="button" disabled={!slot.available}
-                  onClick={() => onTimeChange(slot.time)}
-                  className={`py-2 rounded-xl text-[11px] font-semibold transition-all text-center ${
-                    sel ? "bg-gradient-to-br from-primary-pink to-lavender-purple text-white shadow-sm"
-                    : !slot.available ? "bg-gray-50 text-gray-300 cursor-not-allowed line-through"
-                    : "bg-white border border-gray-200 text-gray-700 hover:border-pink-300 hover:bg-pink-50"
-                  }`}
-                >
-                  {displayTime}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -216,23 +68,10 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
   const navigate  = useNavigate();
   const stripe    = useStripe();
   const elements  = useElements();
-  const { adminTz } = useAdminTimezone();
 
   // ── Global booking availability gate ────────────────────────────────────
-  const { availability, settings: bookingAvailabilitySettings } = useBookingAvailability();
+  const { availability } = useBookingAvailability();
   const isBookingOpen = availability.state === "open";
-  const bookingMinimumDate =
-    bookingAvailabilitySettings?.status === "open"
-      ? bookingAvailabilitySettings.startDate
-      : null;
-  const bookingMaximumDate =
-    bookingAvailabilitySettings?.status === "open"
-      ? bookingAvailabilitySettings.endDate
-      : null;
-
-  const [step,          setStep]          = useState<0 | 1>(0);
-  const [date,          setDate]          = useState("");
-  const [time,          setTime]          = useState("");
   const [name,          setName]          = useState("");
   const [email,         setEmail]         = useState(user?.email ?? "");
   const [phone,         setPhone]         = useState("");
@@ -242,7 +81,6 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
   const [cardComplete,  setCardComplete]  = useState(false);
   const [cardError,     setCardError]     = useState<string | null>(null);
 
-  const canProceed  = !!date && !!time;
   const emailValid  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -283,7 +121,7 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
         body:    JSON.stringify({
           amount:   amountCents,
           currency: "usd",
-          metadata: { plan: plan.name, date, time },
+          metadata: { plan: plan.name },
         }),
       });
 
@@ -367,9 +205,10 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
       const appt = await createAppointment({
         client_name:  clientName,
         client_email: clientEmail || null,
+        client_phone: phone.trim() || null,
         user_id:      user?.id    ?? null,
-        date,
-        time,
+        date:         null,
+        time:         null,
         type:         plan.name,
         status:       "scheduled",
         notes:        null,
@@ -409,13 +248,10 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
             clientEmail,
             phone:        phone.trim() || null,
             service:      plan.name,
-            date,
-            time,
+            date:         null,
+            time:         null,
             notes:        null,
             lang,
-            adminTz:      adminTz ?? null,
-            visitorTz:    getLocalTimezone(),
-            visitorTime:  adminTz ? slotToLocalDisplay(date, time, adminTz) : time,
           }),
         });
         if (!emailResp.ok) {
@@ -458,11 +294,7 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setStatus("idle");
     }
-  }, [status, stripe, elements, plan, date, time, name, email, phone, user, navigate, onClose, cardComplete, lang, adminTz, isBookingOpen, availability]);
-
-  const stepLabel = step === 0
-    ? "Step 1 of 2 — Pick a Date & Time"
-    : "Step 2 of 2 — Payment Details";
+  }, [status, stripe, elements, plan, name, email, phone, user, navigate, onClose, cardComplete, lang, isBookingOpen, availability]);
 
   return createPortal(
     <motion.div
@@ -498,6 +330,7 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
               <motion.div key="success"
                 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 className="text-center py-6"
+                dir={lang === "ar" ? "rtl" : "ltr"}
               >
                 <CheckCircle2 className="mx-auto text-primary-pink mb-4" size={48} />
                 <h4 className="font-heading text-lg font-bold text-gray-900 mb-2">{t.success}</h4>
@@ -529,59 +362,20 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
                 </button>
               </motion.div>
 
-            ) : step === 0 ? (
-              <motion.div key="datetime"
-                initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.22 }}
-              >
-                {/* Plan summary */}
-                <div className="mb-5 flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
-                  <div>
-                    <p className="text-xs text-gray-500">Plan</p>
-                    <p className="text-sm font-bold text-gray-900">{plan.name}</p>
-                  </div>
-                  <p className="font-heading font-extrabold text-primary-pink text-lg">{plan.price}</p>
-                </div>
-
-                <p className="text-[11px] text-gray-400 mb-4">{stepLabel}</p>
-
-                <DateTimePicker
-                  selectedDate={date} selectedTime={time}
-                  onDateChange={setDate} onTimeChange={setTime}
-                  adminTz={adminTz}
-                  minimumDate={bookingMinimumDate}
-                  maximumDate={bookingMaximumDate}
-                />
-
-                <button type="button" disabled={!canProceed} onClick={() => setStep(1)}
-                  className="w-full mt-6 py-3.5 rounded-full bg-gradient-to-r from-primary-pink to-soft-pink text-white font-semibold shadow-lg shadow-deep-purple/25 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2">
-                  Continue to Payment
-                  <ChevronRight size={16} />
-                </button>
-              </motion.div>
-
             ) : (
               <motion.form key="payment"
                 initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.22 }}
                 onSubmit={handleSubmit} className="space-y-4"
+                dir={lang === "ar" ? "rtl" : "ltr"}
               >
-                {/* Back + step label */}
-                <div className="flex items-center gap-2 mb-1">
-                  <button type="button" onClick={() => setStep(0)}
-                    className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
-                    <ChevronLeft size={14} className="text-gray-500" />
-                  </button>
-                  <p className="text-[11px] text-gray-400">{stepLabel}</p>
-                </div>
-
-                {/* Booking summary */}
-                <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100 text-xs text-gray-600 flex items-center justify-between gap-4">
-                  <span className="font-semibold text-gray-800">{plan.name}</span>
-                  <span>
-                    {new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    {" · "}{time}
-                  </span>
+                {/* Product summary */}
+                <div className="mb-2 flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+                  <div>
+                    <p className="text-xs text-gray-500">{lang === "ar" ? "الخدمة" : "Service"}</p>
+                    <p className="text-sm font-bold text-gray-900">{plan.name}</p>
+                  </div>
+                  <p className="font-heading font-extrabold text-primary-pink text-lg">{plan.price}</p>
                 </div>
 
                 {/* Email address — required, pre-filled from auth */}
@@ -637,7 +431,11 @@ function CheckoutModalInner({ plan, onClose }: CheckoutModalProps) {
                     lang={lang as "en" | "ar"}
                     placeholder="e.g. +1 555 000 0000"
                   />
-                  <p className="mt-1 text-[10px] text-gray-400">Used to send a session confirmation via WhatsApp.</p>
+                  <p className="mt-1 text-[10px] text-gray-400">
+                    {lang === "ar"
+                      ? "قد نستخدم هذا الرقم للتواصل معك بشأن تنسيق موعدك."
+                      : "We may use this number to contact you about scheduling."}
+                  </p>
                 </div>
 
                 {/* Stripe Card Element */}

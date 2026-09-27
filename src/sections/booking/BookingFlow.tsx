@@ -512,13 +512,15 @@ function BookingSummary({
           <CheckCircle2 size={38} className="text-white" />
         </div>
         <h3 className="font-heading text-2xl font-bold text-heading">
-          {strings.successTitle ?? (lang === "ar" ? "تم تأكيد الحجز!" : "Booking Confirmed!")}
+          {!appointmentSchedulingEnabled
+            ? (lang === "ar" ? "تم تأكيد الدفع!" : "Payment Confirmed!")
+            : (strings.successTitle ?? (lang === "ar" ? "تم تأكيد الحجز!" : "Booking Confirmed!"))}
         </h3>
         <p className="text-body opacity-75 max-w-sm">
           {!appointmentSchedulingEnabled
             ? (lang === "ar"
-                ? "تم تأكيد حجزك بنجاح، وسيتم التواصل معك قريبًا عبر WhatsApp لتنسيق موعدك."
-                : "Your booking is confirmed. We’ll contact you soon via WhatsApp to arrange your appointment.")
+                ? "تم تأكيد دفعتك بنجاح، وسيتواصل معك فريقنا قريبًا لتنسيق موعد مناسب لك."
+                : "Your payment is confirmed. Our team will contact you soon to arrange a suitable appointment time.")
             : (strings.successMessage ?? (lang === "ar"
                 ? "تم إرسال بريد تأكيد إليكِ. نتطلع إلى لقائكِ!"
                 : "A confirmation email has been sent to you. We look forward to seeing you!"))}
@@ -666,6 +668,7 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
   const programMode = !!preselectedProgramId;
   const [appointmentSchedulingEnabled, setAppointmentSchedulingEnabled] = useState(true);
   const [schedulingSettingLoaded, setSchedulingSettingLoaded] = useState(false);
+  const requiresAppointmentTime = appointmentSchedulingEnabled && !programMode;
 
   useEffect(() => {
     let current = true;
@@ -695,7 +698,7 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
     });
   }, [preselectedProgramId]);
 
-  const [step,            setStep]            = useState(programMode ? 1 : 0);
+  const [step,            setStep]            = useState(programMode ? 2 : 0);
   const [serviceId,       setServiceId]       = useState(preselectedServiceId ?? "");
   const [date,            setDate]            = useState("");
   const [time,            setTime]            = useState("");
@@ -712,8 +715,8 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
 
   useEffect(() => {
     if (!schedulingSettingLoaded || !programMode) return;
-    setStep(appointmentSchedulingEnabled ? 1 : 2);
-  }, [appointmentSchedulingEnabled, programMode, schedulingSettingLoaded]);
+    setStep(requiresAppointmentTime ? 1 : 2);
+  }, [requiresAppointmentTime, programMode, schedulingSettingLoaded]);
 
   // ── Global booking availability gate ──────────────────────────────────────
   const { availability, settings: bookingAvailabilitySettings } = useBookingAvailability();
@@ -810,7 +813,7 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
       }
       setForceShowErrors(false);
     }
-    if (step === 0 && !appointmentSchedulingEnabled && canNext[0]) {
+    if (step === 0 && !requiresAppointmentTime && canNext[0]) {
       setStep(2);
       return;
     }
@@ -822,7 +825,7 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
   const handleBack = () => {
     setForceShowErrors(false);
     setStep((s) => {
-      if (!appointmentSchedulingEnabled) {
+      if (!requiresAppointmentTime) {
         if (s === 3) return 2;
         if (s === 2) return programMode ? 2 : 0;
       }
@@ -838,7 +841,7 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
       setStep(2);
       return;
     }
-    if (appointmentSchedulingEnabled && (!date || !time)) {
+    if (requiresAppointmentTime && (!date || !time)) {
       setStep(1);
       setBookingError(lang === "ar" ? "يرجى اختيار التاريخ والوقت." : "Please choose a date and time.");
       return;
@@ -984,8 +987,8 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
         client_email: clientEmail,
         client_phone: clientPhone,
         user_id:      user?.id ?? null,
-        date:         appointmentSchedulingEnabled ? date : null,
-        time:         appointmentSchedulingEnabled ? time : null,
+        date:         requiresAppointmentTime ? date : null,
+        time:         requiresAppointmentTime ? time : null,
         type:         serviceType,
         status:       "scheduled",
         notes:        personalInfo.notes || null,
@@ -1018,7 +1021,7 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
       let emailResp: Response | undefined;
       try {
         const visitorTz   = getLocalTimezone();
-        const visitorTime = appointmentSchedulingEnabled && adminTz ? slotToLocalDisplay(date, time, adminTz) : time;
+        const visitorTime = requiresAppointmentTime && adminTz ? slotToLocalDisplay(date, time, adminTz) : time;
         emailResp = await fetch("/api/send-booking-emails", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
@@ -1028,8 +1031,8 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
             clientEmail,
             phone:         clientPhone,
             service:       serviceType,
-            date:          appointmentSchedulingEnabled ? date : null,
-            time:          appointmentSchedulingEnabled ? time : null,
+            date:          requiresAppointmentTime ? date : null,
+            time:          requiresAppointmentTime ? time : null,
             notes:         personalInfo.notes || null,
             lang,
             adminTz:      adminTz ?? null,
@@ -1100,10 +1103,10 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
   };
 
   const str = strings as Record<string, string>;
-  const stepLabels = appointmentSchedulingEnabled
+  const stepLabels = requiresAppointmentTime
     ? steps
     : steps.filter((_, index) => index !== 1);
-  const indicatorStep = !appointmentSchedulingEnabled && step > 1 ? step - 1 : step;
+  const indicatorStep = !requiresAppointmentTime && step > 1 ? step - 1 : step;
 
   if (!schedulingSettingLoaded || (programMode && programLoading)) {
     return (
@@ -1152,7 +1155,7 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
             {step === 0 && (
               <SelectService services={data.services} selected={serviceId} onSelect={setServiceId} />
             )}
-            {step === 1 && appointmentSchedulingEnabled && (
+            {step === 1 && requiresAppointmentTime && (
               <PickTime
                 timeSlots={effectiveTimeSlots}
                 selectedDate={date}
@@ -1186,7 +1189,7 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
                 service={selectedService}
                 date={date}
                 time={time}
-                appointmentSchedulingEnabled={appointmentSchedulingEnabled}
+                appointmentSchedulingEnabled={requiresAppointmentTime}
                 strings={str}
                 paymentNote={data.paymentNote}
                 onConfirm={handleConfirm}
@@ -1212,7 +1215,7 @@ function BookingFlowInner({ data, strings, preselectedServiceId, preselectedProg
         <div className="flex items-center justify-between mt-6">
           <button
             onClick={handleBack}
-            disabled={step === (programMode ? (appointmentSchedulingEnabled ? 1 : 2) : 0)}
+            disabled={step === (programMode ? (requiresAppointmentTime ? 1 : 2) : 0)}
             className="flex items-center gap-2 px-6 py-3 rounded-full border border-soft-purple/20 text-deep-purple text-sm font-semibold hover:bg-light-pink/30 disabled:opacity-0 disabled:pointer-events-none transition-all"
           >
             <ChevronLeft size={16} className="rtl:rotate-180" />

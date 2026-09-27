@@ -12,3 +12,11 @@ description: Global open/scheduled/closed booking gate — settings shape, dual 
 - Fail-closed: lookup errors return state `unknown` → endpoint responds 503, never creates a PI. `scheduled` without a startDate is treated as closed on both sides.
 - Admin UI (AdminSettingsPage "Booking Availability") keeps legacy `booking_start_date` in sync on save and refuses to save scheduled without a start date.
 - Remember Express api server (port 3001) must be restarted to pick up api/ changes — a stale process will happily serve the old ungated code and make tests lie.
+
+## Payment-first course checkout
+
+The pricing-card `CheckoutModal` and program-purchase mode of `BookingFlow` are payment-first: they do not ask for a date or time, and the team coordinates the appointment after payment. The standalone appointment-booking mode of `BookingFlow` still honors its scheduling toggle, availability, and timezone behavior. Pending-schedule confirmations should say the team will contact the customer without promising automated WhatsApp contact.
+
+**Why:** The consultation cards and standalone booking page are separate purchase paths; changing only `BookingFlow` left the date picker visible in the course/consultation checkout.
+
+**How to apply:** Keep purchase flows distinct from standalone appointment booking. Payment-first purchases write null date/time and require the optional-scheduling Supabase migration before they are safe to use in production; standalone booking continues to require a selected slot when its toggle is on.
