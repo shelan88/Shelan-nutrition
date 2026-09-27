@@ -308,22 +308,24 @@ export default function AdminSettingsPage() {
         <div className="flex items-start justify-between gap-5">
           <div className="space-y-1.5">
             <p className="text-[13px] font-semibold text-[var(--admin-text)]">
-              Enable Appointment Scheduling
+              {isAr ? "طلب اختيار الموعد قبل الدفع" : "Require an appointment time before payment"}
             </p>
             <p className="text-[12px] text-[var(--admin-text-faint)] leading-relaxed">
               {isAr
-                ? "عند الإيقاف، يتجاوز العميل اختيار التاريخ والوقت وينتقل إلى بياناته والدفع. تبقى إعدادات المواعيد والمنطقة الزمنية والتوفر محفوظة."
-                : "When off, clients skip date and time selection and continue to their details and payment. Appointment, timezone, and availability settings remain saved."}
+                ? "يتحكم هذا الخيار بصفحة «احجزي الآن» المستقلة فقط. عند التفعيل، يختار العميل التاريخ والوقت قبل الدفع؛ وعند الإيقاف، ينتقل مباشرة إلى بياناته والدفع. مشتريات البرامج والخدمات من البطاقات تتجاوز اختيار الموعد دائمًا، وسيتواصل الفريق بعد الدفع لتنسيقه."
+                : "This controls only the standalone Book Now page. When on, clients choose a date and time before payment; when off, they go straight to their details and payment. Program and service-card purchases always skip appointment selection; the team arranges a time after payment."}
             </p>
             <p className="text-[11px] text-[var(--admin-text-faint)]">
-              {isAr ? "تُطبّق التغييرات بعد الضغط على حفظ التغييرات." : "Changes apply after you select Save Changes."}
+              {isAr
+                ? "تُطبّق التغييرات بعد الضغط على «حفظ التغييرات» ثم فتح صفحة الحجز من جديد."
+                : "Changes apply after you select Save Changes and reopen the booking page."}
             </p>
           </div>
           <button
             type="button"
             role="switch"
             aria-checked={appointmentSchedulingEnabled}
-            aria-label="Enable Appointment Scheduling"
+            aria-label={isAr ? "طلب اختيار الموعد قبل الدفع" : "Require an appointment time before payment"}
             onClick={() => setAppointmentSchedulingEnabled((enabled) => !enabled)}
             className={`relative mt-1 h-6 w-11 shrink-0 rounded-full transition-colors ${
               appointmentSchedulingEnabled ? "bg-primary-pink" : "bg-[var(--admin-border)]"
